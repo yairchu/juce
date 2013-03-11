@@ -761,6 +761,11 @@ public:
                     break;
             }
 
+            for (int i = numInChans; i < numIn; ++i)
+            {
+                FloatVectorOperations::clear (channels [i], numSamples);
+            }
+
             {
                 const ScopedLock sl (incomingMidiLock);
                 midiEvents.clear();
