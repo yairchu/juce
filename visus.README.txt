@@ -1,0 +1,49 @@
+
+############################
+# how to update juce
+############################
+
+LocalVisus=/cygdrive/c/nvisusio
+JuceFork=https://github.com/sci-visus/JUCE
+JuceOfficial="git@github.com:julianstorer/JUCE"
+OldJuce=$LocalVisus/libs/JUCE
+NewJuce=$LocalVisus/temp/JUCE
+
+# clone juce fork
+mkdir -p $NewJuce
+cd $NewJuce/../
+git clone $JuceFork 
+    
+# refresh sci-visus/JUCE master branch
+cd $NewJuce
+git checkout master
+git remote add upstream $JuceOfficial
+git fetch upstream
+git merge upstream/master
+git push    
+
+# refresh sci-visus/JUCE visus branch
+git checkout visus
+... remove all file in $NewJuce except ".git" directory and .gitignore file ...
+cp -r $OldJuce/* $NewJuce/
+git status
+git commit -a -m "Updating JUCE"
+
+git checkout master
+git merge --squash visus
+git branch -D visus
+git push origin :visus
+git checkout -b visus
+git commit -a -m "Updating JUCE"
+git push -u origin visus
+
+# copy back updated files to nvisusio
+rm -Rf $OldJuce/*
+rm -Rf $NewJuce/.git
+cp -r $NewJuce/* $OldJuce/
+rm -Rf $NewJuce
+
+# finally commits
+cd $LocalVisus
+git commit -a -m "Updating JUCE"
+   

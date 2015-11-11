@@ -214,6 +214,16 @@ public:
 
             updateViewportSize (false);
         }
+        
+        #if VISUS_OPTION_JUCE
+        //visus (I want the rendering to happen with the main message lock)
+        if (!mmLock)
+        {
+          mmLock = new MessageManagerLock(this);
+          if (! mmLock->lockWasGained())
+            return false;
+        }
+        #endif        
 
         if (! context.makeActive())
             return false;
@@ -543,6 +553,19 @@ public:
     ~Attachment()
     {
         detach();
+
+      #if VISUS_OPTION_JUCE
+      if (context.bVisusMainSharedContext)
+      {
+        Component& comp = *getComponent();
+
+        if (CachedImage* const oldCachedImage = CachedImage::get (comp))
+          oldCachedImage->shutdownOnThread();
+
+        comp.setCachedComponentImage (nullptr);
+        context.nativeContext = nullptr;
+      }
+      #endif  
     }
 
     void componentMovedOrResized (bool /*wasMoved*/, bool /*wasResized*/) override
@@ -629,6 +652,16 @@ private:
                                                              context.openGLPixelFormat,
                                                              context.contextToShareWith);
         comp.setCachedComponentImage (newCachedImage);
+        
+        #if VISUS_OPTION_JUCE
+        if (context.bVisusMainSharedContext)
+        {
+          newCachedImage->initialiseOnThread();
+          newCachedImage->hasInitialised = true;
+          return;
+        }
+        #endif        
+        
         newCachedImage->start(); // (must wait until this is attached before starting its thread)
         newCachedImage->updateViewportSize (true);
 
@@ -637,6 +670,12 @@ private:
 
     void detach()
     {
+      #if VISUS_OPTION_JUCE
+      if (context.bVisusMainSharedContext)
+        return; //I'm really detaching only in destructor (see ~Attachment)
+      #endif      
+      
+      
         stopTimer();
 
         Component& comp = *getComponent();
@@ -666,6 +705,9 @@ OpenGLContext::OpenGLContext()
       imageCacheMaxSize (8 * 1024 * 1024),
       renderComponents (true), useMultisampling (false), continuousRepaint (false)
 {
+  #if VISUS_OPTION_JUCE
+  bVisusMainSharedContext=false;
+  #endif  
 }
 
 OpenGLContext::~OpenGLContext()

@@ -435,6 +435,7 @@ private:
 
     void timerCallback() override;
     void resetTimer();
+
     ListenerList<MouseListener>& getMouseListeners();
 
     void addDesktopComponent (Component*);

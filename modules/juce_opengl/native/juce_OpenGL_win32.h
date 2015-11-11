@@ -190,6 +190,11 @@ private:
         pfd.nSize           = sizeof (pfd);
         pfd.nVersion        = 1;
         pfd.dwFlags         = PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER;
+        
+				#if VISUS_ZSPACE
+        pfd.dwFlags |= PFD_STEREO;
+				#endif
+        
         pfd.iPixelType      = PFD_TYPE_RGBA;
         pfd.iLayerType      = PFD_MAIN_PLANE;
         pfd.cColorBits      = (BYTE) (pixelFormat.redBits + pixelFormat.greenBits + pixelFormat.blueBits);
@@ -222,6 +227,10 @@ private:
             atts[n++] = WGL_PIXEL_TYPE_ARB;       atts[n++] = WGL_TYPE_RGBA_ARB;
             atts[n++] = WGL_ACCELERATION_ARB;
             atts[n++] = WGL_FULL_ACCELERATION_ARB;
+            
+						#if VISUS_ZSPACE
+            atts[n++]=WGL_STEREO_ARB;
+						#endif 
 
             atts[n++] = WGL_COLOR_BITS_ARB;  atts[n++] = pixelFormat.redBits + pixelFormat.greenBits + pixelFormat.blueBits;
             atts[n++] = WGL_RED_BITS_ARB;    atts[n++] = pixelFormat.redBits;

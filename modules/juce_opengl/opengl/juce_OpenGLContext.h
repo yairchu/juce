@@ -45,6 +45,11 @@
 class JUCE_API  OpenGLContext
 {
 public:
+  
+    #if VISUS_OPTION_JUCE
+    bool bVisusMainSharedContext;
+    #endif  
+  
     OpenGLContext();
 
     /** Destructor. */
