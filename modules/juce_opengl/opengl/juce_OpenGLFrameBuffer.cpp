@@ -171,12 +171,12 @@ private:
 OpenGLFrameBuffer::OpenGLFrameBuffer() {}
 OpenGLFrameBuffer::~OpenGLFrameBuffer() {}
 
-bool OpenGLFrameBuffer::initialise (OpenGLContext& context, int width, int height)
+bool OpenGLFrameBuffer::initialise (OpenGLContext& context, int width, int height,bool wantsDepthBuffer,bool wantsStencilBuffer)
 {
     jassert (context.isActive()); // The context must be active when creating a framebuffer!
 
     pimpl = nullptr;
-    pimpl = new Pimpl (context, width, height, false, false);
+    pimpl = new Pimpl (context, width, height, wantsDepthBuffer, wantsStencilBuffer);
 
     if (! pimpl->createdOk())
         pimpl = nullptr;
