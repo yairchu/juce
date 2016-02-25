@@ -964,7 +964,11 @@ StickyMidiKeyboardComponent::~StickyMidiKeyboardComponent()
     /* Empty */
 }
 
+#ifdef JUCE_WINDOWS
+void StickyMidiKeyboardComponent::mouseUpOnKey(int midiNoteNumber, const MouseEvent& e)
+#else
 void StickyMidiKeyboardComponent::mouseUpOnKey (__unused int midiNoteNumber, const MouseEvent& e)
+#endif
 {
     /** Note: We don't use the midiNoteNumber figured out by the caller by examining
      the mouse event location. Instead, we are interested in what note was under
