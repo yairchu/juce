@@ -157,6 +157,7 @@ public:
     Value getVST3PathValue() const                        { return vst3Path; }
     Value getRTASPathValue() const                        { return rtasPath; }
     Value getAAXPathValue() const                         { return aaxPath; }
+	Value getARAPathValue() const                         { return araPath; }
 
     // NB: this is the path to the parent "modules" folder that contains the named module, not the
     // module folder itself.
@@ -365,8 +366,8 @@ protected:
     const ProjectType& projectType;
     const String projectName;
     const File projectFolder;
-    Value vst3Path, rtasPath, aaxPath; // these must be initialised in the specific exporter c'tors!
-
+    Value vst3Path, rtasPath, aaxPath, araPath; // these must be initialised in the specific exporter c'tors!
+	
     ValueWithDefault targetLocationValue, extraCompilerFlagsValue, extraLinkerFlagsValue, externalLibrariesValue,
                      userNotesValue, gnuExtensionsValue, bigIconValue, smallIconValue, extraPPDefsValue;
 
@@ -443,6 +444,7 @@ private:
     void addCommonAudioPluginSettings();
     void addVST3FolderToPath();
     void addAAXFoldersToPath();
+	void addARAFoldersToPath();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ProjectExporter)
 };

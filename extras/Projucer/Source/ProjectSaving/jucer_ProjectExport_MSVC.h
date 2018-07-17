@@ -132,6 +132,10 @@ public:
         rtasPath.referTo (Value (new DependencyPathValueSource (getSetting (Ids::rtasFolder),
                                                                 Ids::rtasPath,
                                                                 TargetOS::windows)));
+
+		araPath.referTo (Value (new DependencyPathValueSource (getSetting (Ids::araFolder),
+															   Ids::araPath,
+															   TargetOS::windows)));
     }
 
     //==============================================================================
