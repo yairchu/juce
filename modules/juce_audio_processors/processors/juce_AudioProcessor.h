@@ -1660,7 +1660,7 @@ public:
 	const ARA::PlugIn::PlugInExtension* getARAPlugInExtension() const;
 	const ARA::PlugIn::DocumentController* getARADocumentController() const;
 private:
-	const ARA::PlugIn::PlugInExtension* araPlugInExtension{ nullptr };
+	const ARA::PlugIn::PlugInExtension* ARAPlugInExtension{ nullptr };
 #endif
 	//==============================================================================
     
