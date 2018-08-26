@@ -714,9 +714,9 @@ namespace
 
     static bool isValidPathIdentifier (const String& id, const String& os)
     {
-		return id == "vst3Path" || (id == "aaxPath" && os != "linux") || (id == "rtasPath" && os != "linux")
-			|| id == "androidSDKPath" || id == "androidNDKPath" || id == "defaultJuceModulePath" || id == "defaultUserModulePath"
-			|| id == "araPath";
+        return id == "vst3Path" || (id == "aaxPath" && os != "linux") || (id == "rtasPath" && os != "linux")
+            || id == "androidSDKPath" || id == "androidNDKPath" || id == "defaultJuceModulePath" || id == "defaultUserModulePath"
+            || id == "araPath";
     }
 
     static void setGlobalPath (const StringArray& args)
@@ -848,7 +848,7 @@ namespace
                   << std::endl
                   << " " << appName << " --set-global-search-path os identifier_to_set new_path" << std::endl
                   << "    Sets the global path for a specified os and identifier. The os should be either osx, windows or linux and the identifiers can be any of the following: "
-			      << "defaultJuceModulePath, defaultUserModulePath, vst3path, aaxPath (not valid on linux), rtasPath (not valid on linux), araPath (not valid on linux), androidSDKPath or androidNDKPath." << std::endl
+                  << "defaultJuceModulePath, defaultUserModulePath, vst3path, aaxPath (not valid on linux), rtasPath (not valid on linux), araPath (not valid on linux), androidSDKPath or androidNDKPath." << std::endl
                   << std::endl
                   << " " << appName << " --create-project-from-pip path/to/PIP path/to/output" << std::endl
                   << "    Generates a JUCE project from a PIP file." << std::endl

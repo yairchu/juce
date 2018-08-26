@@ -214,8 +214,8 @@ private:
             addAndMakeVisible (pathPropertyComponents.add (new FilePathPropertyComponent (settings.getStoredPath (Ids::androidNDKPath),
                                                                                           "Android NDK", true)));
 
-			addAndMakeVisible (pathPropertyComponents.add (new FilePathPropertyComponent (settings.getStoredPath (Ids::araPath),
-																						  "ARA SDK", true)));
+            addAndMakeVisible (pathPropertyComponents.add (new FilePathPropertyComponent (settings.getStoredPath (Ids::araPath),
+                                                                                          "ARA SDK", true)));
 
             pathPropertyComponents.add (nullptr);
 
@@ -267,8 +267,8 @@ private:
             addAndMakeVisible (pathPropertyComponents.add (new TextPropertyComponent (settings.getFallbackPathForOS (Ids::androidNDKPath, selectedOS),
                                                                                       "Android NDK", maxChars, false)));
 
-			addAndMakeVisible (pathPropertyComponents.add (new FilePathPropertyComponent (settings.getStoredPath (Ids::araPath),
-																						  "ARA SDK", true)));
+            addAndMakeVisible (pathPropertyComponents.add (new FilePathPropertyComponent (settings.getStoredPath (Ids::araPath),
+                                                                                          "ARA SDK", true)));
         }
 
         resized();
