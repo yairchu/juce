@@ -60,6 +60,18 @@ AudioProcessor::~AudioProcessor()
     // or more parameters without having made a corresponding call to endParameterChangeGesture...
     jassert (changingParams.countNumberOfSetBits() == 0);
    #endif
+
+#if JucePlugin_Enable_ARA
+	if (ARAPlugInExtension)
+	{
+		delete ARAPlugInExtension->getEditorView ();
+		delete ARAPlugInExtension->getPlaybackRenderer ();
+		delete ARAPlugInExtension->getEditorRenderer ();
+
+		delete ARAPlugInExtension;
+		ARAPlugInExtension = nullptr;
+	}
+#endif // JucePlugin_Enable_ARA
 }
 
 //==============================================================================
@@ -188,7 +200,7 @@ bool AudioProcessor::setChannelLayoutOfBus (bool isInputBus, int busIndex, const
     {
         auto layouts = bus->getBusesLayoutForLayoutChangeOfBus (layout);
 
-        if (layouts.getChannelSet (isInputBus, busIndex) == layout)
+        if (layouts.getChannelSet (isInputBus, busIndex) == layout || layout.isDisabled())
             return applyBusLayouts (layouts);
 
         return false;
@@ -1613,5 +1625,35 @@ void AudioPlayHead::CurrentPositionInfo::resetToDefault()
     timeSigDenominator = 4;
     bpm = 120;
 }
+
+//==============================================================================
+#if JucePlugin_Enable_ARA
+
+const ARA::PlugIn::PlugInExtension* AudioProcessor::createARAPlugInExtension(ARA::PlugIn::DocumentController* documentController, bool isPlaybackRenderer, bool isEditorRenderer, bool isEditorView)
+{
+	ARAPlugInExtension = new ARA::PlugIn::PlugInExtension (documentController,
+														   isPlaybackRenderer ? new ARA::PlugIn::PlaybackRenderer (documentController) : nullptr,
+														   isEditorRenderer ? new ARA::PlugIn::EditorRenderer (documentController) : nullptr,
+														   isEditorView ? new ARA::PlugIn::EditorView (documentController) : nullptr);
+	return ARAPlugInExtension;
+}
+
+const ARA::PlugIn::PlugInExtension* AudioProcessor::_createARAPlugInExtension(ARA::PlugIn::DocumentController* documentController, bool isPlaybackRenderer, bool isEditorRenderer, bool isEditorView)
+{
+	ARAPlugInExtension = createARAPlugInExtension(documentController, isPlaybackRenderer, isEditorRenderer, isEditorView);
+	return ARAPlugInExtension;
+}
+
+const ARA::PlugIn::PlugInExtension* AudioProcessor::getARAPlugInExtension() const
+{
+	return ARAPlugInExtension;
+}
+
+const ARA::PlugIn::DocumentController* AudioProcessor::getARADocumentController() const
+{
+	return ARAPlugInExtension ? ARAPlugInExtension->getDocumentController() : nullptr;
+}
+
+#endif // JucePlugin_Enable_ARA
 
 } // namespace juce

@@ -72,6 +72,23 @@ namespace Vst2
  #endif
 #endif
 
+//==============================================================================
+#if JucePlugin_Enable_ARA
+
+ #include "../ARA/juce_audio_plugin_client_ARA.cpp"
+ #include <ARA_API/ARAVST3.h>
+ 
+ #if ARA_SUPPORT_VERSION_1
+  #error "Unsupported ARA version - ARA version 2 and onward are JUCE compatible"
+ #endif
+ 
+ DEF_CLASS_IID(ARA::IPlugInEntryPoint)
+ DEF_CLASS_IID(ARA::IPlugInEntryPoint2)
+ DEF_CLASS_IID(ARA::IMainFactory)
+
+#endif // JucePlugin_Enable_ARA
+
+
 namespace juce
 {
 
@@ -838,8 +855,9 @@ private:
 
         tresult PLUGIN_API queryInterface (const TUID targetIID, void** obj) override
         {
-            TEST_FOR_AND_RETURN_IF_VALID (targetIID, Steinberg::IPlugViewContentScaleSupport)
-            return Vst::EditorView::queryInterface (targetIID, obj);
+			return kResultFalse;
+            //TEST_FOR_AND_RETURN_IF_VALID (targetIID, Steinberg::IPlugViewContentScaleSupport)
+            //return Vst::EditorView::queryInterface (targetIID, obj);
         }
 
         REFCOUNT_METHODS (Vst::EditorView)
@@ -1246,6 +1264,56 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JuceVST3EditController)
 };
 
+
+//==============================================================================
+#if JucePlugin_Enable_ARA
+
+class JuceARAFactory : public ARA::IMainFactory
+{
+public:
+	JuceARAFactory ()	FUNKNOWN_CTOR;
+	virtual ~JuceARAFactory () {}
+
+	DECLARE_FUNKNOWN_METHODS
+
+	static FUnknown* createInstance (void*)
+	{
+		return (FUnknown*)new JuceARAFactory ();
+	}
+
+	//---from ARA::IMainFactory-------
+	const ARA::ARAFactory* PLUGIN_API getFactory () SMTG_OVERRIDE
+	{
+		return ARA::PlugIn::DocumentController::getARAFactory();
+	}
+
+protected:
+};
+
+static const ::Steinberg::TUID JuceARAFactory_IID = JucePlugin_ARAVST3FactoryUUID;
+
+IMPLEMENT_REFCOUNT(JuceARAFactory);
+
+::Steinberg::tresult PLUGIN_API JuceARAFactory::queryInterface (const ::Steinberg::TUID targetIID, void** obj)
+{
+	TEST_FOR_AND_RETURN_IF_VALID (targetIID, FObject)
+	TEST_FOR_AND_RETURN_IF_VALID (targetIID, ARA::IMainFactory)
+
+	if (doUIDsMatch (targetIID, JuceARAFactory_IID))
+	{
+		addRef();
+		*obj = this;
+		return kResultOk;
+	}
+
+	*obj = nullptr;
+	return kNoInterface;
+}
+
+#endif // JucePlugin_Enable_ARA
+
+//==============================================================================
+
 namespace
 {
     template <typename FloatType> struct AudioBusPointerHelper {};
@@ -1264,6 +1332,9 @@ class JuceVST3Component : public Vst::IComponent,
                           public Vst::IUnitInfo,
                           public Vst::IConnectionPoint,
                           public AudioPlayHead
+#if JucePlugin_Enable_ARA
+	, public ARA::IPlugInEntryPoint, public ARA::IPlugInEntryPoint2
+#endif
 {
 public:
     JuceVST3Component (Vst::IHostApplication* h)
@@ -1325,6 +1396,11 @@ public:
         TEST_FOR_AND_RETURN_IF_VALID (targetIID, Vst::IUnitInfo)
         TEST_FOR_AND_RETURN_IF_VALID (targetIID, Vst::IConnectionPoint)
         TEST_FOR_COMMON_BASE_AND_RETURN_IF_VALID (targetIID, FUnknown, Vst::IComponent)
+
+#if JucePlugin_Enable_ARA
+			TEST_FOR_AND_RETURN_IF_VALID (targetIID, ARA::IPlugInEntryPoint)
+			TEST_FOR_AND_RETURN_IF_VALID (targetIID, ARA::IPlugInEntryPoint2)
+#endif
 
         if (doUIDsMatch (targetIID, JuceAudioProcessor::iid))
         {
@@ -2532,6 +2608,49 @@ private:
         midiBuffer.clear();
     }
 
+	//==============================================================================
+#if JucePlugin_Enable_ARA
+
+	const ARA::ARAFactory* PLUGIN_API getFactory() SMTG_OVERRIDE
+	{
+		// TODO there should be some per-project customization here
+		return ARA::PlugIn::DocumentController::getARAFactory();
+	}
+
+	const ARA::ARAPlugInExtensionInstance* PLUGIN_API bindToDocumentController (ARA::ARADocumentControllerRef controllerRef) SMTG_OVERRIDE
+	{
+#if ARA_SUPPORT_VERSION_1
+		ARA_VALIDATE_STATE(ARA::PlugIn::DocumentController::getUsedApiGeneration() < ARA::kARAAPIGeneration_2_0_Draft);
+		ARA::ARAPlugInInstanceRoleFlags allRoles = ARA::kARAPlaybackRendererRole | ARA::kARAEditorRendererRole | ARA::kARAEditorViewRole;
+		return bindToDocumentControllerWithRoles(controllerRef, allRoles, allRoles);
+#else
+		ARA_VALIDATE_API_STATE(false && "call is deprecated in ARA 2, host must not call this");
+		return nullptr;
+#endif
+	}
+
+	const ARA::ARAPlugInExtensionInstance* PLUGIN_API bindToDocumentControllerWithRoles (ARA::ARADocumentControllerRef documentControllerRef,
+																						 ARA::ARAPlugInInstanceRoleFlags knownRoles, ARA::ARAPlugInInstanceRoleFlags assignedRoles) SMTG_OVERRIDE
+	{
+		ARA::PlugIn::DocumentController * documentController = (ARA::PlugIn::DocumentController *)documentControllerRef;
+		ARA_VALIDATE_API_ARGUMENT(documentControllerRef, ARA::PlugIn::DocumentController::isValidDocumentController (documentController));
+
+		// verify this is only called once
+		if (pluginInstance->getARAPlugInExtension())
+		{
+			ARA_VALIDATE_API_STATE(false && "binding already established");
+			return nullptr;
+		}
+
+		bool isPlaybackRenderer = ((knownRoles & ARA::kARAPlaybackRendererRole) == 0) || ((assignedRoles & ARA::kARAPlaybackRendererRole) != 0);
+		bool isEditorRenderer = ((knownRoles & ARA::kARAEditorRendererRole) == 0) || ((assignedRoles & ARA::kARAEditorRendererRole) != 0);
+		bool isEditorView = ((knownRoles & ARA::kARAEditorViewRole) == 0) || ((assignedRoles & ARA::kARAEditorViewRole) != 0);
+
+		return pluginInstance->_createARAPlugInExtension(documentController, isPlaybackRenderer, isEditorRenderer, isEditorView)->getInstance();
+	}
+
+#endif // JucePlugin_Enable_ARA
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JuceVST3Component)
 };
@@ -2662,6 +2781,13 @@ static FUnknown* createControllerInstance (Vst::IHostApplication* host)
 {
     return static_cast<Vst::IEditController*> (new JuceVST3EditController (host));
 }
+
+#if JucePlugin_Enable_ARA
+static FUnknown* createARAFactoryInstance (Vst::IHostApplication* host)
+{
+	return (FUnknown*) JuceARAFactory::createInstance(host);
+}
+#endif
 
 //==============================================================================
 struct JucePluginFactory;
@@ -2920,6 +3046,20 @@ JUCE_EXPORTED_FUNCTION IPluginFactory* PLUGIN_API GetPluginFactory()
                                                   kVstVersionString);
 
         globalFactory->registerClass (controllerClass, createControllerInstance);
+
+#if JucePlugin_Enable_ARA
+		static const PClassInfo2 araFactoryClass (JuceARAFactory_IID,
+												  PClassInfo::kManyInstances,
+												  kARAMainFactoryClass,
+												  JucePlugin_Name "ARAFactory",
+												  JucePlugin_Vst3ComponentFlags,
+												  JucePlugin_Vst3Category,
+												  JucePlugin_Manufacturer,
+												  JucePlugin_VersionString,
+												  kVstVersionString);
+
+		globalFactory->registerClass (araFactoryClass, createARAFactoryInstance);
+#endif // JucePlugin_Enable_ARA
     }
     else
     {

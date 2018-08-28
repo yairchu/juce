@@ -85,6 +85,7 @@ void ProjectSaver::writePluginCharacteristicsFile()
     flags.set ("JucePlugin_Build_Standalone",            boolToString (project.shouldBuildStandalonePlugin()));
     flags.set ("JucePlugin_Build_Unity",                 boolToString (project.shouldBuildUnityPlugin()));
     flags.set ("JucePlugin_Enable_IAA",                  boolToString (project.shouldEnableIAA()));
+    flags.set ("JucePlugin_Enable_ARA",                  boolToString (project.shouldEnableARA()));
     flags.set ("JucePlugin_Name",                        toStringLiteral (project.getPluginNameString()));
     flags.set ("JucePlugin_Desc",                        toStringLiteral (project.getPluginDescriptionString()));
     flags.set ("JucePlugin_Manufacturer",                toStringLiteral (project.getPluginManufacturerString()));
@@ -123,6 +124,11 @@ void ProjectSaver::writePluginCharacteristicsFile()
     flags.set ("JucePlugin_IAAType",                     toCharLiteral (project.getIAATypeCode()));
     flags.set ("JucePlugin_IAASubType",                  "JucePlugin_PluginCode");
     flags.set ("JucePlugin_IAAName",                     project.getIAAPluginName().quoted());
+    flags.set ("JucePlugin_ARAContentTypes",             String (project.getARAContentTypes()));
+    flags.set ("JucePlugin_ARATransformationFlags",      String (project.getARATransformationFlags()));
+    flags.set ("JucePlugin_ARAFactoryID",                toStringLiteral(project.getARAFactoryIDString()));
+    flags.set ("JucePlugin_ARADocumentArchiveID",        toStringLiteral(project.getARADocumentArchiveIDString()));
+    flags.set ("JucePlugin_ARAVST3FactoryUUID",          project.getARAVST3FactoryUUIDString());
 
     {
         String plugInChannelConfig = project.getPluginChannelConfigsString();
