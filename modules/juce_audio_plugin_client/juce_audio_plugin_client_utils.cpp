@@ -25,7 +25,3 @@
 */
 
 #include "utility/juce_PluginUtilities.cpp"
-
-#if JucePlugin_Enable_ARA
- #include "ARA/juce_audio_plugin_client_ARA.cpp"
-#endif // JucePlugin_Enable_ARA
