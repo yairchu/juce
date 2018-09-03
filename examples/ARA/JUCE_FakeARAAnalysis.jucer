@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="rBC30w" araVST3FactoryUUID="{ 0x5c, 0x01, 0x4f, 0x3f, 0x48, 0x25, 0x4a, 0x16, 0x1a, 0x38, 0x21, 0x56, 0x27, 0x34, 0x6e, 0x03 }"
+<JUCERPROJECT id="rBC30w" araVST3FactoryUUID="{ 0x5c, 0x80, 0x4f, 0xbf, 0xc8, 0xa5, 0x4a, 0x16, 0x9a, 0xb8, 0xa1, 0x56, 0x27, 0xb4, 0x6e, 0x83 }"
               name="JUCE_FakeARAAnalysis" projectType="araaudioplug" jucerVersion="5.3.2"
               pluginFormats="buildVST3" pluginARAContentType="1">
   <MAINGROUP id="yoH8sR" name="JUCE_FakeARAAnalysis">
@@ -61,7 +61,7 @@
         <MODULEPATH id="juce_audio_utils" path="../../modules"/>
       </MODULEPATHS>
     </VS2015>
-    <XCODE_MAC targetFolder="Builds/MacOSX" araFolder="../../../ARA_SDK">
+    <XCODE_MAC targetFolder="Builds/MacOSX">
       <CONFIGURATIONS>
         <CONFIGURATION isDebug="1" name="Debug"/>
         <CONFIGURATION isDebug="0" name="Release"/>
