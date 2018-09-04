@@ -163,7 +163,7 @@ public:
     bool shouldBuildAAX() const                       { return checkMultiChoiceVar (pluginFormatsValue, Ids::buildAAX); }
     bool shouldBuildStandalonePlugin() const          { return checkMultiChoiceVar (pluginFormatsValue, Ids::buildStandalone); }
     bool shouldEnableIAA() const                      { return checkMultiChoiceVar (pluginFormatsValue, Ids::enableIAA); }
-    bool shouldEnableARA() const                      { return getProjectType().isARAAudioPlugin(); }
+    bool shouldEnableARA() const                      { return checkMultiChoiceVar (pluginFormatsValue, Ids::enableARA) || getProjectType().isARAAudioPlugin(); }
 
     //==============================================================================
     bool isPluginSynth() const                        { return checkMultiChoiceVar (pluginCharacteristicsValue, Ids::pluginIsSynth); }
@@ -195,6 +195,7 @@ public:
     static Array<var> getAllRTASCategoryVars() noexcept;
     Array<var> getDefaultRTASCategories() const noexcept;
 
+    bool getDefaultEnableARA() const noexcept;
     static StringArray getAllARAContentTypeStrings() noexcept;
     static Array<var> getAllARAContentTypeVars() noexcept;
     Array<var> getDefaultARAContentTypes() const noexcept;
@@ -411,7 +412,7 @@ private:
     ValueWithDefault pluginFormatsValue, pluginNameValue, pluginDescriptionValue, pluginManufacturerValue, pluginManufacturerCodeValue,
                      pluginCodeValue, pluginChannelConfigsValue, pluginCharacteristicsValue, pluginAUExportPrefixValue, pluginAAXIdentifierValue,
                      pluginAUMainTypeValue, pluginRTASCategoryValue, pluginVSTCategoryValue, pluginVST3CategoryValue, pluginAAXCategoryValue,
-                     pluginARAContentTypeValue, pluginARAFactoryIDValue, pluginARAArchiveIDValue, pluginARATransformFlagsValue;
+                     pluginEnableARA, pluginARAContentTypeValue, pluginARAFactoryIDValue, pluginARAArchiveIDValue, pluginARATransformFlagsValue;
 
     //==============================================================================
     std::unique_ptr<CompileEngineSettings> compileEngineSettings;

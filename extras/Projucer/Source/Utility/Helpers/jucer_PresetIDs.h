@@ -303,6 +303,7 @@ namespace Ids
     DECLARE_ID (buildAAX);
     DECLARE_ID (buildStandalone);
     DECLARE_ID (enableIAA);
+    DECLARE_ID (enableARA);
     DECLARE_ID (pluginName);
     DECLARE_ID (pluginDesc);
     DECLARE_ID (pluginManufacturer);

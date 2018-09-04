@@ -257,6 +257,7 @@ void Project::initialiseAudioPluginValues()
     pluginVST3CategoryValue.referTo          (projectRoot, Ids::pluginVST3Category,         getUndoManager(), getDefaultVST3Categories(),  ",");
     pluginRTASCategoryValue.referTo          (projectRoot, Ids::pluginRTASCategory,         getUndoManager(), getDefaultRTASCategories(),  ",");
     pluginAAXCategoryValue.referTo           (projectRoot, Ids::pluginAAXCategory,          getUndoManager(), getDefaultAAXCategories(),   ",");
+    pluginEnableARA.referTo                  (projectRoot, Ids::pluginARAContentType,       getUndoManager(), getDefaultARAContentTypes(), ",");
     pluginARAContentTypeValue.referTo        (projectRoot, Ids::pluginARAContentType,       getUndoManager(), getDefaultARAContentTypes(), ",");
     pluginARATransformFlagsValue.referTo     (projectRoot, Ids::pluginARATransformFlags,    getUndoManager(), getDefaultARAContentTypes(), ",");
 }
@@ -746,6 +747,7 @@ void Project::valueTreePropertyChanged (ValueTree& tree, const Identifier& prope
             pluginVST3CategoryValue.setDefault      (getDefaultVST3Categories());
             pluginRTASCategoryValue.setDefault      (getDefaultRTASCategories());
             pluginAAXCategoryValue.setDefault       (getDefaultAAXCategories());
+            pluginEnableARA.setDefault              (getDefaultEnableARA());
             pluginARAContentTypeValue.setDefault    (getDefaultARAContentTypes());
             pluginARATransformFlagsValue.setDefault (getDefaultARATransformationFlags());
 
@@ -1041,11 +1043,23 @@ void Project::createPropertyEditors (PropertyListBuilder& props)
 
 void Project::createAudioPluginPropertyEditors (PropertyListBuilder& props)
 {
-    props.add (new MultiChoicePropertyComponent (pluginFormatsValue, "Plugin Formats",
-                                                 { "VST", "VST3", "AU", "AUv3", "RTAS", "AAX", "Standalone", "Enable IAA" },
-                                                 { Ids::buildVST.toString(), Ids::buildVST3.toString(), Ids::buildAU.toString(), Ids::buildAUv3.toString(),
-                                                   Ids::buildRTAS.toString(), Ids::buildAAX.toString(), Ids::buildStandalone.toString(), Ids::enableIAA.toString() }),
-               "Plugin formats to build.");
+    if (getProjectType().isARAAudioPlugin())
+    {
+        props.add (new MultiChoicePropertyComponent (pluginFormatsValue, "Plugin Formats",
+        { "VST", "VST3", "AU", "AUv3", "RTAS", "AAX", "Standalone", "Enable IAA" },
+        { Ids::buildVST.toString(), Ids::buildVST3.toString(), Ids::buildAU.toString(), Ids::buildAUv3.toString(),
+                                                     Ids::buildRTAS.toString(), Ids::buildAAX.toString(), Ids::buildStandalone.toString(), Ids::enableIAA.toString() }),
+                   "Plugin formats to build.");
+    }
+    else
+    {
+        props.add (new MultiChoicePropertyComponent (pluginFormatsValue, "Plugin Formats",
+        { "VST", "VST3", "AU", "AUv3", "RTAS", "AAX", "Standalone", "Enable IAA", "Enable ARA" },
+        { Ids::buildVST.toString(), Ids::buildVST3.toString(), Ids::buildAU.toString(), Ids::buildAUv3.toString(),
+                                                     Ids::buildRTAS.toString(), Ids::buildAAX.toString(), Ids::buildStandalone.toString(), Ids::enableIAA.toString(),
+                                                     Ids::enableARA.toString() }),
+                   "Plugin formats to build.");
+    }
     props.add (new MultiChoicePropertyComponent (pluginCharacteristicsValue, "Plugin Characteristics",
                                                  { "Plugin is a Synth", "Plugin MIDI Input", "Plugin MIDI Output", "MIDI Effect Plugin", "Plugin Editor Requires Keyboard Focus",
                                                    "Disable RTAS Bypass", "Disable AAX Bypass", "Disable RTAS Multi-Mono", "Disable AAX Multi-Mono" },
@@ -1898,6 +1912,10 @@ Array<var> Project::getDefaultRTASCategories() const noexcept
     return getAllRTASCategoryVars()[getAllRTASCategoryStrings().indexOf ("ePlugInCategory_None")];
 }
 
+bool Project::getDefaultEnableARA() const noexcept
+{
+    return false;
+}
 StringArray Project::getAllARAContentTypeStrings() noexcept
 {
     static StringArray araContentTypes{
