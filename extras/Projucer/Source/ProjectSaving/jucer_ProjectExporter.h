@@ -156,6 +156,7 @@ public:
     String getGlobalVST3PathString() const                { return getAppSettings().getStoredPath (Ids::vst3Path).toString(); }
     String getGlobalRTASPathString() const                { return getAppSettings().getStoredPath (Ids::rtasPath).toString(); }
     String getGlobalAAXPathString() const                 { return getAppSettings().getStoredPath (Ids::aaxPath).toString(); }
+    String getGlobalARAPathString() const                 { return getAppSettings().getStoredPath (Ids::araPath).toString(); }
 
     // NB: this is the path to the parent "modules" folder that contains the named module, not the
     // module folder itself.

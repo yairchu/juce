@@ -411,7 +411,7 @@ void ProjectExporter::addAAXFoldersToPath()
 
 void ProjectExporter::addARAFoldersToPath()
 {
-    auto araFolder = String ("TODO: ARA Path");
+    auto araFolder = getGlobalARAPathString();
 
     if (araFolder.isNotEmpty())
         addToExtraSearchPaths (RelativePath (araFolder, RelativePath::projectFolder));
