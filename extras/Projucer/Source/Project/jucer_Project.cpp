@@ -1051,18 +1051,18 @@ void Project::createAudioPluginPropertyEditors (PropertyListBuilder& props)
     {
         props.add (new MultiChoicePropertyComponent (pluginFormatsValue, "Plugin Formats",
         { "VST3", "AU", "AUv3", "RTAS", "AAX", "Standalone", "Unity", "Enable IAA", "VST (legacy)" },
-                                                 { Ids::buildVST3.toString(), Ids::buildAU.toString(), Ids::buildAUv3.toString(),
-                                                   Ids::buildRTAS.toString(), Ids::buildAAX.toString(), Ids::buildStandalone.toString(), Ids::buildUnity.toString(),
-                                                   Ids::enableIAA.toString(), Ids::buildVST.toString() }),
+        { Ids::buildVST3.toString(), Ids::buildAU.toString(), Ids::buildAUv3.toString(),
+                                                     Ids::buildRTAS.toString(), Ids::buildAAX.toString(), Ids::buildStandalone.toString(), Ids::buildUnity.toString(),
+                                                     Ids::enableIAA.toString(), Ids::buildVST.toString() }),
                    "Plugin formats to build.");
     }
     else
     {
         props.add (new MultiChoicePropertyComponent (pluginFormatsValue, "Plugin Formats",
-        { "VST3", "AU", "AUv3", "RTAS", "AAX", "Standalone", "Unity", "Enable IAA", "VST (legacy)" },
-                                                 { Ids::buildVST3.toString(), Ids::buildAU.toString(), Ids::buildAUv3.toString(),
-                                                   Ids::buildRTAS.toString(), Ids::buildAAX.toString(), Ids::buildStandalone.toString(), Ids::buildUnity.toString(),
-                                                   Ids::enableIAA.toString(), Ids::enableARA.toString(), Ids::buildVST.toString() }),
+        { "VST3", "AU", "AUv3", "RTAS", "AAX", "Standalone", "Unity", "Enable IAA", "Enable ARA", "VST (legacy)" },
+        { Ids::buildVST3.toString(), Ids::buildAU.toString(), Ids::buildAUv3.toString(),
+                                                     Ids::buildRTAS.toString(), Ids::buildAAX.toString(), Ids::buildStandalone.toString(), Ids::buildUnity.toString(),
+                                                     Ids::enableIAA.toString(), Ids::enableARA.toString(), Ids::buildVST.toString() }),
                    "Plugin formats to build.");
     }
     props.add (new MultiChoicePropertyComponent (pluginCharacteristicsValue, "Plugin Characteristics",
