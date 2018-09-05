@@ -342,13 +342,6 @@ void ProjectExporter::createDependencyPathProperties (PropertyListBuilder& props
             props.add (new DependencyPathPropertyComponent (project.getFile().getParentDirectory(), getRTASPathValue(), "RTAS SDK Folder"),
                        "If you're building an RTAS, this must be the folder containing the RTAS SDK. This can be an absolute path, or a path relative to the Projucer project file.");
     }
-
-    if (project.shouldEnableARA())
-    {
-        if (dynamic_cast<DependencyPathValueSource*> (&getARAPathValue().getValueSource()) != nullptr)
-            props.add (new DependencyPathPropertyComponent (project.getFile().getParentDirectory(), getARAPathValue(), "ARA SDK Folder"),
-                       "If you're building an ARA plugin, this must be the folder containing the ARA SDK. This can be an absolute path, or a path relative to the Projucer project file.");
-    }
 }
 
 void ProjectExporter::createIconProperties (PropertyListBuilder& props)
@@ -437,7 +430,7 @@ void ProjectExporter::addAAXFoldersToPath()
 
 void ProjectExporter::addARAFoldersToPath()
 {
-    auto araFolder = getARAPathValue().toString();
+    auto araFolder = String ("TODO: ARA Path");
 
     if (araFolder.isNotEmpty())
         addToExtraSearchPaths (RelativePath (araFolder, RelativePath::projectFolder));
