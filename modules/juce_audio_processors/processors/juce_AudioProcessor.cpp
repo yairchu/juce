@@ -1642,6 +1642,11 @@ const ARA::PlugIn::PlugInExtension* AudioProcessor::getARAPlugInExtension() cons
 	return ARAPlugInExtension;
 }
 
+const ARA::PlugIn::DocumentController* AudioProcessor::getARADocumentController() const
+{
+	return ARAPlugInExtension ? ARAPlugInExtension->getDocumentController() : nullptr;
+}
+
 #endif // JucePlugin_Enable_ARA
 
 } // namespace juce

@@ -1781,6 +1781,7 @@ public:
 	virtual const ARA::PlugIn::PlugInExtension* createARAPlugInExtension(ARA::PlugIn::DocumentController* documentController, ARA::ARAPlugInInstanceRoleFlags knownRoles, ARA::ARAPlugInInstanceRoleFlags assignedRoles);
 	const ARA::PlugIn::PlugInExtension* _createARAPlugInExtension(ARA::PlugIn::DocumentController* documentController, ARA::ARAPlugInInstanceRoleFlags knownRoles, ARA::ARAPlugInInstanceRoleFlags assignedRoles);
 	const ARA::PlugIn::PlugInExtension* getARAPlugInExtension() const;
+	const ARA::PlugIn::DocumentController* getARADocumentController() const;
 private:
 	const ARA::PlugIn::PlugInExtension* ARAPlugInExtension{ nullptr };
 #endif
