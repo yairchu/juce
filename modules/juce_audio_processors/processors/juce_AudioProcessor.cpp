@@ -62,10 +62,10 @@ AudioProcessor::~AudioProcessor()
    #endif
 
 #if JucePlugin_Enable_ARA
-	if (ARAPlugInExtension)
+	if (araPlugInExtension)
 	{
-		delete ARAPlugInExtension;
-		ARAPlugInExtension = nullptr;
+		delete araPlugInExtension;
+		araPlugInExtension = nullptr;
 	}
 #endif // JucePlugin_Enable_ARA
 }
@@ -1627,24 +1627,34 @@ void AudioPlayHead::CurrentPositionInfo::resetToDefault()
 
 const ARA::PlugIn::PlugInExtension* AudioProcessor::createARAPlugInExtension(ARA::PlugIn::DocumentController* documentController, ARA::ARAPlugInInstanceRoleFlags knownRoles, ARA::ARAPlugInInstanceRoleFlags assignedRoles)
 {
-	ARAPlugInExtension = ARA::PlugIn::PlugInExtension::createWithRoles (documentController, knownRoles, assignedRoles);
-	return ARAPlugInExtension;
+	araPlugInExtension = ARA::PlugIn::PlugInExtension::createWithRoles (documentController, knownRoles, assignedRoles);
+	return araPlugInExtension;
 }
 
 const ARA::PlugIn::PlugInExtension* AudioProcessor::_createARAPlugInExtension(ARA::PlugIn::DocumentController* documentController, ARA::ARAPlugInInstanceRoleFlags knownRoles, ARA::ARAPlugInInstanceRoleFlags assignedRoles)
 {
-	ARAPlugInExtension = createARAPlugInExtension(documentController, knownRoles, assignedRoles);
-	return ARAPlugInExtension;
+	araPlugInExtension = createARAPlugInExtension(documentController, knownRoles, assignedRoles);
+	return araPlugInExtension;
 }
 
 const ARA::PlugIn::PlugInExtension* AudioProcessor::getARAPlugInExtension() const
 {
-	return ARAPlugInExtension;
+	return araPlugInExtension;
 }
 
-const ARA::PlugIn::DocumentController* AudioProcessor::getARADocumentController() const
+const ARA::PlugIn::PlaybackRenderer* AudioProcessor::getARAPlaybackRenderer() const
 {
-	return ARAPlugInExtension ? ARAPlugInExtension->getDocumentController() : nullptr;
+	return araPlugInExtension ? araPlugInExtension->getPlaybackRenderer() : nullptr;
+}
+
+const ARA::PlugIn::EditorRenderer* AudioProcessor::getARAEditorRenderer () const
+{
+    return araPlugInExtension ? araPlugInExtension->getEditorRenderer () : nullptr;
+}
+
+const ARA::PlugIn::EditorView* AudioProcessor::getARAEditorView () const
+{
+    return araPlugInExtension ? araPlugInExtension->getEditorView () : nullptr;
 }
 
 #endif // JucePlugin_Enable_ARA
