@@ -207,4 +207,14 @@ void AudioProcessorEditor::setScaleFactor (float newScale)
     editorResized (true);
 }
 
+//==============================================================================
+#if JucePlugin_Enable_ARA
+
+const ARA::PlugIn::EditorView* AudioProcessorEditor::getARAEditorView () const
+{
+    return processor.getARAEditorView ();
+}
+
+#endif // JucePlugin_Enable_ARA
+
 } // namespace juce
