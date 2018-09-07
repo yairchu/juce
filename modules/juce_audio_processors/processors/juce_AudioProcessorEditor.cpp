@@ -210,7 +210,7 @@ void AudioProcessorEditor::setScaleFactor (float newScale)
 //==============================================================================
 #if JucePlugin_Enable_ARA
 
-const ARA::PlugIn::EditorView* AudioProcessorEditor::getARAEditorView () const
+ARA::PlugIn::EditorView* AudioProcessorEditor::getARAEditorView () const
 {
     return processor.getARAEditorView ();
 }
