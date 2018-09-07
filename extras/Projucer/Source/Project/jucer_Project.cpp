@@ -338,7 +338,7 @@ void Project::updateOldModulePaths()
 Array<Identifier> Project::getLegacyPluginFormatIdentifiers() noexcept
 {
     static Array<Identifier> legacyPluginFormatIdentifiers { Ids::buildVST, Ids::buildVST3, Ids::buildAU, Ids::buildAUv3,
-                                                             Ids::buildRTAS, Ids::buildAAX, Ids::buildStandalone, Ids::enableIAA };
+                                                             Ids::buildRTAS, Ids::buildAAX, Ids::buildStandalone, Ids::enableIAA, Ids::enableARA };
 
     return legacyPluginFormatIdentifiers;
 }
@@ -1043,23 +1043,18 @@ void Project::createPropertyEditors (PropertyListBuilder& props)
 
 void Project::createAudioPluginPropertyEditors (PropertyListBuilder& props)
 {
-    if (getProjectType().isARAAudioPlugin())
     {
-        props.add (new MultiChoicePropertyComponent (pluginFormatsValue, "Plugin Formats",
-        { "VST", "VST3", "AU", "AUv3", "RTAS", "AAX", "Standalone", "Enable IAA" },
-        { Ids::buildVST.toString(), Ids::buildVST3.toString(), Ids::buildAU.toString(), Ids::buildAUv3.toString(),
-                                                     Ids::buildRTAS.toString(), Ids::buildAAX.toString(), Ids::buildStandalone.toString(), Ids::enableIAA.toString() }),
-                   "Plugin formats to build.");
+        StringArray pluginFormatChoices{ "VST", "VST3", "AU", "AUv3", "RTAS", "AAX", "Standalone", "Enable IAA" };
+        Array<var> pluginFormatChoiceValues{ Ids::buildVST.toString(), Ids::buildVST3.toString(), Ids::buildAU.toString(), Ids::buildAUv3.toString(),
+                                             Ids::buildRTAS.toString(), Ids::buildAAX.toString(), Ids::buildStandalone.toString(), Ids::enableIAA.toString() };
+        if (!getProjectType().isARAAudioPlugin())
+        {
+            pluginFormatChoices.add ("Enable ARA");
+            pluginFormatChoiceValues.add (Ids::enableARA.toString());
+        }
+        props.add (new MultiChoicePropertyComponent (pluginFormatsValue, "Plugin Formats", pluginFormatChoices, pluginFormatChoiceValues), "Plugin formats to build.");
     }
-    else
-    {
-        props.add (new MultiChoicePropertyComponent (pluginFormatsValue, "Plugin Formats",
-        { "VST", "VST3", "AU", "AUv3", "RTAS", "AAX", "Standalone", "Enable IAA", "Enable ARA" },
-        { Ids::buildVST.toString(), Ids::buildVST3.toString(), Ids::buildAU.toString(), Ids::buildAUv3.toString(),
-                                                     Ids::buildRTAS.toString(), Ids::buildAAX.toString(), Ids::buildStandalone.toString(), Ids::enableIAA.toString(),
-                                                     Ids::enableARA.toString() }),
-                   "Plugin formats to build.");
-    }
+
     props.add (new MultiChoicePropertyComponent (pluginCharacteristicsValue, "Plugin Characteristics",
                                                  { "Plugin is a Synth", "Plugin MIDI Input", "Plugin MIDI Output", "MIDI Effect Plugin", "Plugin Editor Requires Keyboard Focus",
                                                    "Disable RTAS Bypass", "Disable AAX Bypass", "Disable RTAS Multi-Mono", "Disable AAX Multi-Mono" },
