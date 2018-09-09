@@ -24,6 +24,10 @@
   ==============================================================================
 */
 
+#if JucePlugin_Enable_ARA
+ #include <ARA_Library/PlugIn/ARAPlug.h>
+#endif
+
 namespace juce
 {
 
@@ -228,6 +232,16 @@ private:
     ComponentBoundsConstrainer defaultConstrainer;
     ComponentBoundsConstrainer* constrainer = {};
     Component::SafePointer<Component> splashScreen;
+
+
+	//==============================================================================
+#if JucePlugin_Enable_ARA
+public:
+    ARA::PlugIn::EditorView* getARAEditorView() const;
+
+    inline bool isARAEditorView() const { return getARAEditorView() != nullptr; }
+#endif
+	//==============================================================================
 
     JUCE_DECLARE_NON_COPYABLE (AudioProcessorEditor)
 };

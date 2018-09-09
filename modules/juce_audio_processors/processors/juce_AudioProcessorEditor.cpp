@@ -227,4 +227,14 @@ ComponentPeer* AudioProcessorEditor::createNewPeer (int styleFlags, void* native
     return Component::createNewPeer (styleFlags, nativeWindow);
 }
 
+//==============================================================================
+#if JucePlugin_Enable_ARA
+
+ARA::PlugIn::EditorView* AudioProcessorEditor::getARAEditorView () const
+{
+    return processor.getARAEditorView ();
+}
+
+#endif // JucePlugin_Enable_ARA
+
 } // namespace juce
