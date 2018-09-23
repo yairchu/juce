@@ -81,10 +81,10 @@ void ProjucerApplication::initialise (const String& commandLine)
                               + "MHz  Cores: " + String (SystemStats::getNumCpus())
                               + "  " + String (SystemStats::getMemorySizeInMegabytes()) + "MB");
 
+        initialiseBasics();
+
         isRunningCommandLine = commandLine.isNotEmpty()
                                 && ! commandLine.startsWith ("-NSDocumentRevisionsDebugMode");
-
-        initialiseBasics();
 
         licenseController.reset (new LicenseController);
         licenseController->addLicenseStatusChangedCallback (this);
@@ -943,7 +943,7 @@ void ProjucerApplication::getCommandInfo (CommandID commandID, ApplicationComman
 
     case CommandIDs::newPIP:
         result.setInfo ("New PIP...", "Opens the PIP Creator utility for creating a new PIP", CommandCategories::general, 0);
-            result.defaultKeypresses.add (KeyPress ('p', ModifierKeys::commandModifier | ModifierKeys::shiftModifier, 0));
+        result.defaultKeypresses.add (KeyPress ('p', ModifierKeys::commandModifier | ModifierKeys::shiftModifier, 0));
         break;
 
     case CommandIDs::launchDemoRunner:
