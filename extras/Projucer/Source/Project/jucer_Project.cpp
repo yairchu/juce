@@ -338,7 +338,7 @@ void Project::updateOldModulePaths()
 Array<Identifier> Project::getLegacyPluginFormatIdentifiers() noexcept
 {
     static Array<Identifier> legacyPluginFormatIdentifiers { Ids::buildVST, Ids::buildVST3, Ids::buildAU, Ids::buildAUv3,
-                                                             Ids::buildRTAS, Ids::buildAAX, Ids::buildStandalone, Ids::enableIAA, Ids::enableARA };
+                                                             Ids::buildRTAS, Ids::buildAAX, Ids::buildStandalone, Ids::enableIAA };
 
     return legacyPluginFormatIdentifiers;
 }
@@ -364,7 +364,16 @@ void Project::coalescePluginFormatValues()
 
     if (formatsToBuild.size() > 0)
     {
-        pluginFormatsValue = formatsToBuild;
+        if (pluginFormatsValue.isUsingDefault())
+        {
+            pluginFormatsValue = formatsToBuild;
+        }
+        else
+        {
+            auto formatVar = pluginFormatsValue.get();
+            if (auto* arr = formatVar.getArray())
+                arr->addArray(formatsToBuild);
+        }
         shouldWriteLegacyPluginFormatSettings = true;
     }
 }
