@@ -445,10 +445,10 @@ public:
     //==============================================================================
     void initialiseDependencyPathValues() override
     {
-        vst3Path.referTo (Value (new DependencyPathValueSource (getSetting (Ids::vst3Folder), Ids::vst3Path, TargetOS::osx)));
-        aaxPath. referTo (Value (new DependencyPathValueSource (getSetting (Ids::aaxFolder),  Ids::aaxPath,  TargetOS::osx)));
-        rtasPath.referTo (Value (new DependencyPathValueSource (getSetting (Ids::rtasFolder), Ids::rtasPath, TargetOS::osx)));
-        araPath. referTo (Value (new DependencyPathValueSource (getSetting (Ids::araFolder), Ids::araPath, TargetOS::osx)));
+        vst3PathValueWrapper.init (Ids::vst3Path, TargetOS::osx);
+        aaxPathValueWrapper .init (Ids::aaxPath,  TargetOS::osx);
+        rtasPathValueWrapper.init (Ids::rtasPath, TargetOS::osx);
+        araPathValueWrapper .init (Ids::araPath,  TargetOS::osx);
     }
 
 protected:
@@ -1676,7 +1676,7 @@ public:
         {
             if (type == AAXPlugIn)
             {
-                auto aaxLibsFolder = RelativePath (owner.getAAXPathValue().toString(), RelativePath::projectFolder).getChildFile ("Libs");
+                auto aaxLibsFolder = RelativePath (owner.getAAXPathString(), RelativePath::projectFolder).getChildFile ("Libs");
 
                 String libraryPath (config.isDebug() ? "Debug" : "Release");
                 libraryPath += "/libAAXLibrary_libcpp.a";
@@ -1686,7 +1686,7 @@ public:
             else if (type == RTASPlugIn)
             {
                 auto rtasFolder
-                    = RelativePath (owner.getRTASPathValue().toString(), RelativePath::projectFolder)
+                    = RelativePath (owner.getRTASPathString(), RelativePath::projectFolder)
                         .getChildFile ("MacBag").getChildFile ("Libs");
 
                 String libraryPath (config.isDebug() ? "Debug/libPluginLibrary" : "Release/libPluginLibrary");
@@ -1702,7 +1702,7 @@ public:
 
             if (type == RTASPlugIn)
             {
-                RelativePath rtasFolder (owner.getRTASPathValue().toString(), RelativePath::projectFolder);
+                RelativePath rtasFolder (owner.getRTASPathString(), RelativePath::projectFolder);
 
                 targetExtraSearchPaths.add ("$(DEVELOPER_DIR)/Headers/FlatCarbon");
                 targetExtraSearchPaths.add ("$(SDKROOT)/Developer/Headers/FlatCarbon");
