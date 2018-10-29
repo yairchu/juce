@@ -170,43 +170,27 @@ bool ARARegionSequence::Reader::readSamples (
     if (! sequence)
         return false;
 
-    if (sampleBuffer.getNumSamples() < numSamples || sampleBuffer.getNumChannels() < numDestChannels)
-        sampleBuffer.setSize (numDestChannels, numSamples, false, false, true);
-
-    const double start = (double) startSampleInFile / sampleRate;
-    const double stop = (double) (startSampleInFile + (int64) numSamples) / sampleRate;
-
-    // Fill in content from relevant regions
-    for (ARA::PlugIn::PlaybackRegion* region : sequence->getPlaybackRegions())
-    {
-        if (region->getEndInPlaybackTime() <= start || region->getStartInPlaybackTime() >= stop)
-            continue;
-
-        const int64 regionStartSample = region->getStartInPlaybackSamples (sampleRate);
-
-        AudioFormatReader* sourceReader = sourceReaders[region->getAudioModification()->getAudioSource()];
-        jassert (sourceReader != nullptr);
-
-        const int64 startSampleInRegion = std::max ((int64) 0, startSampleInFile - regionStartSample);
-        const int destOffest = (int) std::max ((int64) 0, regionStartSample - startSampleInFile);
-        const int numRegionSamples = std::min (
-            (int) (region->getDurationInPlaybackSamples (sampleRate) - startSampleInRegion),
-            numSamples - destOffest);
-        if (! sourceReader->read (
-            (int**) sampleBuffer.getArrayOfWritePointers(),
-            numDestChannels,
-            region->getStartInAudioModificationSamples() + startSampleInRegion,
-            numRegionSamples,
-            false))
-            return false;
-        for (int chan_i = 0; chan_i < numDestChannels; ++chan_i)
-            if (float* destBuf = (float*) destSamples[chan_i])
-                FloatVectorOperations::add (
-                    destBuf + startOffsetInDestBuffer + destOffest,
-                    sampleBuffer.getReadPointer (chan_i), numRegionSamples);
-    }
-
-    return true;
+    return renderPlaybackRegionsSamples (
+        [=](ARA::PlugIn::PlaybackRegion* region, int64 startSampleInRegion, int numRegionSamples)
+        {
+            ARA::PlugIn::AudioSource* source = region->getAudioModification()->getAudioSource();
+            if (source->getSampleRate() != sampleRate)
+            {
+                // Skip regions with wrong sample rate.
+                buf_.clear (0, numRegionSamples);
+                return true;
+            }
+            AudioFormatReader* sourceReader = sourceReaders_[source];
+            jassert (sourceReader != nullptr);
+            return sourceReader->read (
+                (int**) buf_.getArrayOfWritePointers(),
+                numDestChannels,
+                region->getStartInAudioModificationSamples() + startSampleInRegion,
+                numRegionSamples,
+                false);
+        },
+        sequence->getPlaybackRegions(), sampleRate, &buf_,
+        (float**) destSamples, numDestChannels, startOffsetInDestBuffer, startSampleInFile, numSamples);
 }
 
 } // namespace juce
