@@ -11,12 +11,11 @@
 #pragma once
 
 #include "../JuceLibraryCode/JuceHeader.h"
-#include "juce_audio_plugin_client/ARA/juce_ARAAudioProcessor.h"
 
 //==============================================================================
 /**
 */
-class ArasampleProjectAudioProcessor  : public ARAAudioProcessor
+class ArasampleProjectAudioProcessor  : public AudioProcessor
 {
 public:
     //==============================================================================
