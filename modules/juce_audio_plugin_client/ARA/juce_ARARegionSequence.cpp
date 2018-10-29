@@ -161,11 +161,6 @@ bool ARARegionSequence::Reader::readSamples (
     int64 startSampleInFile,
     int numSamples)
 {
-    // Clear buffers
-    for (int i = 0; i < numDestChannels; ++i)
-        if (float* destBuf = (float*) destSamples[i])
-            FloatVectorOperations::clear (destBuf + startOffsetInDestBuffer, numSamples);
-
     Ref::ScopedAccess sequence (ref, true);
     if (! sequence)
         return false;
