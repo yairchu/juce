@@ -316,6 +316,11 @@ void ProjectExporter::createPropertyEditors (PropertyListBuilder& props)
             props.add (new FilePathPropertyComponent (rtasPathValueWrapper.wrappedValue, "RTAS SDK Folder", true, getTargetOSForExporter() == TargetOS::getThisOS()),
                        "If you're building an RTAS plug-in, this must be the folder containing the RTAS SDK. This can be an absolute path, or a path relative to the Projucer project file.");
         }
+        if (project.shouldEnableARA())
+        {
+            props.add (new FilePathPropertyComponent (araPathValueWrapper.wrappedValue, "ARA SDK Folder", true, getTargetOSForExporter() == TargetOS::getThisOS()),
+                       "If you're building an ARA enabled plug-in, this must be the folder containing the ARA SDK. This can be an absolute path, or a path relative to the Projucer project file.");
+        }
 
         props.add (new TextPropertyComponent (extraPPDefsValue, "Extra Preprocessor Definitions", 32768, true),
                    "Extra preprocessor definitions. Use the form \"NAME1=value NAME2=value\", using whitespace, commas, "
@@ -393,6 +398,9 @@ void ProjectExporter::addCommonAudioPluginSettings()
     if (shouldBuildTargetType (ProjectType::Target::AAXPlugIn))
         addAAXFoldersToPath();
 
+    if (project.shouldEnableARA())
+        addARAFoldersToPath();
+
     // Note: RTAS paths are platform-dependent, impl -> addPlatformSpecificSettingsForProjectType
  }
 
@@ -425,6 +433,14 @@ void ProjectExporter::addAAXFoldersToPath()
         addToExtraSearchPaths (aaxFolderPath.getChildFile ("Interfaces"));
         addToExtraSearchPaths (aaxFolderPath.getChildFile ("Interfaces").getChildFile ("ACF"));
     }
+}
+
+void ProjectExporter::addARAFoldersToPath()
+{
+    auto araFolder = getARAPathString();
+
+    if (araFolder.isNotEmpty())
+        addToExtraSearchPaths (RelativePath (araFolder, RelativePath::projectFolder));
 }
 
 //==============================================================================
@@ -470,6 +486,11 @@ void ProjectExporter::addTargetSpecificPreprocessorDefs (StringPairArray& defs, 
     {
         for (auto& flag : targetFlags)
             defs.set (flag.first, (targetType == flag.second ? "1" : "0"));
+    }
+
+    if (project.shouldEnableARA())
+    {
+        defs.set("JucePlugin_Enable_ARA", "1");
     }
 }
 

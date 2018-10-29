@@ -156,6 +156,7 @@ public:
     String getVST3PathString() const                      { return vst3PathValueWrapper.wrappedValue.get(); }
     String getAAXPathString() const                       { return aaxPathValueWrapper.wrappedValue.get(); }
     String getRTASPathString() const                      { return rtasPathValueWrapper.wrappedValue.get(); }
+    String getARAPathString() const                       { return araPathValueWrapper.wrappedValue.get(); }
 
     // NB: this is the path to the parent "modules" folder that contains the named module, not the
     // module folder itself.
@@ -368,7 +369,6 @@ protected:
     const ProjectType& projectType;
     const String projectName;
     const File projectFolder;
-
     //==============================================================================
     // Wraps a ValueWithDefault object that has a default which depends on a global value.
     // Used for the VST3, RTAS and AAX project-specific path options.
@@ -397,7 +397,8 @@ protected:
         TargetOS::OS os;
     };
 
-    ValueWithDefaultWrapper vst3PathValueWrapper, rtasPathValueWrapper, aaxPathValueWrapper;
+    ValueWithDefaultWrapper vst3PathValueWrapper, rtasPathValueWrapper, aaxPathValueWrapper, 
+                            araPathValueWrapper;
 
     ValueWithDefault targetLocationValue, extraCompilerFlagsValue, extraLinkerFlagsValue, externalLibrariesValue,
                      userNotesValue, gnuExtensionsValue, bigIconValue, smallIconValue, extraPPDefsValue;
@@ -476,6 +477,7 @@ private:
     RelativePath getInternalVST3SDKPath();
     void addVST3FolderToPath();
     void addAAXFoldersToPath();
+    void addARAFoldersToPath();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ProjectExporter)
 };

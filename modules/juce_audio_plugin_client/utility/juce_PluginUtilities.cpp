@@ -32,6 +32,10 @@
 #include "../utility/juce_CheckSettingMacros.h"
 #include "juce_IncludeModuleHeaders.h"
 
+#if JucePlugin_Enable_ARA
+ #include "../ARA/juce_ARA_audio_plugin.cpp"
+#endif
+
 using namespace juce;
 
 namespace juce
@@ -171,6 +175,10 @@ AudioProcessor* JUCE_API JUCE_CALLTYPE createPluginFilterOfType (AudioProcessor:
 
     // your createPluginFilter() method must return an object!
     jassert (pluginInstance != nullptr && pluginInstance->wrapperType == type);
+
+#if JucePlugin_Enable_ARA
+    jassert (dynamic_cast<ARAAudioProcessor*> (pluginInstance) != nullptr);
+#endif
 
     return pluginInstance;
 }

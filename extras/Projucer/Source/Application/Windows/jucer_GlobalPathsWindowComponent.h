@@ -150,7 +150,8 @@ public:
 
 private:
     ValueWithDefault jucePathValue, juceModulePathValue, userModulePathValue, vst3PathValue, rtasPathValue, aaxPathValue,
-                     androidSDKPathValue, androidNDKPathValue, clionExePathValue, androidStudioExePathValue;
+                     androidSDKPathValue, androidNDKPathValue, clionExePathValue, androidStudioExePathValue,
+                     araPathValue;
 
     OwnedArray<Label> pathPropertyLabels;
     OwnedArray<PropertyComponent> pathPropertyComponents;
@@ -227,11 +228,16 @@ private:
 
             addAndMakeVisible (pathPropertyComponents.add (new FilePathPropertyComponent (Value(), "RTAS SDK", true, isThisOS)));
             pathPropertyComponents.getLast()->setEnabled (false);
+
+            addAndMakeVisible (pathPropertyComponents.add (new FilePathPropertyComponent (Value(), "ARA SDK", true)));
+            pathPropertyComponents.getLast()->setEnabled (false);
         }
         else
         {
             addAndMakeVisible (pathPropertyComponents.add (new FilePathPropertyComponent (aaxPathValue,  "AAX SDK", true, isThisOS)));
             addAndMakeVisible (pathPropertyComponents.add (new FilePathPropertyComponent (rtasPathValue, "RTAS SDK", true, isThisOS)));
+
+            addAndMakeVisible (pathPropertyComponents.add (new FilePathPropertyComponent (araPathValue, "ARA SDK", true)));
         }
 
         addAndMakeVisible (pathPropertyComponents.add (new FilePathPropertyComponent (androidSDKPathValue, "Android SDK", true, isThisOS)));
@@ -275,6 +281,7 @@ private:
         vst3PathValue             = settings.getStoredPath (Ids::vst3Path, os);
         rtasPathValue             = settings.getStoredPath (Ids::rtasPath, os);
         aaxPathValue              = settings.getStoredPath (Ids::aaxPath, os);
+        araPathValue              = settings.getStoredPath (Ids::araPath, os);
         androidSDKPathValue       = settings.getStoredPath (Ids::androidSDKPath, os);
         androidNDKPathValue       = settings.getStoredPath (Ids::androidNDKPath, os);
         clionExePathValue         = settings.getStoredPath (Ids::clionExePath, os);

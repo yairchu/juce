@@ -265,9 +265,6 @@ void StoredSettings::changed (bool isProjectDefaults)
 {
     std::unique_ptr<XmlElement> data (isProjectDefaults ? projectDefaults.createXml()
                                                         : fallbackPaths.createXml());
-
-    propertyFiles.getUnchecked (0)->setValue (isProjectDefaults ? "PROJECT_DEFAULT_SETTINGS" : "FALLBACK_PATHS",
-                                              data.get());
 }
 
 //==============================================================================
@@ -292,6 +289,10 @@ static bool isGlobalPathValid (const File& relativeTo, const Identifier& key, co
     else if (key == Ids::aaxPath)
     {
         fileToCheckFor = "Interfaces/AAX_Exports.cpp";
+    }
+    else if (key == Ids::araPath)
+    {
+        fileToCheckFor = "ARA_API/ARAInterface.h";
     }
     else if (key == Ids::androidSDKPath)
     {
@@ -406,6 +407,12 @@ static String getFallbackPathForOS (const Identifier& key, DependencyPathOS os)
         if      (os == TargetOS::windows)  return "C:\\SDKs\\AAX";
         else if (os == TargetOS::osx)      return "~/SDKs/AAX";
         else                               return {}; // no AAX on this OS!
+    }
+    else if (key == Ids::araPath)
+    {
+        if      (os == TargetOS::windows)  return "C:\\SDKs\\ARA";
+        else if (os == TargetOS::osx)      return "~/SDKs/ARA";
+        else                               return {}; // no ARA on this OS!
     }
     else if (key == Ids::androidSDKPath)
     {
