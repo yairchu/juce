@@ -557,6 +557,8 @@ void Project::warnAboutOldProjucerVersion()
                                                   "\n\n"
                                                   "Always make sure that you're running the very latest version, "
                                                   "preferably compiled directly from the JUCE repository that you're working with!");
+
+            return;
         }
     }
 }
@@ -1069,7 +1071,7 @@ void Project::createPropertyEditors (PropertyListBuilder& props)
 
 void Project::createAudioPluginPropertyEditors (PropertyListBuilder& props)
 {
-    StringArray pluginFormatChoices{ "VST3", "AU", "AUv3", "RTAS", "AAX", "Standalone", "Unity", "Enable IAA", "VST (legacy)" };
+    StringArray pluginFormatChoices{ "VST3", "AU", "AUv3", "RTAS", "AAX", "Standalone", "Unity", "Enable IAA", "VST (Legacy)" };
     Array<var> pluginFormatChoiceValues{ Ids::buildVST3.toString(), Ids::buildAU.toString(), Ids::buildAUv3.toString(),
         Ids::buildRTAS.toString(), Ids::buildAAX.toString(), Ids::buildStandalone.toString(), Ids::buildUnity.toString(),
         Ids::enableIAA.toString(), Ids::buildVST.toString() };
@@ -1079,7 +1081,7 @@ void Project::createAudioPluginPropertyEditors (PropertyListBuilder& props)
         pluginFormatChoiceValues.add (Ids::enableARA.toString());
     }
     props.add (new MultiChoicePropertyComponent (pluginFormatsValue, "Plugin Formats", pluginFormatChoices, pluginFormatChoiceValues), 
-               "Plugin formats to build. If you have selected \"VST (legacy)\" then you will need to ensure that you have a VST2 SDK "
+               "Plugin formats to build. If you have selected \"VST (Legacy)\" then you will need to ensure that you have a VST2 SDK "
                "in your header search paths. The VST2 SDK can be obtained from the vstsdk3610_11_06_2018_build_37 (or older) VST3 SDK "
                "or JUCE version 5.3.2. You also need a VST2 license from Steinberg to distribute VST2 plug-ins.");
 
@@ -1136,7 +1138,7 @@ void Project::createAudioPluginPropertyEditors (PropertyListBuilder& props)
         for (auto s : getAllVSTCategoryStrings())
             vstCategoryVars.add (s);
 
-        props.add (new MultiChoicePropertyComponent (pluginVSTCategoryValue, "Plugin VST (legacy) Category", getAllVSTCategoryStrings(), vstCategoryVars, 1),
+        props.add (new MultiChoicePropertyComponent (pluginVSTCategoryValue, "Plugin VST (Legacy) Category", getAllVSTCategoryStrings(), vstCategoryVars, 1),
                    "VST category.");
     }
 
@@ -1694,7 +1696,8 @@ static String getCompanyNameOrDefault (StringRef str)
 
 String Project::getDefaultBundleIdentifierString() const
 {
-    return "com." + getCompanyNameOrDefault (getCompanyNameString()) + "." + CodeHelpers::makeValidIdentifier (getProjectNameString(), false, true, false);
+    return "com." + CodeHelpers::makeValidIdentifier (getCompanyNameOrDefault (getCompanyNameString()), false, true, false)
+            + "." + CodeHelpers::makeValidIdentifier (getProjectNameString(), false, true, false);
 }
 
 String Project::getDefaultPluginManufacturerString() const
@@ -2068,12 +2071,15 @@ EnabledModuleList& Project::getEnabledModules()
     return *enabledModuleList;
 }
 
-static Array<File> getAllPossibleModulePathsFromExporters (Project& project)
+static StringArray getModulePathsFromExporters (Project& project, bool onlyThisOS)
 {
     StringArray paths;
 
     for (Project::ExporterIterator exporter (project); exporter.next();)
     {
+        if (onlyThisOS && ! exporter->mayCompileOnCurrentOS())
+            continue;
+
         auto& modules = project.getEnabledModules();
         auto n = modules.getNumModules();
 
@@ -2096,9 +2102,19 @@ static Array<File> getAllPossibleModulePathsFromExporters (Project& project)
             paths.addIfNotAlreadyThere (oldPath);
     }
 
+    return paths;
+}
+
+static Array<File> getExporterModulePathsToScan (Project& project)
+{
+    auto exporterPaths = getModulePathsFromExporters (project, true);
+
+    if (exporterPaths.isEmpty())
+        exporterPaths = getModulePathsFromExporters (project, false);
+
     Array<File> files;
 
-    for (auto& path : paths)
+    for (auto& path : exporterPaths)
     {
         auto f = project.resolveFilename (path);
 
@@ -2122,9 +2138,9 @@ AvailableModuleList& Project::getExporterPathsModuleList()
 void Project::rescanExporterPathModules (bool async)
 {
     if (async)
-        exporterPathsModuleList->scanPathsAsync (getAllPossibleModulePathsFromExporters (*this));
+        exporterPathsModuleList->scanPathsAsync (getExporterModulePathsToScan (*this));
     else
-        exporterPathsModuleList->scanPaths (getAllPossibleModulePathsFromExporters (*this));
+        exporterPathsModuleList->scanPaths (getExporterModulePathsToScan (*this));
 }
 
 ModuleIDAndFolder Project::getModuleWithID (const String& id)
