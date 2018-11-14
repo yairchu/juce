@@ -26,6 +26,8 @@ public:
     // Needs to be called in the document controller's `didEnableAudioSourceSamplesAccess` method.
     void didEnableSamplesAccess (bool enable);
 
+    std::unique_ptr<BufferingAudioSource> createBufferingAudioSource(TimeSliceThread& thread, int bufferSize);
+
 private:
     void invalidateReaders();
 
@@ -37,9 +39,9 @@ private:
     // Active readers.
     std::vector<Reader*> readers;
 
-#if JUCE_DEBUG
+   #if JUCE_DEBUG
     bool stateUpdateProperties = false, stateEnableSamplesAccess = false;
-#endif
+   #endif
 };
 
 } // namespace juce

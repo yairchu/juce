@@ -75,24 +75,10 @@ namespace Vst2
 //==============================================================================
 #if JucePlugin_Enable_ARA
  
- #include "../ARA/juce_ARAAudioProcessor.h"
-
- #if JUCE_MSVC
-  #pragma warning (push)
-  #pragma warning (disable: 4310)
- #elif __clang__
-  #pragma clang diagnostic push
-  #pragma clang diagnostic ignored "-Wnon-virtual-dtor"
- #endif
+ #include "../ARA/juce_AudioProcessorARAExtension.h"
 
  #include <ARA_API/ARAVST3.h>
 
- #if JUCE_MSVC
-  #pragma warning (pop)
- #elif __clang__
-  #pragma clang diagnostic pop
- #endif
- 
  #if ARA_SUPPORT_VERSION_1
   #error "Unsupported ARA version - ARA version 2 and onward are JUCE compatible"
  #endif
@@ -2624,8 +2610,8 @@ private:
     const ARA::ARAPlugInExtensionInstance* PLUGIN_API bindToDocumentControllerWithRoles (ARA::ARADocumentControllerRef documentControllerRef,
                                                                                          ARA::ARAPlugInInstanceRoleFlags knownRoles, ARA::ARAPlugInInstanceRoleFlags assignedRoles) SMTG_OVERRIDE
     {
-        ARAAudioProcessor* araAudioProcessor = static_cast<ARAAudioProcessor*> (pluginInstance);
-        return araAudioProcessor->createARAPlugInExtension (documentControllerRef, knownRoles, assignedRoles);
+        AudioProcessorARAExtension* araAudioProcessorExtension = dynamic_cast<AudioProcessorARAExtension*>(pluginInstance);
+        return araAudioProcessorExtension->createARAPlugInExtension (documentControllerRef, knownRoles, assignedRoles);
     }
 
 #endif

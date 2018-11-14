@@ -12,16 +12,16 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "PluginProcessor.h"
-
-#include "juce_audio_plugin_client/ARA/juce_ARAAudioProcessor.h"
-
 #include "AudioView.h"
 #include "PluginARADocumentController.h"
 
 //==============================================================================
 /**
 */
-class ArasampleProjectAudioProcessorEditor  : public ARAAudioProcessorEditor
+class ArasampleProjectAudioProcessorEditor  : public AudioProcessorEditor
+#if JucePlugin_Enable_ARA
+     , public AudioProcessorEditorARAExtension
+#endif
 {
 public:
     ArasampleProjectAudioProcessorEditor (ArasampleProjectAudioProcessor&);

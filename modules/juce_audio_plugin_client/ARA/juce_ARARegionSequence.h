@@ -37,9 +37,9 @@ private:
     // Used to unlock old sequence for region in `didUpdatePlaybackRegionProperties`.
     ARARegionSequence* prevSequenceForNewPlaybackRegion;
 
-#if JUCE_DEBUG
+   #if JUCE_DEBUG
     static bool stateUpdatePlaybackRegionProperties;
-#endif
+   #endif
 };
 
 // Utility function for rendering samples for a vector of `PlaybackRegion`s.

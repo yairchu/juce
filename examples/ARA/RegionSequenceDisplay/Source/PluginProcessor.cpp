@@ -14,7 +14,7 @@
 //==============================================================================
 ArasampleProjectAudioProcessor::ArasampleProjectAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
-     : ARAAudioProcessor (BusesProperties()
+     : AudioProcessor (BusesProperties()
                      #if ! JucePlugin_IsMidiEffect
                       #if ! JucePlugin_IsSynth
                        .withInput  ("Input",  AudioChannelSet::stereo(), true)
@@ -144,7 +144,12 @@ void ArasampleProjectAudioProcessor::processBlock (AudioBuffer<float>& buffer, M
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // This ARA plug-in does nothing to audio...
+    AudioPlayHead::CurrentPositionInfo ci{ 0 };
+    if (getPlayHead() == nullptr || !(getPlayHead()->getCurrentPosition(ci)))
+        return;
+
+    ARASampleProjectPlaybackRenderer* playbackRenderer = static_cast<ARASampleProjectPlaybackRenderer*>(getARAPlaybackRenderer());
+    playbackRenderer->renderPlaybackRegions(buffer, getSampleRate(), ci.timeInSamples, ci.isPlaying);
 }
 
 //==============================================================================

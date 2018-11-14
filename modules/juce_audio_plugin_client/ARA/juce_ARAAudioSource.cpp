@@ -34,10 +34,9 @@ private:
 };
 
 ARAAudioSource::ARAAudioSource (ARA::PlugIn::Document* document, ARA::ARAAudioSourceHostRef hostRef)
-    : ARA::PlugIn::AudioSource (document, hostRef)
-    , ref (new Ref (this))
-{
-}
+: ARA::PlugIn::AudioSource (document, hostRef),
+  ref (new Ref (this))
+{}
 
 ARAAudioSource::~ARAAudioSource()
 {
@@ -60,30 +59,30 @@ AudioFormatReader* ARAAudioSource::newReader()
 
 void ARAAudioSource::willUpdateProperties()
 {
-#if JUCE_DEBUG
+   #if JUCE_DEBUG
     jassert (! stateUpdateProperties);
     stateUpdateProperties = true;
-#endif
+   #endif
 
     invalidateReaders();
 }
 
 void ARAAudioSource::didUpdateProperties()
 {
-#if JUCE_DEBUG
+   #if JUCE_DEBUG
     jassert (stateUpdateProperties);
     stateUpdateProperties = false;
-#endif
+   #endif
 
     ref = new Ref (this);
 }
 
 void ARAAudioSource::willEnableSamplesAccess (bool enable)
 {
-#if JUCE_DEBUG
+   #if JUCE_DEBUG
     jassert (! stateEnableSamplesAccess);
     stateEnableSamplesAccess = true;
-#endif
+   #endif
 
     ref->lock.enterWrite();
     if (! enable)
@@ -93,10 +92,10 @@ void ARAAudioSource::willEnableSamplesAccess (bool enable)
 
 void ARAAudioSource::didEnableSamplesAccess (bool enable)
 {
-#if JUCE_DEBUG
+   #if JUCE_DEBUG
     jassert (stateEnableSamplesAccess);
     stateEnableSamplesAccess = false;
-#endif
+   #endif
 
     if (enable)
         for (auto& reader : readers)
@@ -104,9 +103,14 @@ void ARAAudioSource::didEnableSamplesAccess (bool enable)
     ref->lock.exitWrite();
 }
 
+std::unique_ptr<BufferingAudioSource> ARAAudioSource::createBufferingAudioSource(TimeSliceThread& thread, int bufferSize)
+{
+    return std::unique_ptr<BufferingAudioSource>(new BufferingAudioSource(new AudioFormatReaderSource(newReader(), true), thread, true, bufferSize));
+}
+
 ARAAudioSource::Reader::Reader (ARAAudioSource* source)
-    : AudioFormatReader (nullptr, "ARAAudioSourceReader")
-    , ref (source->ref)
+: AudioFormatReader (nullptr, "ARAAudioSourceReader"),
+  ref (source->ref)
 {
     if (source->isSampleAccessEnabled())
         araHostReader.reset (new ARA::PlugIn::HostAudioReader (source));
