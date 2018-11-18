@@ -2,6 +2,7 @@
 
 #include "juce_ARADocumentController.h"
 #include "juce_ARAAudioSource.h"
+#include "juce_ARARegionSequence.h"
 
 const ARA::ARAFactory* ARA::PlugIn::DocumentController::getARAFactory() noexcept
 {
@@ -81,6 +82,11 @@ ARA::PlugIn::AudioSource* ARADocumentController::doCreateAudioSource (ARA::PlugI
     return new ARAAudioSource (document, hostRef);
 }
 
+ARA::PlugIn::RegionSequence* ARADocumentController::doCreateRegionSequence (ARA::PlugIn::Document *document, ARA::ARARegionSequenceHostRef hostRef) noexcept
+{
+    return new ARARegionSequence (document, hostRef);
+}
+
 void ARADocumentController::willEnableAudioSourceSamplesAccess (ARA::PlugIn::AudioSource* audioSource, bool enable) noexcept
 {
     auto source = static_cast<ARAAudioSource*> (audioSource);
@@ -103,6 +109,16 @@ void ARADocumentController::willUpdateAudioSourceProperties (
 void ARADocumentController::didUpdateAudioSourceProperties (ARA::PlugIn::AudioSource* audioSource) noexcept
 {
     static_cast<ARAAudioSource*> (audioSource)->didUpdateProperties();
+}
+
+void ARADocumentController::willUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion, ARA::PlugIn::PropertiesPtr<ARA::ARAPlaybackRegionProperties> newProperties) noexcept
+{
+    ARARegionSequence::willUpdatePlaybackRegionProperties (playbackRegion, newProperties);
+}
+
+void ARADocumentController::didUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept
+{
+    ARARegionSequence::didUpdatePlaybackRegionProperties (playbackRegion);
 }
 
 } // namespace juce
