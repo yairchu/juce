@@ -136,7 +136,7 @@ void ARADocumentController::addAudioSourceUpdateListener (ARAAudioSourceUpdateLi
 
 void ARADocumentController::removeAudioSourceUpdateListener (ARAAudioSourceUpdateListener* updateListener)
 {
-    find_erase (audioSourceUpdateListeners, updateListener);
+    ARA::find_erase (audioSourceUpdateListeners, updateListener);
 }
 
 //==============================================================================
