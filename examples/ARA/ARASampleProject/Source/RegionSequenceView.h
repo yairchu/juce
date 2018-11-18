@@ -3,20 +3,22 @@
 
 #include "JuceHeader.h"
 
-class AudioView
+class RegionSequenceView
 : public Component, public juce::ChangeListener
 {
 public:
-    AudioView();
-    ~AudioView();
-    AudioView (ARA::PlugIn::RegionSequence&);
+    ~RegionSequenceView();
+    RegionSequenceView (ARA::PlugIn::RegionSequence&);
 
     void paint (Graphics&) override;
     void changeListenerCallback (ChangeBroadcaster*) override;
 
     void setIsSelected (bool value);
+    bool getIsSelected () const;
     double getStartInSecs();
     double getLengthInSecs();
+
+    ARA::PlugIn::RegionSequence* getRegionSequence () const { return regionSequence; }
 
 private:
     String name, order;
@@ -24,9 +26,11 @@ private:
     bool isSelected;
     double startInSecs;
 
+    ARA::PlugIn::RegionSequence* regionSequence;
+
     juce::AudioFormatManager audioFormatManger;
     juce::AudioThumbnailCache audioThumbCache;
     juce::AudioThumbnail audioThumb;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioView)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RegionSequenceView)
 };
