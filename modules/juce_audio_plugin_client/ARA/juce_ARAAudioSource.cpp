@@ -68,7 +68,16 @@ void ARAAudioSource::willUpdateAudioSourceProperties (ARA::PlugIn::AudioSource* 
     stateUpdateProperties = true;
    #endif
 
-    invalidateReaders ();
+    // TODO JUCE_ARA
+    // We can check individual values to see if we need to invalidate, 
+    // but according to ARAInterface.h line 2607 isn't it up to the 
+    // ARA host to disable audio source sample access when appropriate?
+    if (getSampleCount () != newProperties->sampleCount ||
+        getSampleRate () != newProperties->sampleRate ||
+        getChannelCount () != newProperties->channelCount)
+    {
+        invalidateReaders ();
+    }
 }
 
 void ARAAudioSource::didUpdateAudioSourceProperties (ARA::PlugIn::AudioSource* audioSource) noexcept
@@ -81,7 +90,8 @@ void ARAAudioSource::didUpdateAudioSourceProperties (ARA::PlugIn::AudioSource* a
     stateUpdateProperties = false;
    #endif
 
-    ref = new Ref (this);
+    if (ref->get () == nullptr)
+        ref = new Ref (this);
 }
 
 void ARAAudioSource::willEnableAudioSourceSamplesAccess (ARA::PlugIn::AudioSource* audioSource, bool enable) noexcept
@@ -116,6 +126,14 @@ void ARAAudioSource::didEnableAudioSourceSamplesAccess (ARA::PlugIn::AudioSource
     ref->lock.exitWrite();
 }
 
+void ARAAudioSource::doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* audioSource, const ARA::ARAContentTimeRange* /*range*/, ARA::ARAContentUpdateFlags /*flags*/) noexcept
+{
+    if (audioSource != this)
+        return;
+
+    invalidateReaders ();
+}
+
 std::unique_ptr<BufferingAudioSource> ARAAudioSource::createBufferingAudioSource (TimeSliceThread& thread, int bufferSize)
 {
     return std::unique_ptr<BufferingAudioSource> (new BufferingAudioSource (new AudioFormatReaderSource (newReader(), true), thread, true, bufferSize));
@@ -139,6 +157,9 @@ ARAAudioSource::Reader::Reader (ARAAudioSource* source)
 
 ARAAudioSource::Reader::~Reader()
 {
+    // TODO JUCE_ARA
+    // this braced initializer does invoke the base ScopedAccess constructor, 
+    // which enters a read lock. But why can't we just use the write lock?
     if (Ref::ScopedAccess source{ ref })
     {
         ScopedWriteLock l (ref->lock);
