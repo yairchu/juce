@@ -31,12 +31,6 @@ ARA::PlugIn::PlaybackRenderer* ARASampleProjectDocumentController::doCreatePlayb
     return new ARASampleProjectPlaybackRenderer (this, *araAudioSourceReadingThread.get(), (1 << 16));
 }
 
-void ARASampleProjectDocumentController::doEndEditing () noexcept
-{
-    for (ARA::PlugIn::PlaybackRenderer* playbackRenderer : getPlaybackRenderers ())
-        static_cast<ARASampleProjectPlaybackRenderer*>(playbackRenderer)->ensureReadersForAllPlaybackRegions ();
-}
-
 //==============================================================================
 // This creates new instances of the document controller..
 ARA::PlugIn::DocumentController* ARA::PlugIn::DocumentController::doCreateDocumentController() noexcept
