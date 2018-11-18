@@ -19,11 +19,13 @@ ARASampleProjectDocumentController::ARASampleProjectDocumentController() noexcep
     araAudioSourceReadingThread->startThread();
 }
 
+// return an instance of our editor view implementation
 ARA::PlugIn::EditorView* ARASampleProjectDocumentController::doCreateEditorView() noexcept
 {
     return new ARASampleProjectEditorView (this);
 }
 
+// return an instance of our playback renderer implementation
 ARA::PlugIn::PlaybackRenderer* ARASampleProjectDocumentController::doCreatePlaybackRenderer() noexcept
 {
     return new ARASampleProjectPlaybackRenderer (this, *araAudioSourceReadingThread.get(), (1 << 16));

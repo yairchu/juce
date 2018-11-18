@@ -6,6 +6,12 @@
 namespace juce
 {
 
+//==============================================================================
+/**
+    ARA RegionSequence class
+     This class provides a special AudioFormatReader subclass that can be used to read
+     all samples of a given region sequence's playback regions using ARA
+*/
 class ARARegionSequence : public ARA::PlugIn::RegionSequence
 {
 public:

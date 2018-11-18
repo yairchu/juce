@@ -1,21 +1,19 @@
-/*
-  ==============================================================================
-
-    This file was auto-generated!
-
-    It contains the basic framework code for an ARA document controller implementation. 
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "JuceHeader.h"
 
+//==============================================================================
+/** 
+    ARA DocumentController class for ARA sample project
+    This is our plug-in's document controller implementation, which will 
+    be the central point of communication between the ARA host and our plug-in
+*/
 class ARASampleProjectDocumentController : public juce::ARADocumentController
 {
 public:
     ARASampleProjectDocumentController() noexcept;
+
+    // ARA class creation overrides
     ARA::PlugIn::EditorView* doCreateEditorView() noexcept override;
     ARA::PlugIn::PlaybackRenderer* doCreatePlaybackRenderer() noexcept override;
 

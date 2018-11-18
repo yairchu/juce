@@ -8,11 +8,11 @@ namespace juce
 class ARARegionSequenceUpdateListener;
 
 // juce ARA document controller implementation
-class ARADocumentController : public ARA::PlugIn::DocumentController
+class ARADocumentController: public ARA::PlugIn::DocumentController
 {
 public:
-    ARADocumentController() noexcept {}
-    virtual ~ARADocumentController() noexcept {}
+    ARADocumentController () noexcept {}
+    virtual ~ARADocumentController () noexcept {}
 
     void addRegionSequenceUpdateListener (ARARegionSequenceUpdateListener* updateListener);
     void removeRegionSequenceUpdateListener (ARARegionSequenceUpdateListener* updateListener);
@@ -33,13 +33,15 @@ protected:
 
 
     // region sequence update overrides
-    virtual void willUpdateRegionSequenceProperties (ARA::PlugIn::RegionSequence* regionSequence, ARA::PlugIn::PropertiesPtr<ARA::ARARegionSequenceProperties> newProperties) noexcept override;
-    virtual void didUpdateRegionSequenceProperties (ARA::PlugIn::RegionSequence* regionSequence) noexcept override;
-    virtual void willDestroyRegionSequence (ARA::PlugIn::RegionSequence* regionSequence) noexcept override;
-    virtual void willReorderRegionSequencesInMusicalContext (const ARA::PlugIn::MusicalContext* musicalContext) noexcept override;
-    virtual void didReorderRegionSequencesInMusicalContext (const ARA::PlugIn::MusicalContext* musicalContext) noexcept override;
-    virtual void willReorderRegionSequencesInDocument (ARA::PlugIn::Document* document) noexcept override;
-    virtual void didReorderRegionSequencesInDocument (ARA::PlugIn::Document* document) noexcept override;
+    // TODO JUCE_ARA we do this so we can notify ARARegionSequenceUpdateListeners, but subclasses of
+    // juce::ARADocumentController will have to manually call these functions to get the listener behaviour to work
+    void willUpdateRegionSequenceProperties (ARA::PlugIn::RegionSequence* regionSequence, ARA::PlugIn::PropertiesPtr<ARA::ARARegionSequenceProperties> newProperties) noexcept override;
+    void didUpdateRegionSequenceProperties (ARA::PlugIn::RegionSequence* regionSequence) noexcept override;
+    void willDestroyRegionSequence (ARA::PlugIn::RegionSequence* regionSequence) noexcept override;
+    void willReorderRegionSequencesInMusicalContext (const ARA::PlugIn::MusicalContext* musicalContext) noexcept override;
+    void didReorderRegionSequencesInMusicalContext (const ARA::PlugIn::MusicalContext* musicalContext) noexcept override;
+    void willReorderRegionSequencesInDocument (ARA::PlugIn::Document* document) noexcept override;
+    void didReorderRegionSequencesInDocument (ARA::PlugIn::Document* document) noexcept override;
 
 private:
     std::vector<ARARegionSequenceUpdateListener*> regionSequenceUpdateListeners;
