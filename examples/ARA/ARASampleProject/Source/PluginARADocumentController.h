@@ -17,7 +17,7 @@ public:
     ARA::PlugIn::EditorView* doCreateEditorView() noexcept override;
     ARA::PlugIn::PlaybackRenderer* doCreatePlaybackRenderer() noexcept override;
     // called when the ARA host stops editing the document
-    virtual void doEndEditing () noexcept;
+    virtual void doEndEditing () noexcept override;
 
 private:
     // Thread used by buffering audio sources to read samples from the host
