@@ -141,16 +141,16 @@ void ARADocumentController::didReorderRegionSequencesInMusicalContext (const ARA
         updateListener->didReorderRegionSequencesInMusicalContext (musicalContext);
 }
 
-void ARADocumentController::willReorderRegionSequences () noexcept
+void ARADocumentController::willReorderRegionSequencesInDocument (ARA::PlugIn::Document* document) noexcept
 {
     for (ARARegionSequenceUpdateListener* updateListener : regionSequenceUpdateListeners)
-        updateListener->willReorderRegionSequences ();
+        updateListener->willReorderRegionSequencesInDocument (document);
 }
 
-void ARADocumentController::didReorderRegionSequences () noexcept
+void ARADocumentController::didReorderRegionSequencesInDocument (ARA::PlugIn::Document* document) noexcept
 {
     for (ARARegionSequenceUpdateListener* updateListener : regionSequenceUpdateListeners)
-        updateListener->didReorderRegionSequences ();
+        updateListener->didReorderRegionSequencesInDocument (document);
 }
 
 void ARADocumentController::addRegionSequenceUpdateListener (ARARegionSequenceUpdateListener* updateListener)
@@ -160,7 +160,7 @@ void ARADocumentController::addRegionSequenceUpdateListener (ARARegionSequenceUp
 
 void ARADocumentController::removeRegionSequenceUpdateListener (ARARegionSequenceUpdateListener* updateListener)
 {
-    find_erase (regionSequenceUpdateListeners, updateListener);
+    ARA::find_erase (regionSequenceUpdateListeners, updateListener);
 }
 
 ARARegionSequenceUpdateListener::ARARegionSequenceUpdateListener (ARA::PlugIn::DocumentController *documentController)
