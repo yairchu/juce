@@ -7,18 +7,6 @@ ARASampleProjectPlaybackRenderer::ARASampleProjectPlaybackRenderer (ARADocumentC
   sampleBufferSize (bufferSize)
 {}
 
-// every time we add a playback region, make sure we have a buffered audio source reader for it
-// we'll use this reader to pull samples from our ARA host and render them back in the audio thread
-void ARASampleProjectPlaybackRenderer::didAddPlaybackRegion (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept
-{
-    ARAAudioSource* audioSource = static_cast<ARAAudioSource*> (playbackRegion->getAudioModification()->getAudioSource());
-    if (audioSourceReaders.count (audioSource) == 0)
-    {
-        audioSourceReaders.emplace (audioSource, audioSource->createBufferingAudioSource (sampleReadingThread, sampleBufferSize));
-        audioSourceReaders[audioSource]->prepareToPlay (128, audioSource->getSampleRate());
-    }
-}
-
 // this function renders playback regions in the ARA document that have been
 // a) added to this playback renderer instance and
 // b) lie within the time range of samples being renderered (in project time)
@@ -84,4 +72,38 @@ void ARASampleProjectPlaybackRenderer::renderPlaybackRegions (AudioBuffer<float>
 void ARASampleProjectPlaybackRenderer::willDestroyAudioSource (ARA::PlugIn::AudioSource* audioSource) noexcept
 {
     audioSourceReaders.erase (static_cast<ARAAudioSource*>(audioSource));
+}
+
+// every time we add a playback region, make sure we have a buffered audio source reader for it
+// we'll use this reader to pull samples from our ARA host and render them back in the audio thread
+void ARASampleProjectPlaybackRenderer::didAddPlaybackRegion (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept
+{
+    ARAAudioSource* audioSource = static_cast<ARAAudioSource*> (playbackRegion->getAudioModification ()->getAudioSource ());
+    if (audioSourceReaders.count (audioSource) == 0)
+    {
+        audioSourceReaders.emplace (audioSource, audioSource->createBufferingAudioSource (sampleReadingThread, sampleBufferSize));
+        audioSourceReaders[audioSource]->prepareToPlay (128, audioSource->getSampleRate ());
+    }
+}
+
+// we can delete the reader associated with this playback region's audio source
+// if no other playback regions in the playback renderer share the same audio source
+void ARASampleProjectPlaybackRenderer::willRemovePlaybackRegion (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept
+{
+    auto audioSource = playbackRegion->getAudioModification ()->getAudioSource ();
+    bool removeAudioSourceFromMap = true;
+    for (auto otherPlaybackRegion : getPlaybackRegions ())
+    {
+        if (playbackRegion != otherPlaybackRegion)
+        {
+            if (otherPlaybackRegion->getAudioModification ()->getAudioSource () == audioSource)
+            {
+                removeAudioSourceFromMap = false;
+                break;
+            }
+        }
+    }
+
+    if (removeAudioSourceFromMap)
+        audioSourceReaders.erase (static_cast<ARAAudioSource*> (audioSource));
 }
