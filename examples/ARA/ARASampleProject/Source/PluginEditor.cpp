@@ -21,9 +21,15 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
 #if JucePlugin_Enable_ARA
     , AudioProcessorEditorARAExtension (&p)
     , ARASampleProjectEditorView::SelectionListener (getARAEditorView ())
+    , ARARegionSequenceUpdateListener (isARAEditorView () ? getARAEditorView ()->getDocumentController () : nullptr)
 #endif
 {
-    setBounds (0, 0, kWidth, kHeight);
+    // init viewport and region sequence list view
+    regionSequenceViewPort.setScrollBarsShown (true, true);
+    regionSequenceListView.setBounds (0, 0, kWidth - regionSequenceViewPort.getScrollBarThickness (), kHeight);
+    regionSequenceViewPort.setViewedComponent (&regionSequenceListView, false);
+    addAndMakeVisible (regionSequenceViewPort);
+    
     setSize (kWidth, kHeight);
 
     // manually invoke the onNewSelection callback to refresh our UI with the current selection
@@ -52,7 +58,7 @@ void ARASampleProjectAudioProcessorEditor::resized ()
 {
     int i = 0;
     const int width = getWidth ();
-    const int height = (int) (double (getHeight ()) / regionSequenceViews.size ());
+    const int height = 80;
     for (auto v : regionSequenceViews)
     {
         double normalizedStartPos = v->getStartInSecs () / maxRegionSequenceLength;
@@ -61,6 +67,10 @@ void ARASampleProjectAudioProcessorEditor::resized ()
         v->setBounds ((int) (width * normalizedStartPos), height * i, (int) (width * normalizedLength), height);
         i++;
     }
+
+    // size list view to match region sequence dimensions and viewport for entire window
+    regionSequenceListView.setBounds (0, 0, width, height * i);
+    regionSequenceViewPort.setBounds (0, 0, getWidth (), getHeight ());
 }
 
 // shows all RegionSequences, highlight ones in current selection.
@@ -84,6 +94,11 @@ void ARASampleProjectAudioProcessorEditor::onNewSelection (const ARA::PlugIn::Vi
             // reconstruct the region sequence view if the sequence order has changed
             regionSequenceViews.set (i, new RegionSequenceView (*regionSequence ), true);
         }
+        else if (regionSequencesWithPropertyChanges.count(regionSequence ) > 0)
+        {
+            // reconstruct the region sequence view if its properties have updated
+            regionSequenceViews.set (i, new RegionSequenceView (*regionSequence ), true);
+        }
 
         // flag the region as selected if it's a part of the current selection, 
         // or not selected if we have no selection
@@ -91,13 +106,22 @@ void ARASampleProjectAudioProcessorEditor::onNewSelection (const ARA::PlugIn::Vi
         bool selectionState = selectedRegionSequences.end () != std::find (selectedRegionSequences.begin (), selectedRegionSequences.end (), regionSequence);
         regionSequenceViews[i]->setIsSelected (selectionState);
 
-        // add region sequence view component and keep track of the longest region sequence
-        addAndMakeVisible (regionSequenceViews[i]);
+        // make the region sequence view visible and keep track of the longest region sequence
+        regionSequenceListView.addAndMakeVisible (regionSequenceViews[i]);
         maxRegionSequenceLength = std::max (maxRegionSequenceLength, regionSequenceViews[i]->getStartInSecs () + regionSequenceViews[i]->getLengthInSecs ());
     }
 
     // remove any views for region sequences no longer in the document
     regionSequenceViews.removeLast (regionSequenceViews.size () - (int) regionSequences.size ());
 
+    // Clear property change state and resize view
+    regionSequencesWithPropertyChanges.clear ();
     resized ();
+}
+
+void ARASampleProjectAudioProcessorEditor::didUpdateRegionSequenceProperties (ARA::PlugIn::RegionSequence* regionSequence) ARA_NOEXCEPT
+{
+    // manually invoke onNewSelection here to redraw the region sequence views
+    regionSequencesWithPropertyChanges.insert (regionSequence);
+    onNewSelection (getMostRecentSelection ());
 }

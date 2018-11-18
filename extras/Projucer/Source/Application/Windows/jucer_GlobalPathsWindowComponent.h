@@ -216,9 +216,8 @@ private:
                          "If you are building AAX plug-ins, this should be the path to the AAX SDK folder.");
             builder.add (new FilePathPropertyComponent (rtasPathValue, "RTAS SDK", true, isThisOS),
                          "If you are building RTAS plug-ins, this should be the path to the RTAS SDK folder.");
-
-            builder.add (new FilePathPropertyComponent (araPathValue, "ARA SDK", true),
-                         "If you are building ARA plug-ins, this should be the path to the ARA SDK folder.");
+            builder.add (new FilePathPropertyComponent (araPathValue, "ARA SDK", true, isThisOS),
+                         "If you are building ARA enabled plug-ins, this should be the path to the ARA SDK folder.");
         }
 
         builder.add (new FilePathPropertyComponent (androidSDKPathValue, "Android SDK", true, isThisOS),
@@ -283,6 +282,7 @@ private:
         vst3PathValue            .resetToDefault();
         rtasPathValue            .resetToDefault();
         aaxPathValue             .resetToDefault();
+        araPathValue             .resetToDefault();
         androidSDKPathValue      .resetToDefault();
         androidNDKPathValue      .resetToDefault();
         clionExePathValue        .resetToDefault();

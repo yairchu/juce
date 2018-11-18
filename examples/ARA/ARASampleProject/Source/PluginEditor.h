@@ -23,6 +23,7 @@ class ARASampleProjectAudioProcessorEditor  : public AudioProcessorEditor
 #if JucePlugin_Enable_ARA
      , public AudioProcessorEditorARAExtension
      , public ARASampleProjectEditorView::SelectionListener
+     , public ARARegionSequenceUpdateListener
 #endif
 {
 public:
@@ -38,10 +39,16 @@ public:
     void didUpdateRegionSequenceProperties (ARA::PlugIn::RegionSequence* regionSequence) ARA_NOEXCEPT override;
 
 private:
+
+    // we'll be displaying all region sequences in the document in a scrollable view
+    Viewport regionSequenceViewPort;
+    Component regionSequenceListView;
+
     double maxRegionSequenceLength;
     juce::CriticalSection selectionLock;
     juce::OwnedArray <RegionSequenceView> regionSequenceViews;
 
+    std::set<ARA::PlugIn::RegionSequence*> regionSequencesWithPropertyChanges;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARASampleProjectAudioProcessorEditor)
 };
