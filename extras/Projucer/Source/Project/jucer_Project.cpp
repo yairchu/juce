@@ -2075,6 +2075,8 @@ static StringArray getModulePathsFromExporters (Project& project, bool onlyThisO
 
     for (Project::ExporterIterator exporter (project); exporter.next();)
     {
+        if (!exporter->mayCompileOnCurrentOS ())
+            continue;
         auto& modules = project.getEnabledModules();
         auto n = modules.getNumModules();
 
