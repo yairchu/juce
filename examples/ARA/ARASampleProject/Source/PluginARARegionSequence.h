@@ -1,16 +1,15 @@
 #pragma once
 
-#include "juce_ARA_audio_plugin.h"
-#include "juce_SafeRef.h"
+#include "JuceHeader.h"
 
 namespace juce
 {
 
-class ARARegionSequence : public ARA::PlugIn::RegionSequence
+class ARASampleProjectRegionSequence : public ARA::PlugIn::RegionSequence
 {
 public:
-    ARARegionSequence (ARA::PlugIn::Document*, ARA::ARARegionSequenceHostRef);
-    ~ARARegionSequence();
+    ARASampleProjectRegionSequence (ARA::PlugIn::Document*, ARA::ARARegionSequenceHostRef);
+    ~ARASampleProjectRegionSequence();
 
     // If not given a `sampleRate` will figure it out from the first playback region within.
     // Playback regions with differing sample rates will be ignored.
@@ -28,14 +27,14 @@ public:
 
 private:
     class Reader;
-    typedef SafeRef<ARARegionSequence> Ref;
+    typedef SafeRef<ARASampleProjectRegionSequence> Ref;
 
     Ref::Ptr ref;
 
     std::map<ARA::PlugIn::AudioSource*, int> sourceRefCount;
 
     // Used to unlock old sequence for region in `didUpdatePlaybackRegionProperties`.
-    ARARegionSequence* prevSequenceForNewPlaybackRegion;
+    ARASampleProjectRegionSequence* prevSequenceForNewPlaybackRegion;
 
    #if JUCE_DEBUG
     static bool stateUpdatePlaybackRegionProperties;
