@@ -161,7 +161,7 @@ ARAAudioSource::Reader::~Reader()
     if (Ref::ScopedAccess source{ ref })
     {
         ScopedWriteLock l (ref->lock);
-        source->readers.erase (std::find (source->readers.begin(), source->readers.end(), this));
+        ARA::find_erase (source->readers, this);
     }
 }
 
