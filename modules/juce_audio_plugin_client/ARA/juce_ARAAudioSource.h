@@ -33,6 +33,7 @@ private:
     Ref::Ptr ref;
 
     // Active readers.
+    ReadWriteLock readersLock;
     std::vector<Reader*> readers;
 
    #if JUCE_DEBUG

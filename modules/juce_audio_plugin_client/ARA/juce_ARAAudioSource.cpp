@@ -44,10 +44,12 @@ ARAAudioSource::~ARAAudioSource()
 
 void ARAAudioSource::invalidateReaders()
 {
-    ScopedWriteLock l (ref->lock);
-    for (auto& reader : readers)
-        reader->invalidate();
-    readers.clear();
+    {
+        ScopedWriteLock l (readersLock);
+        for (auto& reader : readers)
+            reader->invalidate();
+        readers.clear();
+    }
     ref->reset();
 }
 
@@ -104,8 +106,11 @@ void ARAAudioSource::willEnableAudioSourceSamplesAccess (ARA::PlugIn::AudioSourc
 
     ref->lock.enterWrite();
     if (! enable)
+    {
+        ScopedReadLock l (readersLock);
         for (auto& reader : readers)
             reader->invalidate();
+    }
 }
 
 void ARAAudioSource::didEnableAudioSourceSamplesAccess (ARA::PlugIn::AudioSource* audioSource, bool enable) noexcept
@@ -119,8 +124,11 @@ void ARAAudioSource::didEnableAudioSourceSamplesAccess (ARA::PlugIn::AudioSource
    #endif
 
     if (enable)
+    {
+        ScopedReadLock l (readersLock);
         for (auto& reader : readers)
             reader->createHostAudioReaderForSource (this);
+    }
     ref->lock.exitWrite();
 }
 
@@ -149,18 +157,15 @@ ARAAudioSource::Reader::Reader (ARAAudioSource* source)
     numChannels = source->getChannelCount();
     lengthInSamples = source->getSampleCount();
     tmpPtrs.resize (numChannels);
-    ScopedWriteLock l (ref->lock);
+    ScopedWriteLock l (source->readersLock);
     source->readers.push_back (this);
 }
 
 ARAAudioSource::Reader::~Reader()
 {
-    // TODO JUCE_ARA
-    // this braced initializer does invoke the base ScopedAccess constructor, 
-    // which enters a read lock. But why can't we just use the write lock?
     if (Ref::ScopedAccess source{ ref })
     {
-        ScopedWriteLock l (ref->lock);
+        ScopedWriteLock l (source->readersLock);
         ARA::find_erase (source->readers, this);
     }
 }
