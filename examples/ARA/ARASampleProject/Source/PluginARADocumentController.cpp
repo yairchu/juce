@@ -38,7 +38,6 @@ ARA::PlugIn::DocumentController* ARA::PlugIn::DocumentController::doCreateDocume
     return new ARASampleProjectDocumentController();
 };
 
-
 //==============================================================================
 
 AudioFormatReader* ARASampleProjectDocumentController::createRegionSequenceReader (ARA::PlugIn::RegionSequence* regionSequence)
