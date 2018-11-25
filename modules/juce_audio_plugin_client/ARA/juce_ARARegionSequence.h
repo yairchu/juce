@@ -73,6 +73,12 @@ bool renderARAPlaybackRegionsSamples (
     int64 startSampleInFile,
     int numSamples)
 {
+    if (numSamples <= 0)
+    {
+        // Usage of AudioSubsectionReader may result in negative sample counts.
+        return true;
+    }
+
     if (tmpBuf->getNumSamples() < numSamples || tmpBuf->getNumChannels() < numDestChannels)
         tmpBuf->setSize (numDestChannels, numSamples, false, false, true);
 
