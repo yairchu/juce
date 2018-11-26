@@ -64,7 +64,7 @@ void ARAAudioSource::willUpdateAudioSourceProperties (ARA::PlugIn::AudioSource* 
         return;
 
    #if JUCE_DEBUG
-    jassert (!stateUpdateProperties);
+    jassert (! stateUpdateProperties);
     stateUpdateProperties = true;
    #endif
 
@@ -100,7 +100,7 @@ void ARAAudioSource::willEnableAudioSourceSamplesAccess (ARA::PlugIn::AudioSourc
         return;
 
    #if JUCE_DEBUG
-    jassert (!stateEnableSamplesAccess);
+    jassert (! stateEnableSamplesAccess);
     stateEnableSamplesAccess = true;
    #endif
 
@@ -132,13 +132,13 @@ void ARAAudioSource::didEnableAudioSourceSamplesAccess (ARA::PlugIn::AudioSource
     ref->lock.exitWrite();
 }
 
-void ARAAudioSource::doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* audioSource, const ARA::ARAContentTimeRange* range, ARA::ARAContentUpdateFlags flags) noexcept
+void ARAAudioSource::doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* audioSource, const ARA::ARAContentTimeRange* /*range*/, ARA::ARAContentUpdateFlags flags) noexcept
 {
     if (audioSource != this)
         return;
 
     // don't invalidate if the audio signal is unchanged
-    if (flags & ARA::kARAContentUpdateSignalScopeRemainsUnchanged)
+    if ((flags & ARA::kARAContentUpdateSignalScopeRemainsUnchanged) != 0)
         return;
 
     invalidateReaders ();
@@ -196,7 +196,7 @@ bool ARAAudioSource::Reader::readSamples (
     int numSamples)
 {
     Ref::ScopedAccess source (ref, true);
-    if (!source || araHostReader == nullptr)
+    if (! source || araHostReader == nullptr)
     {
         for (int chan_i = 0; chan_i < (int) tmpPtrs.size (); ++chan_i)
             FloatVectorOperations::clear ((float *) destSamples[chan_i], numSamples);
@@ -279,13 +279,13 @@ void ARAAudioSourceReader::willDestroyAudioSource (ARA::PlugIn::AudioSource* aud
     audioSourceBeingRead = nullptr;
 }
 
-void ARAAudioSourceReader::doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* audioSource, const ARA::ARAContentTimeRange* range, ARA::ARAContentUpdateFlags flags) noexcept
+void ARAAudioSourceReader::doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* audioSource, const ARA::ARAContentTimeRange* /*range*/, ARA::ARAContentUpdateFlags flags) noexcept
 {
     if (audioSource != audioSourceBeingRead)
         return;
 
     // don't invalidate if the audio signal is unchanged
-    if (flags & ARA::kARAContentUpdateSignalScopeRemainsUnchanged)
+    if ((flags & ARA::kARAContentUpdateSignalScopeRemainsUnchanged) != 0)
         return;
 
     ScopedWriteLock scopedLock (lock);
@@ -314,9 +314,9 @@ bool ARAAudioSourceReader::readSamples (
     int numSamples)
 {
     // If we can't enter the lock or we don't have a reader, zero samples and return false
-    if (!lock.tryEnterRead () || araHostReader == nullptr)
+    if (! lock.tryEnterRead () || araHostReader == nullptr)
     {
-        for (int chan_i = 0; chan_i < (int) tmpPtrs.size (); ++chan_i)
+        for (int chan_i = 0; chan_i < numDestChannels; ++chan_i)
             FloatVectorOperations::clear ((float *) destSamples[chan_i], numSamples);
         return false;
     }
