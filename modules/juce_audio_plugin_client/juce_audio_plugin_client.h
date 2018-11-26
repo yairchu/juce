@@ -123,4 +123,5 @@
  #include "ARA/juce_ARARegionSequence.h"
  #include "ARA/juce_AudioProcessorARAExtension.h"
  #include "ARA/juce_AudioProcessorEditorARAExtension.h"
+ #include "ARA/juce_ARAAudioReaders.h"
 #endif
