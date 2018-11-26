@@ -95,12 +95,12 @@ void ARADocumentController::didUpdatePlaybackRegionProperties (ARA::PlugIn::Play
     // TODO JUCE_ARA
     // replace these static functions with listener callbacks
     ARARegionSequence::didUpdatePlaybackRegionProperties (playbackRegion);
-    static_cast<ARAPlaybackRegion*> (playbackRegion)->didUpdatePlaybackRegionProperties ();
+    static_cast<ARAPlaybackRegion*> (playbackRegion)->didUpdatePlaybackRegionProperties();
 }
 
 void ARADocumentController::willDestroyPlaybackRegion (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept
 {
-    static_cast<ARAPlaybackRegion*> (playbackRegion)->willDestroyPlaybackRegion ();
+    static_cast<ARAPlaybackRegion*> (playbackRegion)->willDestroyPlaybackRegion();
 }
 //==============================================================================
 
@@ -229,7 +229,7 @@ ARARegionSequenceUpdateListener::ARARegionSequenceUpdateListener (ARA::PlugIn::D
         araDocumentController->addRegionSequenceUpdateListener (this);
 }
 
-ARARegionSequenceUpdateListener::~ARARegionSequenceUpdateListener ()
+ARARegionSequenceUpdateListener::~ARARegionSequenceUpdateListener()
 {
     if (araDocumentController)
         araDocumentController->removeRegionSequenceUpdateListener (this);
@@ -242,7 +242,7 @@ ARAAudioSourceUpdateListener::ARAAudioSourceUpdateListener (ARA::PlugIn::Documen
         araDocumentController->addAudioSourceUpdateListener (this);
 }
 
-ARAAudioSourceUpdateListener::~ARAAudioSourceUpdateListener ()
+ARAAudioSourceUpdateListener::~ARAAudioSourceUpdateListener()
 {
     if (araDocumentController)
         araDocumentController->removeAudioSourceUpdateListener (this);
