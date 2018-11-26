@@ -120,7 +120,7 @@ ARARegionSequence::Reader::Reader (ARARegionSequence* sequence, double sampleRat
     for (ARA::PlugIn::PlaybackRegion* region : sequence->getPlaybackRegions())
     {
         ARA::PlugIn::AudioModification* modification = region->getAudioModification();
-        ARAAudioSource* source = static_cast<ARAAudioSource*> (modification->getAudioSource());
+        ARA::PlugIn::AudioSource* source = modification->getAudioSource();
 
         if (sampleRate == 0.0)
             sampleRate = source->getSampleRate();
@@ -134,7 +134,7 @@ ARARegionSequence::Reader::Reader (ARARegionSequence* sequence, double sampleRat
         if (sourceReaders.find (source) == sourceReaders.end())
         {
             numChannels = std::max (numChannels, (unsigned int) source->getChannelCount());
-            sourceReaders[source] = source->newReader();
+            sourceReaders[source] = new ARAAudioSourceReader (source);
         }
 
         lengthInSamples = std::max (lengthInSamples, region->getEndInPlaybackSamples (sampleRate));
