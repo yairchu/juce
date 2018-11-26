@@ -86,6 +86,7 @@ void ARADocumentController::willUpdatePlaybackRegionProperties (ARA::PlugIn::Pla
     // TODO JUCE_ARA
     // replace these static functions with listener callbacks
     ARARegionSequence::willUpdatePlaybackRegionProperties (playbackRegion, newProperties);
+    jassert (dynamic_cast<ARAPlaybackRegion*> (playbackRegion) != nullptr);
     static_cast<ARAPlaybackRegion*> (playbackRegion)->willUpdatePlaybackRegionProperties (newProperties);
 }
 
