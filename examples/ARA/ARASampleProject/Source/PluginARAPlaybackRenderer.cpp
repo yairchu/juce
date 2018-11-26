@@ -11,7 +11,7 @@ ARASampleProjectPlaybackRenderer::ARASampleProjectPlaybackRenderer (ARADocumentC
 // a) added to this playback renderer instance and
 // b) lie within the time range of samples being renderered (in project time)
 // effectively making this plug-in a pass-through renderer
-void ARASampleProjectPlaybackRenderer::renderPlaybackRegions (AudioBuffer<float>& buffer, ARA::ARASampleRate sampleRate, ARA::ARASamplePosition samplePosition, bool isPlayingBack)
+void ARASampleProjectPlaybackRenderer::renderSamples (AudioBuffer<float>& buffer, ARA::ARASampleRate sampleRate, ARA::ARASamplePosition samplePosition, bool isPlayingBack)
 {
     // zero the samples and get out if we the host is not playing back
     if (isPlayingBack == false)
@@ -67,11 +67,6 @@ void ARASampleProjectPlaybackRenderer::renderPlaybackRegions (AudioBuffer<float>
         audioSourceReaders[audioSource]->setNextReadPosition (startSongSample + offsetToPlaybackRegion);
         audioSourceReaders[audioSource]->getNextAudioBlock (channelInfo);
     }
-}
-
-void ARASampleProjectPlaybackRenderer::willDestroyAudioSource (ARA::PlugIn::AudioSource* audioSource) noexcept
-{
-    audioSourceReaders.erase (static_cast<ARAAudioSource*>(audioSource));
 }
 
 // every time we add a playback region, make sure we have a buffered audio source reader for it
