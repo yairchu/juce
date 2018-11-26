@@ -132,13 +132,13 @@ void ARAAudioSource::didEnableAudioSourceSamplesAccess (ARA::PlugIn::AudioSource
     ref->lock.exitWrite();
 }
 
-void ARAAudioSource::doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* audioSource, const ARA::ARAContentTimeRange* /*range*/, ARA::ARAContentUpdateFlags flags) noexcept
+void ARAAudioSource::doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* audioSource, const ARA::ARAContentTimeRange* /*range*/, ARA::ContentUpdateScopes scopeFlags) noexcept
 {
     if (audioSource != this)
         return;
 
     // don't invalidate if the audio signal is unchanged
-    if ((flags & ARA::kARAContentUpdateSignalScopeRemainsUnchanged) != 0)
+    if (! scopeFlags.affectSamples())
         return;
 
     invalidateReaders();
@@ -279,13 +279,13 @@ void ARAAudioSourceReader::willDestroyAudioSource (ARA::PlugIn::AudioSource* aud
     audioSourceBeingRead = nullptr;
 }
 
-void ARAAudioSourceReader::doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* audioSource, const ARA::ARAContentTimeRange* /*range*/, ARA::ARAContentUpdateFlags flags) noexcept
+void ARAAudioSourceReader::doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* audioSource, const ARA::ARAContentTimeRange* /*range*/, ARA::ContentUpdateScopes scopeFlags) noexcept
 {
     if (audioSource != audioSourceBeingRead)
         return;
 
     // don't invalidate if the audio signal is unchanged
-    if ((flags & ARA::kARAContentUpdateSignalScopeRemainsUnchanged) != 0)
+    if (! scopeFlags.affectSamples())
         return;
 
     ScopedWriteLock scopedLock (lock);

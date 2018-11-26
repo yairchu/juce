@@ -123,10 +123,10 @@ void ARADocumentController::didUpdateAudioSourceProperties (ARA::PlugIn::AudioSo
         updateListener->didUpdateAudioSourceProperties (audioSource);
 }
 
-void ARADocumentController::doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* audioSource, const ARA::ARAContentTimeRange* range, ARA::ARAContentUpdateFlags flags) noexcept
+void ARADocumentController::doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* audioSource, const ARA::ARAContentTimeRange* range, ARA::ContentUpdateScopes scopeFlags) noexcept
 {
     for (ARAAudioSourceUpdateListener* updateListener : audioSourceUpdateListeners)
-        updateListener->doUpdateAudioSourceContent (audioSource, range, flags);
+        updateListener->doUpdateAudioSourceContent (audioSource, range, scopeFlags);
 }
 
 void ARADocumentController::willEnableAudioSourceSamplesAccess (ARA::PlugIn::AudioSource* audioSource, bool enable) noexcept
