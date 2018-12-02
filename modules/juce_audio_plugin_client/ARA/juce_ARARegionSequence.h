@@ -25,9 +25,6 @@ public:
         ARA::PlugIn::PropertiesPtr<ARA::ARAPlaybackRegionProperties>);
     static void didUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion*);
 
-    // Is sample access enabled in all audio sources in sequence?
-    bool isSampleAccessEnabled() const;
-
     class Listener
     {
     public:

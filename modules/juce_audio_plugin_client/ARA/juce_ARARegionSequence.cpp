@@ -36,14 +36,6 @@ ARARegionSequence::ARARegionSequence (ARA::PlugIn::Document* document, ARA::ARAR
     prevSequenceForNewPlaybackRegion = nullptr;
 }
 
-bool ARARegionSequence::isSampleAccessEnabled() const
-{
-    for (auto playbackRegion : getPlaybackRegions ())
-        if (playbackRegion->getAudioModification ()->getAudioSource ()->isSampleAccessEnabled () == false)
-            return false;
-    return true;
-}
-
 void ARARegionSequence::willUpdateRegionSequenceProperties (ARARegionSequence::PropertiesPtr newProperties) noexcept
 {
     listeners.call ([this, &newProperties] (Listener& l) { l.willUpdateRegionSequenceProperties (this, newProperties); });
