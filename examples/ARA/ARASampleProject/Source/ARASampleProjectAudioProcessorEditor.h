@@ -2,7 +2,6 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "ARASampleProjectAudioProcessor.h"
-#include "ARASampleProjectDocumentController.h"
 #include "RegionSequenceView.h"
 
 #if ! JucePlugin_Enable_ARA
@@ -18,8 +17,7 @@
 class ARASampleProjectAudioProcessorEditor: public AudioProcessorEditor,
                                             public AudioProcessorEditorARAExtension,
                                             public ARAEditorView::Listener,
-                                            public ARADocument::Listener,
-                                            public ARARegionSequence::Listener
+                                            public ARADocument::Listener
 {
 public:
     ARASampleProjectAudioProcessorEditor (ARASampleProjectAudioProcessor&);
@@ -34,10 +32,7 @@ public:
 
     // ARADocument::Listener overrides
     void doEndEditing (ARADocument* document) override;
-
-    // ARARegionSequence::Listener overrides
-    void didUpdateRegionSequenceProperties (ARARegionSequence* regionSequence) override;
-    void willDestroyRegionSequence (ARARegionSequence* regionSequence) override;
+    void didReorderRegionSequencesInDocument (ARADocument* document) override;
 
     // function to flag that our view needs to be rebuilt
     void setDirty() { isViewDirty = true; }
@@ -53,6 +48,7 @@ public:
 
 private:
     void rebuildView();
+    void clearView();
 
 private:
 
@@ -60,7 +56,7 @@ private:
     Viewport regionSequenceViewPort;
     Component regionSequenceListView;
 
-    OwnedArray <RegionSequenceView> regionSequenceViews;
+    OwnedArray<RegionSequenceView> regionSequenceViews;
 
     bool isViewDirty;
 
