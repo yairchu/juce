@@ -34,6 +34,11 @@ namespace juce
 // This means that the location of this region has to be taken into account by the calling code if
 // it wants to relate the samples to the model or any other reader output.
 
+// TODO JUCE_ARA
+// This file contains three different classes that can be 
+// used in the JUCE_ARA library - should these classes
+// be moved in to individual files, or is sharing files for
+// smaller classes preferred?
 class ARAAudioSourceReader : public AudioFormatReader,
                              ARAAudioSource::Listener
 {
@@ -109,7 +114,7 @@ public:
     void willDestroyRegionSequence (ARARegionSequence* regionSequence) override;
 
 private:
-    ARARegionSequence* sequence = nullptr;
+    ARARegionSequence* sequence;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARARegionSequenceReader)
