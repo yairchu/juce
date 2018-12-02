@@ -167,7 +167,8 @@ ARARegionSequence::Reader::Reader (ARARegionSequence* sequence, double sampleRat
     for (ARA::PlugIn::PlaybackRegion* region : sequence->getPlaybackRegions())
     {
         ARA::PlugIn::AudioModification* modification = region->getAudioModification();
-        ARA::PlugIn::AudioSource* source = modification->getAudioSource();
+        ARAAudioSource* source = dynamic_cast<ARAAudioSource*> (modification->getAudioSource());
+        jassert (source != nullptr);
 
         if (sampleRate == 0.0)
             sampleRate = source->getSampleRate();
