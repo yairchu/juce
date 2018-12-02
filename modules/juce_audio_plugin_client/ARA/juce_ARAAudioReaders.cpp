@@ -68,7 +68,7 @@ void ARAAudioSourceReader::willDestroyAudioSource (ARAAudioSource* audioSource) 
     audioSourceBeingRead = nullptr;
 }
 
-void ARAAudioSourceReader::doUpdateAudioSourceContent (ARAAudioSource* audioSource, const ARA::ARAContentTimeRange* /*range*/, ARA::ContentUpdateScopes scopeFlags) noexcept
+void ARAAudioSourceReader::doUpdateAudioSourceContent (ARAAudioSource* audioSource, const ARA::ARAContentTimeRange* /*range*/, ARAContentUpdateScopes scopeFlags) noexcept
 {
     jassert (audioSourceBeingRead == audioSource);
 
@@ -262,7 +262,6 @@ void ARAPlaybackRegionReader::willUpdatePlaybackRegionProperties (ARAPlaybackReg
         (playbackRegion->getDurationInAudioModificationTime () != newProperties->durationInModificationTime) ||
         (playbackRegion->getStartInPlaybackTime () != newProperties->startInPlaybackTime) ||
         (playbackRegion->getDurationInPlaybackTime () != newProperties->durationInPlaybackTime) ||
-
         (playbackRegion->isTimestretchEnabled () != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationTimestretch) != 0)) ||
         (playbackRegion->isTimeStretchReflectingTempo () != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationTimestretchReflectingTempo) != 0)) ||
         (playbackRegion->hasContentBasedFadeAtHead () != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationContentBasedFadeAtHead) != 0)) ||
