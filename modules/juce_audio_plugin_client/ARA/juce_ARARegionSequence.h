@@ -43,19 +43,7 @@ public:
         virtual void willDestroyRegionSequence (ARARegionSequence* regionSequence) {}
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_END
     };
-
-    void addListener (Listener* l);
-    void removeListener (Listener* l);
-
-public:         // to be called by ARADocumentController only
-    void willUpdateRegionSequenceProperties (ARARegionSequence::PropertiesPtr newProperties);
-    void didUpdateRegionSequenceProperties();
-    void didAddPlaybackRegionToRegionSequence (ARAPlaybackRegion* playbackRegion);
-    void willRemovePlaybackRegionFromRegionSequence (ARAPlaybackRegion* playbackRegion);
-    void willDestroyRegionSequence();
-
 private:
-    ListenerList<Listener> listeners;
     class Reader;
     typedef SafeRef<ARARegionSequence> Ref;
 
@@ -69,6 +57,9 @@ private:
    #if JUCE_DEBUG
     static bool stateUpdatePlaybackRegionProperties;
    #endif
+
+    //==============================================================================
+    JUCE_ARA_MODEL_OBJECT_LISTENERLIST
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARARegionSequence)
