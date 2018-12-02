@@ -2,6 +2,9 @@
 
 #include "JuceHeader.h"
 
+class ARASampleProjectAudioProcessorEditor;
+class PlaybackRegionView;
+
 //==============================================================================
 /** 
     RegionSequenceView
@@ -9,34 +12,30 @@
     along with their name, order index, color, and selection state
 */
 class RegionSequenceView: public Component, 
-                          public juce::ChangeListener
+                          public ARARegionSequence::Listener
 {
 public:
+    RegionSequenceView (ARASampleProjectAudioProcessorEditor* editor, ARARegionSequence* sequence);
     ~RegionSequenceView();
-    RegionSequenceView (ARARegionSequence* sequence);
 
     void paint (Graphics&) override;
-    void changeListenerCallback (ChangeBroadcaster*) override;
+    void resized() override;
 
     void setIsSelected (bool value);
     bool getIsSelected() const;
-    double getStartInSecs();
-    double getLengthInSecs();
+    ARARegionSequence* getRegionSequence() const { return regionSequence; }
+    
+    void didUpdateRegionSequenceProperties (ARARegionSequence* sequence) override;
+    void willRemovePlaybackRegionFromRegionSequence (ARARegionSequence* sequence, ARAPlaybackRegion* playbackRegion) override;
+    void didAddPlaybackRegionToRegionSequence (ARARegionSequence* sequence, ARAPlaybackRegion* playbackRegion) override;
 
-    ARA::PlugIn::RegionSequence* getRegionSequence() const { return regionSequence; }
+    void getTimeRange (double& startTimeInSeconds, double& endTimeInSeconds) const;
 
 private:
-    String name;
-    String orderIndex;
-    Colour trackColour;
     bool isSelected;
-    double startInSecs;
-
+    ARASampleProjectAudioProcessorEditor* editorComponent;
     ARARegionSequence* regionSequence;
-
-    juce::AudioFormatManager audioFormatManger;
-    juce::AudioThumbnailCache audioThumbCache;
-    juce::AudioThumbnail audioThumb;
+    OwnedArray<PlaybackRegionView> playbackRegionViews;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RegionSequenceView)
 };

@@ -6,27 +6,33 @@ namespace juce
 ARAPlaybackRenderer::ARAPlaybackRenderer (ARADocumentController* documentController)
 : ARA::PlugIn::PlaybackRenderer (documentController),
   sampleRate (44100),
-  maxSamplesPerBlock (1024)
+  numChannels (1),
+  maxSamplesPerBlock (1024),
+  prepared (false)
 {}
 
-void ARAPlaybackRenderer::prepareToPlay (double newSampleRate, int newMaxSamplesPerBlock)
+void ARAPlaybackRenderer::prepareToPlay (double newSampleRate, int newNumChannels, int newMaxSamplesPerBlock)
 {
     sampleRate = newSampleRate;
+    numChannels = newNumChannels;
     maxSamplesPerBlock = newMaxSamplesPerBlock;
 
     setRendering(true);
+    prepared = true;
 }
 
 void ARAPlaybackRenderer::releaseResources()
 {
+    prepared = false;
     setRendering(false);
 }
 
-void ARAPlaybackRenderer::processBlock (AudioBuffer<float>& buffer, int64 /*timeInSamples*/, bool /*isPlayingBack*/)
+bool ARAPlaybackRenderer::processBlock (AudioBuffer<float>& buffer, int64 /*timeInSamples*/, bool /*isPlayingBack*/)
 {
     jassert (buffer.getNumSamples() <= getMaxSamplesPerBlock());
     for (int c = 0; c < buffer.getNumChannels(); c++)
         FloatVectorOperations::clear (buffer.getArrayOfWritePointers()[c], buffer.getNumSamples());
+    return true;
 }
 
 void ARAPlaybackRenderer::addPlaybackRegion (ARAPlaybackRegion* playbackRegion) noexcept
