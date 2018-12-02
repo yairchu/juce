@@ -1,14 +1,3 @@
-/*
-  ==============================================================================
-
-    This file was auto-generated!
-
-    It contains the basic framework code for a JUCE plugin editor.
-
-  ==============================================================================
-*/
-
-
 #pragma once
 
 #include "../JuceLibraryCode/JuceHeader.h"
@@ -38,7 +27,7 @@ public:
     void resized() override;
 
     // ARASampleProjectEditorView overrides
-    void onNewSelection (const ARA::PlugIn::ViewSelection* currentSelection) override;
+    void onNewSelection (const ARA::PlugIn::ViewSelection& currentSelection) override;
 
     // ARARegionSequenceUpdateListener overrides
     void didUpdateRegionSequenceProperties (ARARegionSequence* regionSequence) noexcept override;
@@ -50,7 +39,6 @@ private:
     Component regionSequenceListView;
 
     double maxRegionSequenceLength;
-    juce::CriticalSection selectionLock;
     juce::OwnedArray <RegionSequenceView> regionSequenceViews;
 
     std::set<ARA::PlugIn::RegionSequence*> regionSequencesWithPropertyChanges;

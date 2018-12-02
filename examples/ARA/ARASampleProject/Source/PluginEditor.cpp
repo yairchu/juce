@@ -1,13 +1,3 @@
-/*
-  ==============================================================================
-
-    This file was auto-generated!
-
-    It contains the basic framework code for a JUCE plugin editor.
-
-  ==============================================================================
-*/
-
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
@@ -32,7 +22,7 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
     // manually invoke the onNewSelection callback to refresh our UI with the current selection
     // TODO JUCE_ARA should we rename the function that recreates the view?
     getARAEditorView ()->addSelectionListener (this);
-    onNewSelection (getARAEditorView ()->getMostRecentSelection());
+    onNewSelection (getARAEditorView ()->getViewSelection ());
 }
 
 ARASampleProjectAudioProcessorEditor::~ARASampleProjectAudioProcessorEditor()
@@ -73,12 +63,8 @@ void ARASampleProjectAudioProcessorEditor::resized()
 }
 
 // rebuild our region sequence views and display selection state
-void ARASampleProjectAudioProcessorEditor::onNewSelection (const ARA::PlugIn::ViewSelection* currentSelection)
+void ARASampleProjectAudioProcessorEditor::onNewSelection (const ARA::PlugIn::ViewSelection& currentSelection)
 {
-    // this is called from the constructor as well as our ARA host's
-    // model update thread when the host selection changes
-    const ScopedLock lock (selectionLock);
-
     // determine the length in seconds of the longest ARA region sequence
     maxRegionSequenceLength = 0.0;
 
@@ -101,9 +87,8 @@ void ARASampleProjectAudioProcessorEditor::onNewSelection (const ARA::PlugIn::Vi
 
         // flag the region as selected if it's a part of the current selection, 
         // or not selected if we have no selection
-        auto& selectedRegionSequences = currentSelection->getRegionSequences();
-        bool selectionState = selectedRegionSequences.end() != std::find (selectedRegionSequences.begin(), selectedRegionSequences.end(), regionSequences[i]);
-        regionSequenceViews[i]->setIsSelected (selectionState);
+        bool isSelected = ARA::contains (currentSelection.getRegionSequences (), regionSequences[i]);
+        regionSequenceViews[i]->setIsSelected (isSelected);
 
         // make the region sequence view visible and keep track of the longest region sequence
         regionSequenceListView.addAndMakeVisible (regionSequenceViews[i]);
@@ -122,5 +107,5 @@ void ARASampleProjectAudioProcessorEditor::didUpdateRegionSequenceProperties (AR
 {
     // manually invoke onNewSelection here to redraw the region sequence views
     regionSequencesWithPropertyChanges.insert (regionSequence);
-    onNewSelection (getARAEditorView ()->getMostRecentSelection());
+    onNewSelection (getARAEditorView ()->getViewSelection ());
 }
