@@ -60,6 +60,9 @@ private:
     std::unique_ptr<ARA::PlugIn::HostAudioReader> araHostReader;
     ReadWriteLock lock;
     std::vector<void*> tmpPtrs;
+
+    //==============================================================================
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARAAudioSourceReader)
 };
 
 //==============================================================================
@@ -87,6 +90,9 @@ public:
 private:
     std::unique_ptr<ARAPlaybackRenderer> playbackRenderer;
     ReadWriteLock lock;
+
+    //==============================================================================
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARAPlaybackRegionReader)
 };
 
 //==============================================================================
@@ -103,7 +109,10 @@ public:
     void willDestroyRegionSequence (ARARegionSequence* regionSequence) override;
 
 private:
-    ARARegionSequence* sequence;
+    ARARegionSequence* sequence = nullptr;
+
+    //==============================================================================
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARARegionSequenceReader)
 };
 
 } // namespace juce

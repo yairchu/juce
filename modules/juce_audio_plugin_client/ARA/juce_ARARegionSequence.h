@@ -69,6 +69,9 @@ private:
    #if JUCE_DEBUG
     static bool stateUpdatePlaybackRegionProperties;
    #endif
+
+    //==============================================================================
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARARegionSequence)
 };
 
 // Utility function for rendering samples for a vector of `PlaybackRegion`s.

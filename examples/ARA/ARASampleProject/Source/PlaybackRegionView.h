@@ -36,12 +36,15 @@ private:
     void recreatePlaybackRegionReader();
 
 private:
-    ARASampleProjectAudioProcessorEditor* editorComponent;
-    ARAPlaybackRegion* playbackRegion;
+    ARASampleProjectAudioProcessorEditor* editorComponent = nullptr;
+    ARAPlaybackRegion* playbackRegion = nullptr;
     ARAPlaybackRegionReader* playbackRegionReader = nullptr;  // careful: "weak" pointer, actual pointer is owned by our audioThumb
     bool isSelected = false;
 
     AudioFormatManager audioFormatManger;
     AudioThumbnailCache audioThumbCache;
     AudioThumbnail audioThumb;
+
+    //==============================================================================
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PlaybackRegionView)
 };

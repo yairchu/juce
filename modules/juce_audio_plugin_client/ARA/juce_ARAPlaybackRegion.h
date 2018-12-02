@@ -9,7 +9,7 @@ namespace juce
 class ARAPlaybackRegion : public ARA::PlugIn::PlaybackRegion
 {
 public:
-    ARAPlaybackRegion (ARA::PlugIn::AudioModification* audioModification, ARA::ARAPlaybackRegionHostRef hostRef);
+    ARAPlaybackRegion (ARAAudioModification* audioModification, ARA::ARAPlaybackRegionHostRef hostRef);
 
     class Listener
     {
@@ -35,6 +35,9 @@ public:         // to be called by ARADocumentController only
 
 private:
     ListenerList<Listener> listeners;
+
+    //==============================================================================
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARAPlaybackRegion)
 };
 
 } // namespace juce

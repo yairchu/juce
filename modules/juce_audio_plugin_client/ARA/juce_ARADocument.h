@@ -5,6 +5,9 @@
 namespace juce
 {
 class ARADocumentController;
+class ARARegionSequence;
+class ARAMusicalContext;
+class ARAAudioSource;
 
 class ARADocument : public ARA::PlugIn::Document
 {
@@ -22,6 +25,9 @@ public:
         virtual void willUpdateDocumentProperties (ARADocument* document, ARADocument::PropertiesPtr newProperties) {}
         virtual void didUpdateDocumentProperties (ARADocument* document) {}
         virtual void didReorderRegionSequencesInDocument (ARADocument* document) {}
+        virtual void didAddMusicalContext (ARADocument* document, ARAMusicalContext* musicalContext) {}
+        virtual void didAddRegionSequence (ARADocument* document, ARARegionSequence* regionSequence) {}
+        virtual void didAddAudioSource (ARADocument* document, ARAAudioSource* audioSource) {}
         virtual void willDestroyDocument (ARADocument* document) {}
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_END
     };
@@ -35,10 +41,16 @@ public:         // to be called by ARADocumentController only
     void willUpdateDocumentProperties (ARADocument::PropertiesPtr newProperties);
     void didUpdateDocumentProperties();
     void didReorderRegionSequencesInDocument();
+    void didAddMusicalContext (ARAMusicalContext* musicalContext);
+    void didAddRegionSequence (ARARegionSequence* regionSequence);
+    void didAddAudioSource (ARAAudioSource* audioSource);
     void willDestroyDocument();
 
 private:
     ListenerList<Listener> listeners;
+
+    //==============================================================================
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARADocument)
 };
 
 } // namespace juce

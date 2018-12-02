@@ -3,7 +3,7 @@
 namespace juce
 {
 
-ARAAudioSource::ARAAudioSource (ARA::PlugIn::Document* document, ARA::ARAAudioSourceHostRef hostRef)
+ARAAudioSource::ARAAudioSource (ARADocument* document, ARA::ARAAudioSourceHostRef hostRef)
 : ARA::PlugIn::AudioSource(document, hostRef)
 {}
 
@@ -35,6 +35,11 @@ void ARAAudioSource::didEnableAudioSourceSamplesAccess (bool enable)
 void ARAAudioSource::doDeactivateAudioSourceForUndoHistory (bool deactivate)
 {
     listeners.callExpectingUnregistration ([this, deactivate] (Listener& l) { l.doDeactivateAudioSourceForUndoHistory (this, deactivate); });
+}
+
+void ARAAudioSource::didAddAudioModification (ARAAudioModification* audioModification)
+{
+    listeners.callExpectingUnregistration ([this, audioModification] (Listener& l) { l.didAddAudioModification (this, audioModification); });
 }
 
 void ARAAudioSource::willDestroyAudioSource()

@@ -3,7 +3,7 @@
 namespace juce
 {
 
-ARAAudioModification::ARAAudioModification (ARA::PlugIn::AudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef)
+ARAAudioModification::ARAAudioModification (ARAAudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef)
 : ARA::PlugIn::AudioModification (audioSource, hostRef)
 {}
 
@@ -25,6 +25,11 @@ void ARAAudioModification::didUpdateAudioModificationContent (ARAContentUpdateSc
 void ARAAudioModification::doDeactivateAudioModificationForUndoHistory (bool deactivate)
 {
     listeners.callExpectingUnregistration ([this, deactivate] (Listener& l) { l.doDeactivateAudioModificationForUndoHistory (this, deactivate); });
+}
+
+void ARAAudioModification::didAddPlaybackRegion (ARAPlaybackRegion* playbackRegion)
+{
+    listeners.callExpectingUnregistration ([this, playbackRegion] (Listener& l) { l.didAddPlaybackRegion(this, playbackRegion); });
 }
 
 void ARAAudioModification::willDestroyAudioModification()
