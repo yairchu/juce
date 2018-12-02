@@ -627,7 +627,7 @@ public:
         return (Steinberg::TBool) true;
     }
 
-    Steinberg::tresult PLUGIN_API setViewIsEmbedded (Steinberg::IPlugView* view, Steinberg::TBool embedded) override
+    Steinberg::tresult PLUGIN_API setViewIsEmbedded (Steinberg::IPlugView* /*view*/, Steinberg::TBool /*embedded*/) override
     {
         return kResultOk;
     }
@@ -2663,7 +2663,7 @@ private:
                                                                                          ARA::ARAPlugInInstanceRoleFlags knownRoles, ARA::ARAPlugInInstanceRoleFlags assignedRoles) SMTG_OVERRIDE
     {
         AudioProcessorARAExtension* araAudioProcessorExtension = dynamic_cast<AudioProcessorARAExtension*>(pluginInstance);
-        return araAudioProcessorExtension->createARAPlugInExtension (documentControllerRef, knownRoles, assignedRoles);
+        return araAudioProcessorExtension->bindToARA (documentControllerRef, knownRoles, assignedRoles);
     }
 
 #endif

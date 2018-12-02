@@ -11,14 +11,14 @@ PlaybackRegionView::PlaybackRegionView (ARASampleProjectAudioProcessorEditor* ed
 {
     audioThumb.addChangeListener (this);
 
-    static_cast<ARADocument*> (editorComponent->getARADocumentController()->getDocument())->addListener (this);
+    static_cast<ARADocument*> (playbackRegion->getRegionSequence()->getDocument())->addListener (this);
 
     recreatePlaybackRegionReader();
 }
 
 PlaybackRegionView::~PlaybackRegionView()
 {
-    static_cast<ARADocument*>(playbackRegion->getRegionSequence()->getDocument())->removeListener (this);
+    static_cast<ARADocument*> (playbackRegion->getRegionSequence()->getDocument())->removeListener (this);
 
     audioThumb.clear();
     audioThumb.removeChangeListener (this);
@@ -29,9 +29,9 @@ void PlaybackRegionView::paint (Graphics& g)
     Colour regionColour;
     // TODO JUCE_ARA Studio One uses black as the default color, which looks bad...
     const ARA::ARAColor* colour = playbackRegion->getColor();
-    if (!colour)
+    if (! colour)
         colour = playbackRegion->getRegionSequence()->getColor();
-    if (colour)
+    if (colour != nullptr)
     {
         regionColour = Colour::fromFloatRGBA (colour->r, colour->g, colour->b, 1.0f);
         g.fillAll (regionColour);
@@ -82,7 +82,7 @@ void PlaybackRegionView::recreatePlaybackRegionReader()
     // create a non-realtime playback region reader for our audio thumb
     auto documentController = static_cast<ARASampleProjectDocumentController*> (editorComponent->getARADocumentController());
     playbackRegionReader = documentController->createPlaybackRegionReader ({ playbackRegion }, true);
-    audioThumb.setReader (playbackRegionReader, kAudioThumbHashCode);
+    audioThumb.setReader (playbackRegionReader, reinterpret_cast<intptr_t> (playbackRegion));   // TODO JUCE_ARA better hash?
 }
 
 void PlaybackRegionView::doEndEditing (ARADocument* /*document*/)
