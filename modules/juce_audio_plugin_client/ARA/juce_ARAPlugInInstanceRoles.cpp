@@ -4,11 +4,36 @@ namespace juce
 {
 
 ARAPlaybackRenderer::ARAPlaybackRenderer (ARADocumentController* documentController)
-: ARA::PlugIn::PlaybackRenderer (documentController)
+: ARA::PlugIn::PlaybackRenderer (documentController),
+  sampleRate (44100),
+  maxSamplesPerBlock (1024)
+#if ! JUCE_DISABLE_ASSERTIONS
+, isPreparedToPlay (false)
+#endif
 {}
 
-void ARAPlaybackRenderer::renderSamples (AudioBuffer<float>& buffer, ARA::ARASampleRate /*sampleRate*/, ARA::ARASamplePosition /*samplePosition*/, bool /*isPlayingBack*/)
+void ARAPlaybackRenderer::prepareToPlay (double newSampleRate, int newMaxSamplesPerBlock)
 {
+    jassert (! isPreparedToPlay);
+    sampleRate = newSampleRate;
+    maxSamplesPerBlock = newMaxSamplesPerBlock;
+#if ! JUCE_DISABLE_ASSERTIONS
+    isPreparedToPlay = true;
+#endif
+}
+
+void ARAPlaybackRenderer::releaseResources()
+{
+    jassert (isPreparedToPlay);
+#if ! JUCE_DISABLE_ASSERTIONS
+    isPreparedToPlay = false;
+#endif
+}
+
+void ARAPlaybackRenderer::processBlock (AudioBuffer<float>& buffer, int64 /*timeInSamples*/, bool /*isPlayingBack*/)
+{
+    jassert (isPreparedToPlay);
+    jassert (buffer.getNumSamples() <= getMaxSamplesPerBlock());
     for (int c = 0; c < buffer.getNumChannels(); c++)
         FloatVectorOperations::clear (buffer.getArrayOfWritePointers()[c], buffer.getNumSamples());
 }
