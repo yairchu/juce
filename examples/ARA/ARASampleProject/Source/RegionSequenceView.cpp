@@ -16,11 +16,16 @@ RegionSequenceView::RegionSequenceView (ARASampleProjectAudioProcessorEditor* ed
         playbackRegionViews.add (new PlaybackRegionView (editorComponent, static_cast<ARAPlaybackRegion*> (playbackRegion)));
         addAndMakeVisible (playbackRegionViews.getLast());
     }
+
+    // listen to selection changes and invoke onNewSelection with the current selection
+    editorComponent->getARAEditorView ()->addListener (this);
+    onNewSelection (editorComponent->getARAEditorView ()->getViewSelection ());
 }
 
 RegionSequenceView::~RegionSequenceView()
 {
     regionSequence->removeListener(this);
+    editorComponent->getARAEditorView ()->removeListener (this);
 }
 
 void RegionSequenceView::paint (Graphics& g)
@@ -40,14 +45,16 @@ void RegionSequenceView::paint (Graphics& g)
 
     // draw the track name (vertically) in the header by rotating
     // the graphics transform about the center header rect
+    // TODO JUCE_ARA this was more of a trial-and-error process - is
+    // there a cleaner way to draw vertical text inside headerRect?
     Graphics::ScopedSaveState state (g);
     g.addTransform (AffineTransform::rotation (-MathConstants<float>::halfPi, 
                                                headerRect.getWidth () * 0.5f,
                                                headerRect.getHeight () * 0.5f));
-    Rectangle<int> textRect (-headerRect.getHeight (), (int)(1.25 * headerRect.getWidth ()), (int)(1.5 * headerRect.getHeight ()), headerRect.getWidth ());
+    Rectangle<int> textRect ((int) (-.3 * headerRect.getHeight()), (int)(1.25 * headerRect.getWidth ()), (int)(0.85 * headerRect.getHeight ()), headerRect.getWidth ());
     g.setColour (trackColour.contrasting (1.0f));
     g.setFont (Font (12.0));
-    g.drawText ("Track #" + String (regionSequence->getOrderIndex()) + ": " + regionSequence->getName(), textRect, Justification::bottomLeft);
+    g.drawText (String (regionSequence->getName()), textRect, Justification::bottomLeft);
 }
 
 void RegionSequenceView::resized()
@@ -59,8 +66,8 @@ void RegionSequenceView::resized()
     for (auto v : playbackRegionViews)
     {
         // normalize region boundaries to our entire view length in seconds
-        double normalizedStartPos = (v->getStartInSeconds()) / endInSeconds;
-        double normalizedLength = (v->getLengthInSeconds()) / endInSeconds;
+        double normalizedStartPos = (v->getPlaybackRegion()->getStartInPlaybackTime()) / endInSeconds;
+        double normalizedLength = (v->getPlaybackRegion ()->getDurationInPlaybackTime()) / endInSeconds;
 
         // compute region view bounds and place the bounds just after the track header
         auto regionBounds = getLocalBounds();
@@ -71,12 +78,14 @@ void RegionSequenceView::resized()
     }
 }
 
-void RegionSequenceView::setIsSelected (bool value)
+void RegionSequenceView::onNewSelection (const ARA::PlugIn::ViewSelection& currentSelection)
 {
-    bool needsRepaint = (value != isSelected);
-    isSelected = value;
-    if (needsRepaint)
+    bool isOurRegionSequenceSelected = ARA::contains (currentSelection.getRegionSequences(), regionSequence);
+    if (isOurRegionSequenceSelected != isSelected)
+    {
+        isSelected = isOurRegionSequenceSelected;
         repaint();
+    }
 }
 
 void RegionSequenceView::getTimeRange (double& startTimeInSeconds, double& endTimeInSeconds) const
@@ -88,8 +97,8 @@ void RegionSequenceView::getTimeRange (double& startTimeInSeconds, double& endTi
     endTimeInSeconds = 0;
     for (auto v : playbackRegionViews)
     {
-        startTimeInSeconds = jmin (startTimeInSeconds, v->getStartInSeconds());
-        endTimeInSeconds = jmax (endTimeInSeconds, v->getEndInSeconds());
+        startTimeInSeconds = jmin (startTimeInSeconds, v->getPlaybackRegion()->getStartInPlaybackTime());
+        endTimeInSeconds = jmax (endTimeInSeconds, v->getPlaybackRegion()->getEndInPlaybackTime());
     }
 }
 

@@ -1,6 +1,5 @@
 #include "ARASampleProjectAudioProcessor.h"
 #include "ARASampleProjectAudioProcessorEditor.h"
-#include "PlaybackRegionView.h"
 
 
 //==============================================================================
@@ -23,19 +22,19 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
     {
         auto document = static_cast<ARADocument*> (getARADocumentController()->getDocument());
         document->addListener (this);
-        getARAEditorView()->addSelectionListener (this);
+        getARAEditorView ()->addListener (this);
 
         for (auto regionSequence : document->getRegionSequences())
         {
+            if (ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
+                continue;
+
             static_cast<ARARegionSequence*>(regionSequence)->addListener (this);
             regionSequenceViews.add (new RegionSequenceView (this, static_cast<ARARegionSequence*>(regionSequence)));
             regionSequenceListView.addAndMakeVisible (regionSequenceViews.getLast());
         }
 
         rebuildView();
-
-        // manually invoke the onNewSelection callback to refresh our UI with the current selection
-        onNewSelection (getARAEditorView()->getViewSelection());
     }
 }
 
@@ -45,7 +44,7 @@ ARASampleProjectAudioProcessorEditor::~ARASampleProjectAudioProcessorEditor()
     {
         auto document = static_cast<ARADocument*> (getARADocumentController()->getDocument());
         document->removeListener (this);
-        getARAEditorView()->removeSelectionListener (this);
+        getARAEditorView ()->removeListener (this);
 
         for (auto regionSequence : document->getRegionSequences())
             static_cast<ARARegionSequence*>(regionSequence)->removeListener (this);
@@ -93,21 +92,6 @@ void ARASampleProjectAudioProcessorEditor::resized()
     regionSequenceViewPort.setBounds (0, 0, getWidth(), getHeight());
 }
 
-void ARASampleProjectAudioProcessorEditor::onNewSelection (const ARA::PlugIn::ViewSelection& currentSelection)
-{
-    // flag the region as selected if it's a part of the current selection
-    for (RegionSequenceView* regionSequenceView : regionSequenceViews)
-    {
-        bool isRegionSequenceSelected = ARA::contains (currentSelection.getRegionSequences(), regionSequenceView->getRegionSequence());
-        regionSequenceView->setIsSelected (isRegionSequenceSelected);
-        for (PlaybackRegionView* playbackRegionView : regionSequenceView->getPlaybackRegionViews ())
-        {
-            bool isPlaybackRegionSelected = ARA::contains (currentSelection.getPlaybackRegions (), playbackRegionView->getPlaybackRegion());
-            playbackRegionView->setIsSelected (isPlaybackRegionSelected);
-        }
-    }
-}
-
 void ARASampleProjectAudioProcessorEditor::rebuildView()
 {
     std::sort(regionSequenceViews.begin(), regionSequenceViews.end(),[] (RegionSequenceView* a, RegionSequenceView* b)
@@ -120,10 +104,29 @@ void ARASampleProjectAudioProcessorEditor::rebuildView()
     resized();
 }
 
+void ARASampleProjectAudioProcessorEditor::onHideRegionSequences (std::vector<ARARegionSequence*> const& regionSequences)
+{
+    std::vector<RegionSequenceView*> viewsToRemove;
+    for (auto v : regionSequenceViews)
+        if (ARA::contains (regionSequences, v->getRegionSequence ()))
+            viewsToRemove.push_back (v);
+
+    if (viewsToRemove.empty ())
+        return;
+
+    for (auto v : viewsToRemove)
+        regionSequenceViews.removeObject (v, true);
+
+    repaint ();
+}
+
 void ARASampleProjectAudioProcessorEditor::doEndEditing (ARADocument* document)
 {
     for (auto regionSequence : document->getRegionSequences())
     {
+        if (ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
+            continue;
+
         // TODO JUCE_ARA
         // we need a proper callback for when a region sequence is created
         // so we know when to make new views / subscribe to callbacks

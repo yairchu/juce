@@ -15,6 +15,10 @@ PlaybackRegionView::PlaybackRegionView (ARASampleProjectAudioProcessorEditor* ed
     playbackRegion->addListener (this);
 
     recreatePlaybackRegionReader();
+
+    // listen to selection changes and invoke onNewSelection with the current selection
+    editorComponent->getARAEditorView ()->addListener (this);
+    onNewSelection (editorComponent->getARAEditorView ()->getViewSelection ());
 }
 
 PlaybackRegionView::~PlaybackRegionView()
@@ -22,6 +26,7 @@ PlaybackRegionView::~PlaybackRegionView()
     playbackRegion->removeListener (this);
     static_cast<ARAAudioSource*>(playbackRegion->getAudioModification()->getAudioSource())->removeListener (this);
     static_cast<ARADocument*> (playbackRegion->getRegionSequence()->getDocument())->removeListener (this);
+    editorComponent->getARAEditorView ()->removeListener (this);
 
     audioThumb.clear();
     audioThumb.removeChangeListener (this);
@@ -44,10 +49,11 @@ void PlaybackRegionView::paint (Graphics& g)
 
     if (playbackRegion->getAudioModification()->getAudioSource()->isSampleAccessEnabled())
     {
-        if (getLengthInSeconds() != 0.0)
+        double duration = playbackRegion->getDurationInPlaybackTime();
+        if (duration != 0.0)
         {
             g.setColour (regionColour.contrasting (0.7f));
-            audioThumb.drawChannels (g, getLocalBounds(), 0.0, getLengthInSeconds(), 1.0);
+            audioThumb.drawChannels (g, getLocalBounds(), 0.0, duration, 1.0);
         }
     }
     else
@@ -63,6 +69,16 @@ void PlaybackRegionView::changeListenerCallback (ChangeBroadcaster* /*broadcaste
     repaint();
 }
 
+void PlaybackRegionView::onNewSelection (const ARA::PlugIn::ViewSelection& currentSelection)
+{
+    bool isOurPlaybackRegionSelected = ARA::contains (currentSelection.getPlaybackRegions(), playbackRegion);
+    if (isOurPlaybackRegionSelected != isSelected)
+    {
+        isSelected = isOurPlaybackRegionSelected;
+        repaint();
+    }
+}
+
 void PlaybackRegionView::doEndEditing (ARADocument* document)
 {
     jassert (document == playbackRegion->getRegionSequence()->getDocument());
@@ -74,7 +90,7 @@ void PlaybackRegionView::doEndEditing (ARADocument* document)
     }
 }
 
-void PlaybackRegionView::didEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool enable)
+void PlaybackRegionView::didEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool /*enable*/)
 {
     jassert (audioSource == playbackRegion->getAudioModification()->getAudioSource());
 
@@ -89,15 +105,6 @@ void PlaybackRegionView::willUpdatePlaybackRegionProperties (ARAPlaybackRegion* 
         (playbackRegion->getDurationInPlaybackTime() != newProperties->durationInPlaybackTime))
     {
         editorComponent->setDirty();
-    }
-}
-
-void PlaybackRegionView::setIsSelected (bool value)
-{
-    if (isSelected != value)
-    {
-        isSelected = value;
-        repaint();
     }
 }
 
