@@ -143,9 +143,10 @@ bool ARAAudioSourceReader::readSamples (int** destSamples, int numDestChannels, 
 
 //==============================================================================
 
-ARAPlaybackRegionReader::ARAPlaybackRegionReader (ARAPlaybackRenderer* renderer, std::vector<ARAPlaybackRegion*> const& playbackRegions)
+ARAPlaybackRegionReader::ARAPlaybackRegionReader (ARAPlaybackRenderer* renderer, std::vector<ARAPlaybackRegion*> const& playbackRegions, bool nonRealtime)
 : AudioFormatReader (nullptr, "ARAPlaybackRegionReader"),
-  playbackRenderer (renderer)
+  playbackRenderer (renderer),
+  isNonRealtime (nonRealtime)
 {
     // TODO JUCE_ARA
     // Make sampleRate, numChannels and use64BitSamples available as c'tor parameters instead
@@ -198,9 +199,9 @@ ARAPlaybackRegionReader::~ARAPlaybackRegionReader()
 
 void ARAPlaybackRegionReader::invalidate()
 {
-    ScopedWriteLock scopedWrite (lock);
     if (isValid())
     {
+        ScopedWriteLock scopedWrite (lock);
         for (auto playbackRegion : playbackRenderer->getPlaybackRegions ())
             static_cast<ARAPlaybackRegion*>(playbackRegion)->removeListener (this);
 
@@ -221,7 +222,7 @@ bool ARAPlaybackRegionReader::readSamples (int** destSamples, int numDestChannel
             {
                 int numSliceSamples = jmin(numSamples, playbackRenderer->getMaxSamplesPerBlock());
                 AudioBuffer<float> buffer ((float **) destSamples, numDestChannels, startOffsetInDestBuffer, numSliceSamples);
-                success = playbackRenderer->processBlock (buffer, startSampleInFile, true);
+                success = playbackRenderer->processBlock (buffer, startSampleInFile, true, isNonRealtime); 
                 numSamples -= numSliceSamples;
                 startOffsetInDestBuffer += numSliceSamples;
                 startSampleInFile += numSliceSamples;
@@ -235,8 +236,6 @@ bool ARAPlaybackRegionReader::readSamples (int** destSamples, int numDestChannel
     {
         for (int chan_i = 0; chan_i < numDestChannels; ++chan_i)
             FloatVectorOperations::clear ((float *) destSamples[chan_i], numSamples);
-
-        invalidate();
     }
     return success;
 }
@@ -263,8 +262,8 @@ void ARAPlaybackRegionReader::willDestroyPlaybackRegion (ARAPlaybackRegion* /*pl
 
 //==============================================================================
 
-ARARegionSequenceReader::ARARegionSequenceReader (ARAPlaybackRenderer* playbackRenderer, ARARegionSequence* regionSequence)
-: ARAPlaybackRegionReader (playbackRenderer, reinterpret_cast<std::vector<ARAPlaybackRegion*> const&> (regionSequence->getPlaybackRegions ())),
+ARARegionSequenceReader::ARARegionSequenceReader (ARAPlaybackRenderer* playbackRenderer, ARARegionSequence* regionSequence, bool nonRealtime)
+: ARAPlaybackRegionReader (playbackRenderer, reinterpret_cast<std::vector<ARAPlaybackRegion*> const&> (regionSequence->getPlaybackRegions ()), nonRealtime),
   sequence (regionSequence)
 {
     sequence->addListener (this);
