@@ -5,7 +5,16 @@ namespace juce
 
 AudioProcessorEditorARAExtension::AudioProcessorEditorARAExtension (AudioProcessor* audioProcessor)
 : araProcessorExtension (dynamic_cast<AudioProcessorARAExtension*> (audioProcessor))
-{}
+{
+    if (isARAEditorView ())
+        getARAEditorView()->setEditorOpen (true);
+}
+
+AudioProcessorEditorARAExtension::~AudioProcessorEditorARAExtension ()
+{
+    if (isARAEditorView ())
+        getARAEditorView()->setEditorOpen (false);
+}
 
 ARAEditorView* AudioProcessorEditorARAExtension::getARAEditorView() const noexcept
 {
