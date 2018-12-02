@@ -90,7 +90,7 @@ void ARADocumentController::notifyAudioSourceContentChanged (ARAAudioSource* aud
 void ARADocumentController::notifyAudioModificationContentChanged (ARAAudioModification* audioModification, ARAContentUpdateScopes scopeFlags, bool notifyAllPlaybackRegions)
 {
     audioModification->didUpdateAudioModificationContent (scopeFlags);
-    
+
     if (notifyAllPlaybackRegions)
     {
         for (auto playbackRegion : audioModification->getPlaybackRegions())
@@ -108,7 +108,7 @@ void ARADocumentController::notifyPlaybackRegionContentChanged (ARAPlaybackRegio
 }
 
 //==============================================================================
-    
+
 ARA::PlugIn::Document* ARADocumentController::doCreateDocument (ARA::PlugIn::DocumentController* documentController) noexcept
 {
     return new ARADocument (static_cast<ARADocumentController*> (documentController));
@@ -138,7 +138,7 @@ void ARADocumentController::doNotifyModelUpdates () noexcept
         for (auto& playbackRegionUpdate : playbackRegionUpdates)
             modelUpdateController->notifyPlaybackRegionContentChanged (playbackRegionUpdate.first->getHostRef (), nullptr, playbackRegionUpdate.second);
     }
- 
+
     audioSourceUpdates.clear ();
     audioModificationUpdates.clear ();
     playbackRegionUpdates.clear ();
@@ -152,6 +152,11 @@ void ARADocumentController::willUpdateDocumentProperties (ARA::PlugIn::Document*
 void ARADocumentController::didUpdateDocumentProperties (ARA::PlugIn::Document* document) noexcept
 {
     static_cast<ARADocument*> (document)->didUpdateDocumentProperties ();
+}
+
+void ARADocumentController::didReorderRegionSequencesInDocument (ARA::PlugIn::Document* document) noexcept
+{
+    static_cast<ARADocument*> (document)->didReorderRegionSequencesInDocument ();
 }
 
 void ARADocumentController::willDestroyDocument (ARA::PlugIn::Document* document) noexcept

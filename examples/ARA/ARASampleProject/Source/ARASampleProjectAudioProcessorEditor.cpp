@@ -13,7 +13,7 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
     regionSequenceListView.setBounds (0, 0, kWidth - regionSequenceViewPort.getScrollBarThickness(), kHeight);
     regionSequenceViewPort.setViewedComponent (&regionSequenceListView, false);
     addAndMakeVisible (regionSequenceViewPort);
-    
+
     setSize (kWidth, kHeight);
     setResizeLimits (kMinWidth, kMinHeight, 32768, 32768);
     setResizable (true, false);
@@ -75,12 +75,12 @@ void ARASampleProjectAudioProcessorEditor::resized()
     // and determine the length in seconds of the longest ARA region sequence
     for (auto v : regionSequenceViews)
     {
-        double startInSeconds (0), endInSeconds (0);
+        double startInSeconds, endInSeconds;
         v->getTimeRange (startInSeconds, endInSeconds);
 
         double normalizedEnd = endInSeconds / kVisibleSeconds;
         v->setBounds (0, kRegionSequenceHeight * i, kTrackHeaderWidth + (int) (width * normalizedEnd), kRegionSequenceHeight);
-        
+
         maxRegionSequenceLength = jmax (maxRegionSequenceLength, endInSeconds);
         i++;
     }

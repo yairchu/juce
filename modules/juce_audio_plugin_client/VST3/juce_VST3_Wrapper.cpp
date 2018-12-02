@@ -74,7 +74,7 @@ namespace Vst2
 
 //==============================================================================
 #if JucePlugin_Enable_ARA
- 
+
  #include "../ARA/juce_AudioProcessorARAExtension.h"
 
  #include <ARA_API/ARAVST3.h>
@@ -82,7 +82,7 @@ namespace Vst2
  #if ARA_SUPPORT_VERSION_1
   #error "Unsupported ARA version - ARA version 2 and onward are JUCE compatible"
  #endif
- 
+
  DEF_CLASS_IID(ARA::IPlugInEntryPoint)
  DEF_CLASS_IID(ARA::IPlugInEntryPoint2)
  DEF_CLASS_IID(ARA::IMainFactory)
