@@ -29,7 +29,7 @@ private:
     AudioSampleBuffer sampleBuffer;
 };
 
-ARARegionSequence::ARARegionSequence (ARA::PlugIn::Document* document, ARA::ARARegionSequenceHostRef hostRef)
+ARARegionSequence::ARARegionSequence (ARADocument* document, ARA::ARARegionSequenceHostRef hostRef)
 : ARA::PlugIn::RegionSequence (document, hostRef)
 {
     ref = new Ref (this);

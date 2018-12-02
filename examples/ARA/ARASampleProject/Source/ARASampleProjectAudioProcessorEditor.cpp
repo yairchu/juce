@@ -24,8 +24,16 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
     // TODO JUCE_ARA should we rename the function that recreates the view?
     if (isARAEditorView())
     {
-        getARADocumentController ()->addListener (this);
+        auto document = static_cast<ARADocument*> (getARADocumentController ()->getDocument ());
+        document->addListener (this);
         getARAEditorView()->addSelectionListener (this);
+
+        for (auto regionSequence : document->getRegionSequences ())
+        {
+            static_cast<ARARegionSequence*>(regionSequence)->addListener (this);
+            for (auto playbackRegion : regionSequence->getPlaybackRegions ())
+                static_cast<ARAPlaybackRegion*>(playbackRegion)->addListener (this);
+        }
 
         rebuildView();
         onNewSelection (getARAEditorView()->getViewSelection());
@@ -36,16 +44,15 @@ ARASampleProjectAudioProcessorEditor::~ARASampleProjectAudioProcessorEditor()
 {
     if (isARAEditorView ())
     {
-        getARADocumentController ()->removeListener (this);
-        getARAEditorView ()->removeSelectionListener (this);
+        auto document = static_cast<ARADocument*> (getARADocumentController()->getDocument());
+        document->removeListener (this);
+        getARAEditorView()->removeSelectionListener (this);
 
-        for (auto regionSequence : getARAEditorView ()->getDocumentController ()->getDocument ()->getRegionSequences ())
+        for (auto regionSequence : document->getRegionSequences())
         {
             static_cast<ARARegionSequence*>(regionSequence)->removeListener (this);
-            for (auto playbackRegion : regionSequence->getPlaybackRegions ())
-            {
+            for (auto playbackRegion : regionSequence->getPlaybackRegions())
                 static_cast<ARAPlaybackRegion*>(playbackRegion)->removeListener (this);
-            }
         }
     }
 }
@@ -105,7 +112,7 @@ void ARASampleProjectAudioProcessorEditor::rebuildView()
     auto& regionSequences = getARAEditorView()->getDocumentController()->getDocument()->getRegionSequences();
     for (int i = 0; i < regionSequences.size(); i++)
     {
-        ARARegionSequence* regionSequence = static_cast<ARARegionSequence*>(regionSequences[i]);
+        auto regionSequence = static_cast<ARARegionSequence*>(regionSequences[i]);
 
         // construct the region sequence view if we don't yet have one
         if (regionSequenceViews.size() <= i)
@@ -171,15 +178,13 @@ void ARASampleProjectAudioProcessorEditor::willDestroyRegionSequence (ARARegionS
     isViewDirty = true;
 }
 
-void ARASampleProjectAudioProcessorEditor::doEndEditing (ARADocumentController* /*documentController*/) noexcept
+void ARASampleProjectAudioProcessorEditor::doEndEditing (ARADocument* document) noexcept
 {
-    for (auto regionSequence : getARAEditorView ()->getDocumentController ()->getDocument ()->getRegionSequences ())
+    for (auto regionSequence : document->getRegionSequences ())
     {
         static_cast<ARARegionSequence*>(regionSequence)->addListener (this);
         for (auto playbackRegion : regionSequence->getPlaybackRegions ())
-        {
             static_cast<ARAPlaybackRegion*>(playbackRegion)->addListener (this);
-        }
     }
 
     if (isViewDirty)
