@@ -38,7 +38,7 @@ void ARAAudioSourceReader::willEnableAudioSourceSamplesAccess (ARAAudioSource* a
     lock.enterWrite();
 
     // invalidate our reader if sample access is disabled
-    if (enable == false)
+    if (! enable)
         invalidate();
 }
 
@@ -145,10 +145,12 @@ ARAPlaybackRegionReader::ARAPlaybackRegionReader (ARAPlaybackRenderer* playbackR
   playbackRenderer (playbackRenderer)
 {
     // TODO JUCE_ARA
-    // deal with single and double precision floats
+    // Make sampleRate, numChannels and use64BitSamples available as c'tor parameters instead
+    // of deducing it here. Since regions can start anywhere on the timeline, maybe also define
+    // which time range should be considered as "range to be read by this reader".
     bitsPerSample = 32;
     usesFloatingPointData = true;
-    numChannels = 0;
+    numChannels = 1;
     lengthInSamples = 0;
     sampleRate = 0;
 
@@ -160,18 +162,14 @@ ARAPlaybackRegionReader::ARAPlaybackRegionReader (ARAPlaybackRenderer* playbackR
         if (sampleRate == 0.0)
             sampleRate = source->getSampleRate();
 
-        if (sampleRate != source->getSampleRate())
-        {
-            // Skip regions with mis-matching sample-rates!
-            continue;
-        }
-
-        numChannels = std::max (numChannels, (unsigned int) source->getChannelCount());
-        lengthInSamples = std::max (lengthInSamples, playbackRegion->getEndInPlaybackSamples (sampleRate));
+        numChannels = jmax (numChannels, (unsigned int) source->getChannelCount());
+        lengthInSamples = jmax (lengthInSamples, playbackRegion->getEndInPlaybackSamples (sampleRate));
 
         playbackRenderer->addPlaybackRegion (playbackRegion);
     }
 
+	if (sampleRate == 0.0)
+		sampleRate = 44100;
     playbackRenderer->prepareToPlay(sampleRate, 16*1024);
 }
 
@@ -194,7 +192,7 @@ bool ARAPlaybackRegionReader::readSamples (int** destSamples, int numDestChannel
 
     while (numSamples > 0)
     {
-        int numSliceSamples = std::min(numSamples, playbackRenderer->getMaxSamplesPerBlock());
+        int numSliceSamples = jmin(numSamples, playbackRenderer->getMaxSamplesPerBlock());
         AudioBuffer<float> buffer ((float **) destSamples, numDestChannels, startOffsetInDestBuffer, numSliceSamples);
         playbackRenderer->processBlock (buffer, startSampleInFile, true);
         numSamples -= numSliceSamples;

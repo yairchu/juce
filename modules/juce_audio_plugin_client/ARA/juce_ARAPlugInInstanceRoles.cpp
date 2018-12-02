@@ -14,7 +14,6 @@ ARAPlaybackRenderer::ARAPlaybackRenderer (ARADocumentController* documentControl
 
 void ARAPlaybackRenderer::prepareToPlay (double newSampleRate, int newMaxSamplesPerBlock)
 {
-    jassert (! isPreparedToPlay);
     sampleRate = newSampleRate;
     maxSamplesPerBlock = newMaxSamplesPerBlock;
 #if ! JUCE_DISABLE_ASSERTIONS
@@ -24,7 +23,6 @@ void ARAPlaybackRenderer::prepareToPlay (double newSampleRate, int newMaxSamples
 
 void ARAPlaybackRenderer::releaseResources()
 {
-    jassert (isPreparedToPlay);
 #if ! JUCE_DISABLE_ASSERTIONS
     isPreparedToPlay = false;
 #endif
@@ -53,31 +51,13 @@ ARAEditorRenderer::ARAEditorRenderer (ARADocumentController* documentController)
 : ARA::PlugIn::EditorRenderer (documentController)
 {}
 
-void ARAEditorRenderer::addPlaybackRegion (ARAPlaybackRegion* playbackRegion) noexcept
-{
-    ARA::PlugIn::EditorRenderer::addPlaybackRegion (ARA::PlugIn::toRef (playbackRegion));
-}
-void ARAEditorRenderer::removePlaybackRegion (ARAPlaybackRegion* playbackRegion) noexcept
-{
-    ARA::PlugIn::EditorRenderer::removePlaybackRegion (ARA::PlugIn::toRef (playbackRegion));
-}
-
-void ARAEditorRenderer::addRegionSequence (ARARegionSequence* regionSequence) noexcept
-{
-    ARA::PlugIn::EditorRenderer::addRegionSequence (ARA::PlugIn::toRef (regionSequence));
-}
-void ARAEditorRenderer::removeRegionSequence (ARARegionSequence* regionSequence) noexcept
-{
-    ARA::PlugIn::EditorRenderer::removeRegionSequence (ARA::PlugIn::toRef (regionSequence));
-}
-
 //==============================================================================
 
 ARAEditorView::ARAEditorView (ARA::PlugIn::DocumentController* documentController) noexcept
 : ARA::PlugIn::EditorView (documentController)
 {}
 
-void ARAEditorView::doNotifySelection (const ARA::PlugIn::ViewSelection* currentSelection) noexcept
+void ARAEditorView::doNotifySelection (const ARA::PlugIn::ViewSelection* /*currentSelection*/) noexcept
 {
     for (Listener* l : listeners)
         l->onNewSelection (getViewSelection());

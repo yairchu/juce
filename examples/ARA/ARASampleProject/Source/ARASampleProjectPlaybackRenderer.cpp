@@ -5,6 +5,38 @@ ARASampleProjectPlaybackRenderer::ARASampleProjectPlaybackRenderer (ARADocumentC
 : ARAPlaybackRenderer (documentController)
 {}
 
+int ARASampleProjectPlaybackRenderer::getReadAheadSize() const
+{
+    int readAheadSizeBySampleRate = (int) (2.0 * getSampleRate() + 0.5);
+    int readAheadSizeByBlockSize = 8 * getMaxSamplesPerBlock();
+    return jmax (readAheadSizeBySampleRate, readAheadSizeByBlockSize);
+}
+
+std::unique_ptr<BufferingAudioSource> ARASampleProjectPlaybackRenderer::createBufferingAudioSourceReader (ARAAudioSource* audioSource)
+{
+    auto documentController = static_cast<ARASampleProjectDocumentController*> (audioSource->getDocument()->getDocumentController());
+    auto newSourceReader = documentController->createBufferingAudioSourceReader (audioSource, documentController->getAudioSourceReadingThread(), getReadAheadSize());
+    newSourceReader->prepareToPlay (getMaxSamplesPerBlock(), audioSource->getSampleRate());
+    return std::unique_ptr<BufferingAudioSource> (newSourceReader);
+}
+
+void ARASampleProjectPlaybackRenderer::prepareToPlay (double newSampleRate, int newMaxSamplesPerBlock)
+{
+    auto oldSampleRate = getSampleRate();
+    auto oldMaxSamplesPerBlock = getMaxSamplesPerBlock();
+    auto oldReadAheadSize = getReadAheadSize();
+
+    ARAPlaybackRenderer::prepareToPlay(newSampleRate, newMaxSamplesPerBlock);
+
+    if ((oldSampleRate != getSampleRate()) ||
+        (oldMaxSamplesPerBlock != getMaxSamplesPerBlock()) ||
+        (oldReadAheadSize != getReadAheadSize()))
+    {
+        for (auto& readerPair : audioSourceReaders)
+            readerPair.second = createBufferingAudioSourceReader (readerPair.first);
+    }
+}
+
 // this function renders playback regions in the ARA document that have been
 // a) added to this playback renderer instance and
 // b) lie within the time range of samples being renderered (in project time)
@@ -15,7 +47,7 @@ void ARASampleProjectPlaybackRenderer::processBlock (AudioBuffer<float>& buffer,
     jassert (buffer.getNumSamples() <= getMaxSamplesPerBlock());
 
     // zero the samples and get out if we the host is not playing back
-    if (isPlayingBack == false)
+    if (! isPlayingBack)
     {
         for (int c = 0; c < buffer.getNumChannels(); c++)
             FloatVectorOperations::clear (buffer.getArrayOfWritePointers()[c], buffer.getNumSamples());
@@ -50,19 +82,19 @@ void ARASampleProjectPlaybackRenderer::processBlock (AudioBuffer<float>& buffer,
         if (regionEndSample <= sampleStart)
             continue;
 
-        ARASamplePosition startSongSample = std::max (regionStartSample, sampleStart);
-        ARASamplePosition endSongSample = std::min (regionEndSample, sampleEnd);
+        ARASamplePosition startSongSample = jmax (regionStartSample, sampleStart);
+        ARASamplePosition endSongSample = jmin (regionEndSample, sampleEnd);
 
         // calculate offset between song and audio source samples, clip at region borders in audio source samples
         // (if a plug-in supports time stretching, it will also need to reflect the stretch factor here)
         ARASamplePosition offsetToPlaybackRegion = playbackRegion->getStartInAudioModificationSamples() - regionStartSample;
 
         // clamp sample ranges within the range we're rendering
-        ARASamplePosition startAvailableSourceSamples = std::max<ARASamplePosition> (0, playbackRegion->getStartInAudioModificationSamples());
-        ARASamplePosition endAvailableSourceSamples = std::min (audioSource->getSampleCount(), playbackRegion->getEndInAudioModificationSamples());
+        ARASamplePosition startAvailableSourceSamples = jmax<ARASamplePosition> (0, playbackRegion->getStartInAudioModificationSamples());
+        ARASamplePosition endAvailableSourceSamples = jmin (audioSource->getSampleCount(), playbackRegion->getEndInAudioModificationSamples());
 
-        startSongSample = std::max (startSongSample, startAvailableSourceSamples - offsetToPlaybackRegion);
-        endSongSample = std::min (endSongSample, endAvailableSourceSamples - offsetToPlaybackRegion);
+        startSongSample = jmax (startSongSample, startAvailableSourceSamples - offsetToPlaybackRegion);
+        endSongSample = jmin (endSongSample, endAvailableSourceSamples - offsetToPlaybackRegion);
 
         // use the buffered audio source reader to read samples into the audio block
         AudioSourceChannelInfo channelInfo (&buffer, (int) (startSongSample - sampleStart), (int) (endSongSample - startSongSample));
@@ -76,12 +108,8 @@ void ARASampleProjectPlaybackRenderer::processBlock (AudioBuffer<float>& buffer,
 void ARASampleProjectPlaybackRenderer::didAddPlaybackRegion (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept
 {
     ARAAudioSource* audioSource = static_cast<ARAAudioSource*> (playbackRegion->getAudioModification()->getAudioSource());
-    ARASampleProjectDocumentController* documentController = static_cast<ARASampleProjectDocumentController*> (audioSource->getDocument()->getDocumentController());
     if (audioSourceReaders.count (audioSource) == 0)
-    {
-        audioSourceReaders.emplace (audioSource, documentController->createBufferingAudioSourceReader (audioSource, documentController->getAudioSourceReadingThread(), getMaxSamplesPerBlock()));
-        audioSourceReaders[audioSource]->prepareToPlay (getMaxSamplesPerBlock(), audioSource->getSampleRate());
-    }
+        audioSourceReaders.emplace (audioSource, createBufferingAudioSourceReader (audioSource));
 }
 
 // we can delete the reader associated with this playback region's audio source

@@ -8,10 +8,8 @@ static const int kVisibleSeconds = 10;
 
 //==============================================================================
 ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARASampleProjectAudioProcessor& p)
-    : AudioProcessorEditor (&p)
-#if JucePlugin_Enable_ARA
-    , AudioProcessorEditorARAExtension (&p)
-#endif
+: AudioProcessorEditor (&p),
+  AudioProcessorEditorARAExtension (&p)
 {
     // init viewport and region sequence list view
     regionSequenceViewPort.setScrollBarsShown (true, true);
@@ -23,13 +21,17 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
 
     // manually invoke the onNewSelection callback to refresh our UI with the current selection
     // TODO JUCE_ARA should we rename the function that recreates the view?
-    getARAEditorView()->addSelectionListener (this);
-    onNewSelection (getARAEditorView()->getViewSelection());
+    if (isARAEditorView())
+    {
+        getARAEditorView()->addSelectionListener (this);
+        onNewSelection (getARAEditorView()->getViewSelection());
+    }
 }
 
 ARASampleProjectAudioProcessorEditor::~ARASampleProjectAudioProcessorEditor()
 {
-    getARAEditorView()->removeSelectionListener (this);
+    if (isARAEditorView())
+        getARAEditorView()->removeSelectionListener (this);
 }
 
 //==============================================================================
@@ -37,7 +39,8 @@ void ARASampleProjectAudioProcessorEditor::paint (Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
-    if (isARAEditorView() == false)
+
+    if (! isARAEditorView())
     {
         g.setColour (Colours::white);
         g.setFont (20.0f);
@@ -96,7 +99,7 @@ void ARASampleProjectAudioProcessorEditor::onNewSelection (const ARA::PlugIn::Vi
 
         // make the region sequence view visible and keep track of the longest region sequence
         regionSequenceListView.addAndMakeVisible (regionSequenceViews[i]);
-        maxRegionSequenceLength = std::max (maxRegionSequenceLength, regionSequenceViews[i]->getStartInSecs() + regionSequenceViews[i]->getLengthInSecs());
+        maxRegionSequenceLength = jmax (maxRegionSequenceLength, regionSequenceViews[i]->getStartInSecs() + regionSequenceViews[i]->getLengthInSecs());
     }
 
     // remove any views for region sequences no longer in the document
