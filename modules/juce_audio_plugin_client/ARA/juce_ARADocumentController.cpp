@@ -118,12 +118,12 @@ ARA::PlugIn::Document* ARADocumentController::doCreateDocument (ARA::PlugIn::Doc
 
 void ARADocumentController::willBeginEditing() noexcept
 {
-    notify_listeners (ARADocument, doBeginEditing, getDocument());
+    notify_listeners (ARADocument, willBeginEditing, getDocument());
 }
 
 void ARADocumentController::didEndEditing() noexcept
 {
-    notify_listeners (ARADocument, doEndEditing, getDocument());
+    notify_listeners (ARADocument, didEndEditing, getDocument());
 }
 
 void ARADocumentController::doNotifyModelUpdates() noexcept
@@ -240,9 +240,9 @@ void ARADocumentController::didUpdateRegionSequenceProperties (ARA::PlugIn::Regi
     notify_listeners (ARARegionSequence, didUpdateRegionSequenceProperties, regionSequence);
 }
 
-void ARADocumentController::willDestroyRegionSequence (ARA::PlugIn::RegionSequence* regionSequence) noexcept
+void ARADocumentController::didAddPlaybackRegionToRegionSequence (ARA::PlugIn::RegionSequence* regionSequence, ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept
 {
-    notify_listeners (ARARegionSequence, willDestroyRegionSequence, regionSequence);
+    notify_listeners (ARARegionSequence, didAddPlaybackRegionToRegionSequence, regionSequence, static_cast<ARAPlaybackRegion*> (playbackRegion));
 }
 
 void ARADocumentController::willRemovePlaybackRegionFromRegionSequence (ARA::PlugIn::RegionSequence* regionSequence, ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept
@@ -250,9 +250,9 @@ void ARADocumentController::willRemovePlaybackRegionFromRegionSequence (ARA::Plu
     notify_listeners (ARARegionSequence, willRemovePlaybackRegionFromRegionSequence, regionSequence, static_cast<ARAPlaybackRegion*> (playbackRegion));
 }
 
-void ARADocumentController::didAddPlaybackRegionToRegionSequence (ARA::PlugIn::RegionSequence* regionSequence, ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept
+void ARADocumentController::willDestroyRegionSequence (ARA::PlugIn::RegionSequence* regionSequence) noexcept
 {
-    notify_listeners (ARARegionSequence, didAddPlaybackRegionToRegionSequence, regionSequence, static_cast<ARAPlaybackRegion*> (playbackRegion));
+    notify_listeners (ARARegionSequence, willDestroyRegionSequence, regionSequence);
 }
 
 //==============================================================================
