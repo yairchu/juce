@@ -77,30 +77,55 @@ const ARA::ARAFactory* ARA::PlugIn::DocumentController::getARAFactory() noexcept
 namespace juce
 {
 
-ARA::PlugIn::PlaybackRegion* ARADocumentController::doCreatePlaybackRegion (ARA::PlugIn::AudioModification* modification, ARA::ARAPlaybackRegionHostRef hostRef) noexcept 
+//==============================================================================
+
+ARA::PlugIn::MusicalContext* ARADocumentController::doCreateMusicalContext (ARA::PlugIn::Document* document, ARA::ARAMusicalContextHostRef hostRef) noexcept
 {
-    return new ARAPlaybackRegion (modification, hostRef);
+    return new ARAMusicalContext (document, hostRef);
 }
 
-void ARADocumentController::willUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion, ARA::PlugIn::PropertiesPtr<ARA::ARAPlaybackRegionProperties> newProperties) noexcept
+void ARADocumentController::willUpdateMusicalContextProperties (ARA::PlugIn::MusicalContext* musicalContext, ARA::PlugIn::PropertiesPtr<ARA::ARAMusicalContextProperties> newProperties) noexcept
 {
-    // TODO JUCE_ARA
-    // replace these static functions with listener callbacks
-    jassert (dynamic_cast<ARAPlaybackRegion*> (playbackRegion) != nullptr);
-    static_cast<ARAPlaybackRegion*> (playbackRegion)->willUpdatePlaybackRegionProperties (newProperties);
+    static_cast<ARAMusicalContext*> (musicalContext)->willUpdateMusicalContextProperties (newProperties);
 }
 
-void ARADocumentController::didUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept
+void ARADocumentController::didUpdateMusicalContextProperties (ARA::PlugIn::MusicalContext* musicalContext) noexcept
 {
-    // TODO JUCE_ARA
-    // replace these static functions with listener callbacks
-    static_cast<ARAPlaybackRegion*> (playbackRegion)->didUpdatePlaybackRegionProperties();
+    static_cast<ARAMusicalContext*> (musicalContext)->didUpdateMusicalContextProperties ();
 }
 
-void ARADocumentController::willDestroyPlaybackRegion (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept
+void ARADocumentController::doUpdateMusicalContextContent (ARA::PlugIn::MusicalContext* musicalContext, const ARA::ARAContentTimeRange* range, ARA::ContentUpdateScopes scopeFlags) noexcept
 {
-    static_cast<ARAPlaybackRegion*> (playbackRegion)->willDestroyPlaybackRegion();
+    static_cast<ARAMusicalContext*> (musicalContext)->doUpdateMusicalContextContent (range, scopeFlags);
 }
+
+void ARADocumentController::willDestroyMusicalContext (ARA::PlugIn::MusicalContext* musicalContext) noexcept
+{
+    static_cast<ARAMusicalContext*> (musicalContext)->willDestroyMusicalContext ();
+}
+
+//==============================================================================
+
+ARA::PlugIn::RegionSequence* ARADocumentController::doCreateRegionSequence (ARA::PlugIn::Document* document, ARA::ARARegionSequenceHostRef hostRef) noexcept
+{
+    return new ARARegionSequence (document, hostRef);
+}
+
+void ARADocumentController::willUpdateRegionSequenceProperties (ARA::PlugIn::RegionSequence* regionSequence, ARA::PlugIn::PropertiesPtr<ARA::ARARegionSequenceProperties> newProperties) noexcept
+{
+    static_cast<ARARegionSequence*> (regionSequence)->willUpdateRegionSequenceProperties (newProperties);
+}
+
+void ARADocumentController::didUpdateRegionSequenceProperties (ARA::PlugIn::RegionSequence* regionSequence) noexcept
+{
+    static_cast<ARARegionSequence*> (regionSequence)->didUpdateRegionSequenceProperties ();
+}
+
+void ARADocumentController::willDestroyRegionSequence (ARA::PlugIn::RegionSequence* regionSequence) noexcept
+{
+    static_cast<ARARegionSequence*> (regionSequence)->willDestroyRegionSequence ();
+}
+
 //==============================================================================
 
 ARA::PlugIn::AudioSource* ARADocumentController::doCreateAudioSource (ARA::PlugIn::Document *document, ARA::ARAAudioSourceHostRef hostRef) noexcept
@@ -157,24 +182,52 @@ BufferingAudioSource* ARADocumentController::createBufferingAudioSourceReader (A
 
 //==============================================================================
 
-ARA::PlugIn::RegionSequence* ARADocumentController::doCreateRegionSequence (ARA::PlugIn::Document* document, ARA::ARARegionSequenceHostRef hostRef) noexcept
+ARA::PlugIn::AudioModification* ARADocumentController::doCreateAudioModification (ARA::PlugIn::AudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef) noexcept
 {
-    return new ARARegionSequence (document, hostRef);
+    return new ARAAudioModification (audioSource, hostRef);
 }
 
-void ARADocumentController::willUpdateRegionSequenceProperties (ARA::PlugIn::RegionSequence* regionSequence, ARA::PlugIn::PropertiesPtr<ARA::ARARegionSequenceProperties> newProperties) noexcept
+void ARADocumentController::willUpdateAudioModificationProperties (ARA::PlugIn::AudioModification* audioModification, ARA::PlugIn::PropertiesPtr<ARA::ARAAudioModificationProperties> newProperties) noexcept
 {
-    static_cast<ARARegionSequence*> (regionSequence)->willUpdateRegionSequenceProperties (newProperties);
+    static_cast<ARAAudioModification*> (audioModification)->willUpdateAudioModificationProperties (newProperties);
 }
 
-void ARADocumentController::didUpdateRegionSequenceProperties (ARA::PlugIn::RegionSequence* regionSequence) noexcept
+void ARADocumentController::didUpdateAudioModificationProperties (ARA::PlugIn::AudioModification* audioModification) noexcept
 {
-    static_cast<ARARegionSequence*> (regionSequence)->didUpdateRegionSequenceProperties ();
+    static_cast<ARAAudioModification*> (audioModification)->didUpdateAudioModificationProperties ();
 }
 
-void ARADocumentController::willDestroyRegionSequence (ARA::PlugIn::RegionSequence* regionSequence) noexcept
+void ARADocumentController::doDeactivateAudioModificationForUndoHistory (ARA::PlugIn::AudioModification* audioModification, bool deactivate) noexcept
 {
-    static_cast<ARARegionSequence*> (regionSequence)->willDestroyRegionSequence ();
+    static_cast<ARAAudioModification*> (audioModification)->doDeactivateAudioModificationForUndoHistory (deactivate);
+}
+
+void ARADocumentController::willDestroyAudioModification (ARA::PlugIn::AudioModification* audioModification) noexcept
+{
+    static_cast<ARAAudioModification*> (audioModification)->willDestroyAudioModification ();
+}
+
+//==============================================================================
+
+ARA::PlugIn::PlaybackRegion* ARADocumentController::doCreatePlaybackRegion (ARA::PlugIn::AudioModification* modification, ARA::ARAPlaybackRegionHostRef hostRef) noexcept
+{
+    return new ARAPlaybackRegion (modification, hostRef);
+}
+
+void ARADocumentController::willUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion, ARA::PlugIn::PropertiesPtr<ARA::ARAPlaybackRegionProperties> newProperties) noexcept
+{
+    jassert (dynamic_cast<ARAPlaybackRegion*> (playbackRegion) != nullptr);
+    static_cast<ARAPlaybackRegion*> (playbackRegion)->willUpdatePlaybackRegionProperties (newProperties);
+}
+
+void ARADocumentController::didUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept
+{
+    static_cast<ARAPlaybackRegion*> (playbackRegion)->didUpdatePlaybackRegionProperties ();
+}
+
+void ARADocumentController::willDestroyPlaybackRegion (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept
+{
+    static_cast<ARAPlaybackRegion*> (playbackRegion)->willDestroyPlaybackRegion ();
 }
 
 } // namespace juce
