@@ -36,17 +36,17 @@ ARARegionSequence::ARARegionSequence (ARA::PlugIn::Document* document, ARA::ARAR
     prevSequenceForNewPlaybackRegion = nullptr;
 }
 
-void ARARegionSequence::willUpdateRegionSequenceProperties (ARARegionSequence::PropertiesPtr newProperties) noexcept
+void ARARegionSequence::willUpdateRegionSequenceProperties (ARARegionSequence::PropertiesPtr newProperties)
 {
     listeners.call ([this, &newProperties] (Listener& l) { l.willUpdateRegionSequenceProperties (this, newProperties); });
 }
 
-void ARARegionSequence::didUpdateRegionSequenceProperties() noexcept
+void ARARegionSequence::didUpdateRegionSequenceProperties()
 {
     listeners.call ([this] (Listener& l) { l.didUpdateRegionSequenceProperties (this); });
 }
 
-void ARARegionSequence::willDestroyRegionSequence() noexcept
+void ARARegionSequence::willDestroyRegionSequence()
 {
     // TODO JUCE_ARA 
     // same concerns involving removal as with other listeners
@@ -58,12 +58,12 @@ void ARARegionSequence::willDestroyRegionSequence() noexcept
     }
 }
 
-void ARARegionSequence::didAddPlaybackRegionToRegionSequence (ARAPlaybackRegion* playbackRegion) noexcept
+void ARARegionSequence::didAddPlaybackRegionToRegionSequence (ARAPlaybackRegion* playbackRegion)
 {
     listeners.call ([this, playbackRegion] (Listener& l) { l.didAddPlaybackRegionToRegionSequence (this, playbackRegion); });
 }
 
-void ARARegionSequence::willRemovePlaybackRegionFromRegionSequence (ARAPlaybackRegion* playbackRegion) noexcept
+void ARARegionSequence::willRemovePlaybackRegionFromRegionSequence (ARAPlaybackRegion* playbackRegion)
 {
     listeners.call ([this, playbackRegion] (Listener& l) { l.willRemovePlaybackRegionFromRegionSequence (this, playbackRegion); });
 }
