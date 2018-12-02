@@ -7,30 +7,23 @@ ARAPlaybackRenderer::ARAPlaybackRenderer (ARADocumentController* documentControl
 : ARA::PlugIn::PlaybackRenderer (documentController),
   sampleRate (44100),
   maxSamplesPerBlock (1024)
-#if ! JUCE_DISABLE_ASSERTIONS
-, isPreparedToPlay (false)
-#endif
 {}
 
 void ARAPlaybackRenderer::prepareToPlay (double newSampleRate, int newMaxSamplesPerBlock)
 {
     sampleRate = newSampleRate;
     maxSamplesPerBlock = newMaxSamplesPerBlock;
-#if ! JUCE_DISABLE_ASSERTIONS
-    isPreparedToPlay = true;
-#endif
+
+    setRendering(true);
 }
 
 void ARAPlaybackRenderer::releaseResources()
 {
-#if ! JUCE_DISABLE_ASSERTIONS
-    isPreparedToPlay = false;
-#endif
+    setRendering(false);
 }
 
 void ARAPlaybackRenderer::processBlock (AudioBuffer<float>& buffer, int64 /*timeInSamples*/, bool /*isPlayingBack*/)
 {
-    jassert (isPreparedToPlay);
     jassert (buffer.getNumSamples() <= getMaxSamplesPerBlock());
     for (int c = 0; c < buffer.getNumChannels(); c++)
         FloatVectorOperations::clear (buffer.getArrayOfWritePointers()[c], buffer.getNumSamples());
@@ -57,10 +50,10 @@ ARAEditorView::ARAEditorView (ARA::PlugIn::DocumentController* documentControlle
 : ARA::PlugIn::EditorView (documentController)
 {}
 
-void ARAEditorView::doNotifySelection (const ARA::PlugIn::ViewSelection* /*currentSelection*/) noexcept
+void ARAEditorView::doNotifySelection (const ARA::PlugIn::ViewSelection* currentSelection) noexcept
 {
     for (Listener* l : listeners)
-        l->onNewSelection (getViewSelection());
+        l->onNewSelection (*currentSelection);
 }
 
 void ARAEditorView::doNotifyHideRegionSequences (std::vector<ARA::PlugIn::RegionSequence*> const& regionSequences) noexcept 

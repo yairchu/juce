@@ -36,6 +36,20 @@ ARARegionSequence::ARARegionSequence (ARA::PlugIn::Document* document, ARA::ARAR
     prevSequenceForNewPlaybackRegion = nullptr;
 }
 
+double ARARegionSequence::getCommonSampleRate()
+{
+    double commonSampleRate = 0.0;
+    for (auto playbackRegion : getPlaybackRegions())
+    {
+        double sampleRate = playbackRegion->getAudioModification()->getAudioSource()->getSampleRate();
+        if (commonSampleRate == 0.0)
+            commonSampleRate = sampleRate;
+        if (commonSampleRate != sampleRate)
+            return 0.0;
+    }
+    return commonSampleRate;
+}
+
 void ARARegionSequence::willUpdateRegionSequenceProperties (ARARegionSequence::PropertiesPtr newProperties)
 {
     listeners.call ([this, &newProperties] (Listener& l) { l.willUpdateRegionSequenceProperties (this, newProperties); });
