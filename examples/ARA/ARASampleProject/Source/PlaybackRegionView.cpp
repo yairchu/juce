@@ -5,30 +5,23 @@
 PlaybackRegionView::PlaybackRegionView (ARASampleProjectAudioProcessorEditor* editor, ARAPlaybackRegion* region)
 : editorComponent (editor),
   playbackRegion (region),
-  isSelected (false),
   audioThumbCache (1),
   audioThumb (128, audioFormatManger, audioThumbCache)
 {
     audioThumb.addChangeListener (this);
 
-    auto document = static_cast<ARADocument*> (playbackRegion->getRegionSequence()->getDocument());
-    auto audioSource = static_cast<ARAAudioSource*> (playbackRegion->getAudioModification()->getAudioSource());
-    document->addListener (this);
-    audioSource->addListener (this);
+    static_cast<ARADocument*> (playbackRegion->getRegionSequence()->getDocument())->addListener (this);
+    static_cast<ARAAudioSource*> (playbackRegion->getAudioModification()->getAudioSource())->addListener (this);
     playbackRegion->addListener (this);
-
-    isSampleAccessEnabled = audioSource->isSampleAccessEnabled();
 
     recreatePlaybackRegionReader();
 }
 
 PlaybackRegionView::~PlaybackRegionView()
 {
-    auto document = static_cast<ARADocument*> (playbackRegion->getRegionSequence()->getDocument());
-    auto audioSource = static_cast<ARAAudioSource*>(playbackRegion->getAudioModification()->getAudioSource());
     playbackRegion->removeListener (this);
-    audioSource->removeListener (this);
-    document->removeListener (this);
+    static_cast<ARAAudioSource*>(playbackRegion->getAudioModification()->getAudioSource())->removeListener (this);
+    static_cast<ARADocument*> (playbackRegion->getRegionSequence()->getDocument())->removeListener (this);
 
     audioThumb.clear();
     audioThumb.removeChangeListener (this);
@@ -46,10 +39,10 @@ void PlaybackRegionView::paint (Graphics& g)
         g.fillAll (regionColour);
     }
 
-    g.setColour (isSelected ? juce::Colours::yellow : juce::Colours::black);
+    g.setColour (isSelected ? Colours::yellow : Colours::black);
     g.drawRect (getLocalBounds());
 
-    if (isSampleAccessEnabled)
+    if (playbackRegion->getAudioModification()->getAudioSource()->isSampleAccessEnabled())
     {
         if (getLengthInSeconds() != 0.0)
         {
@@ -65,40 +58,35 @@ void PlaybackRegionView::paint (Graphics& g)
     }
 }
 
-void PlaybackRegionView::changeListenerCallback (juce::ChangeBroadcaster* /*broadcaster*/)
+void PlaybackRegionView::changeListenerCallback (ChangeBroadcaster* /*broadcaster*/)
 {
     repaint();
 }
 
-double PlaybackRegionView::getStartInSeconds() const
+// TODO JUCE_ARA what if this is called after ARASampleProjectAudioProcessorEditor::doEndEditing?
+void PlaybackRegionView::doEndEditing (ARADocument* document)
 {
-    return playbackRegion->getStartInPlaybackTime();
-}
+    jassert (document == playbackRegion->getRegionSequence()->getDocument());
 
-double PlaybackRegionView::getLengthInSeconds() const
-{
-    return playbackRegion->getDurationInPlaybackTime();
-}
-
-double PlaybackRegionView::getEndInSeconds() const
-{
-    return playbackRegion->getEndInPlaybackTime();
-}
-
-void PlaybackRegionView::didEnableAudioSourceSamplesAccess (ARAAudioSource* /*audioSource*/, bool enable)
-{
-    if (isSampleAccessEnabled != enable)
+    if ((playbackRegionReader ==  nullptr) || ! playbackRegionReader->isValid())
     {
-        isSampleAccessEnabled = enable;
-        repaint();
+        recreatePlaybackRegionReader();
+        editorComponent->setDirty();
     }
 }
 
-void PlaybackRegionView::willUpdatePlaybackRegionProperties (ARAPlaybackRegion* /*region*/, ARAPlaybackRegion::PropertiesPtr newProperties)
+void PlaybackRegionView::didEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool enable)
 {
-    if ((playbackRegion->getStartInAudioModificationTime() != newProperties->startInModificationTime) ||
-        (playbackRegion->getDurationInAudioModificationTime() != newProperties->durationInModificationTime) ||
-        (playbackRegion->getStartInPlaybackTime() != newProperties->startInPlaybackTime) ||
+    jassert (audioSource == playbackRegion->getAudioModification()->getAudioSource());
+
+    repaint();
+}
+
+void PlaybackRegionView::willUpdatePlaybackRegionProperties (ARAPlaybackRegion* region, ARAPlaybackRegion::PropertiesPtr newProperties)
+{
+    jassert (playbackRegion == region);
+
+    if ((playbackRegion->getStartInPlaybackTime() != newProperties->startInPlaybackTime) ||
         (playbackRegion->getDurationInPlaybackTime() != newProperties->durationInPlaybackTime))
     {
         editorComponent->setDirty();
@@ -122,25 +110,15 @@ void PlaybackRegionView::recreatePlaybackRegionReader()
     auto documentController = static_cast<ARASampleProjectDocumentController*> (editorComponent->getARADocumentController());
     playbackRegionReader = documentController->createPlaybackRegionReader ({ playbackRegion }, true);
     
-    // TODO JUCE_ARA
-    // See juce_AudioThumbnail.cpp line 122
+    // see juce_AudioThumbnail.cpp line 122 - AudioThumbnail does not deal with zero length sources.
     if (playbackRegionReader->lengthInSamples <= 0)
     {
         delete playbackRegionReader;
         playbackRegionReader = nullptr;
+        audioThumb.clear ();
     }
     else
     {
         audioThumb.setReader (playbackRegionReader, reinterpret_cast<intptr_t> (playbackRegion));   // TODO JUCE_ARA better hash?
-    }
-}
-
-// TODO JUCE_ARA what if this is called after ARASampleProjectAudioProcessorEditor::doEndEditing?
-void PlaybackRegionView::doEndEditing (ARADocument* /*document*/)
-{
-    if ((playbackRegionReader ==  nullptr) || ! playbackRegionReader->isValid())
-    {
-        recreatePlaybackRegionReader();
-        editorComponent->setDirty(); 
     }
 }
