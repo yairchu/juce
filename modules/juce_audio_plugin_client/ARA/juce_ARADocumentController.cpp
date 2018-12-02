@@ -205,6 +205,28 @@ AudioFormatReader* ARADocumentController::createRegionSequenceReader (ARARegionS
 
 //==============================================================================
 
+void ARADocumentController::addListener (Listener* l)
+{
+    listeners.add (l);
+}
+
+void ARADocumentController::removeListener (Listener* l)
+{
+    listeners.remove (l);
+}
+
+//==============================================================================
+
+void ARADocumentController::willBeginEditing() noexcept
+{
+    listeners.call ([this] (Listener& l) { l.doBeginEditing (this); });
+}
+
+void ARADocumentController::didEndEditing() noexcept
+{
+    listeners.call ([this] (Listener& l) { l.doEndEditing (this); });
+}
+
 ARA::PlugIn::AudioModification* ARADocumentController::doCreateAudioModification (ARA::PlugIn::AudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef) noexcept
 {
     return new ARAAudioModification (audioSource, hostRef);
