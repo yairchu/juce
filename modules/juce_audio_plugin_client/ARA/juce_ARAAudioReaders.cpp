@@ -2,7 +2,7 @@
 
 namespace juce
 {
-    
+
 ARAAudioSourceReader::ARAAudioSourceReader (ARAAudioSource* audioSource, bool use64BitSamples)
 : AudioFormatReader (nullptr, "ARAAudioSourceReader"),
   audioSourceBeingRead (audioSource)
@@ -315,6 +315,200 @@ void ARARegionSequenceReader::willDestroyRegionSequence (ARARegionSequence* regi
 
     sequence->removeListener (this);
     sequence = nullptr;
+}
+
+ARARegionSequenceSourceReader::ARARegionSequenceSourceReader (
+    ARARegionSequence* regionSequence, double sampleRate_, int numChannels_)
+: AudioFormatReader (nullptr, "ARARegionSequenceSourceReader"),
+  sequence (regionSequence), sampleBuffer (numChannels_, 256)
+{
+    jassert (sequence != nullptr);
+
+    bitsPerSample = 32;
+    usesFloatingPointData = true;
+    sampleRate = sampleRate_;
+    numChannels = numChannels_;
+
+
+    sequence->addListener (this);
+
+    for (auto playbackRegion : sequence->getPlaybackRegions())
+    {
+        ARAPlaybackRegion* region = static_cast<ARAPlaybackRegion*> (playbackRegion);
+        auto modification = region->getAudioModification();
+        ARAAudioSource* source = static_cast<ARAAudioSource*> (modification->getAudioSource());
+
+        if (sampleRate != source->getSampleRate())
+            continue;
+
+        regions.push_back (region);
+        region->addListener (this);
+
+        if (sourceReaders.find (source) == sourceReaders.end())
+        {
+            sourceReaders[source] = new ARAAudioSourceReader (source);
+            source->addListener (this);
+        }
+
+        lengthInSamples = std::max (lengthInSamples, region->getEndInPlaybackSamples (sampleRate));
+    }
+}
+
+ARARegionSequenceSourceReader::~ARARegionSequenceSourceReader()
+{
+    invalidate();
+}
+
+void ARARegionSequenceSourceReader::invalidate()
+{
+    ScopedWriteLock scopedWrite (lock);
+
+    if (! isValid())
+        return;
+
+    for (auto src : sourceReaders)
+    {
+        src.first->removeListener (this);
+        delete src.second;
+    }
+
+    for (auto region : regions)
+        region->removeListener (this);
+
+    sequence->removeListener (this);
+    sequence = nullptr;
+}
+
+bool ARARegionSequenceSourceReader::readSamples (
+    int** destSamples, int numDestChannels, int startOffsetInDestBuffer,
+    int64 startSampleInFile, int numSamples)
+{
+    int destSize = (bitsPerSample / 8) * numSamples;
+    int bufferOffset = (bitsPerSample / 8) * startOffsetInDestBuffer;
+
+    for (int chan_i = 0; chan_i < numDestChannels; ++chan_i)
+        if (destSamples[chan_i] != nullptr)
+            zeromem (((uint8_t*) destSamples[chan_i]) + bufferOffset, destSize);
+
+    if (! lock.tryEnterRead())
+        return false;
+
+    if (! isValid())
+    {
+        lock.exitRead();
+        return false;
+    }
+
+    const double start = (double) startSampleInFile / sampleRate;
+    const double stop = (double) (startSampleInFile + (int64) numSamples) / sampleRate;
+
+    if (sampleBuffer.getNumSamples() < numSamples)
+        sampleBuffer.setSize (numDestChannels, numSamples, false, false, true);
+
+    // Fill in content from relevant regions
+    for (auto region : regions)
+    {
+        if (region->getEndInPlaybackTime() <= start || region->getStartInPlaybackTime() >= stop)
+            continue;
+
+        const int64 regionStartSample = region->getStartInPlaybackSamples (sampleRate);
+
+        const int64 startSampleInRegion = std::max ((int64) 0, startSampleInFile - regionStartSample);
+        const int destOffest = (int) std::max ((int64) 0, regionStartSample - startSampleInFile);
+        const int numRegionSamples = std::min (
+                (int) (region->getDurationInPlaybackSamples (sampleRate) - startSampleInRegion),
+                numSamples - destOffest);
+
+        ARAAudioSource* source = static_cast<ARAAudioSource*> (region->getAudioModification()->getAudioSource());
+        AudioFormatReader* sourceReader = sourceReaders[source];
+        jassert (sourceReader != nullptr);
+
+        if (! sourceReader->read (
+            (int**) sampleBuffer.getArrayOfWritePointers(),
+            numDestChannels,
+            region->getStartInAudioModificationSamples() + startSampleInRegion,
+            numRegionSamples,
+            false))
+        {
+            lock.exitRead();
+            return false;
+        }
+
+        for (int chan_i = 0; chan_i < numDestChannels; ++chan_i)
+            if (destSamples[chan_i] != nullptr)
+                FloatVectorOperations::add (
+                    (float*) (destSamples[chan_i]) + startOffsetInDestBuffer + destOffest,
+                    sampleBuffer.getReadPointer (chan_i), numRegionSamples);
+    }
+
+    lock.exitRead();
+
+    return true;
+}
+
+void ARARegionSequenceSourceReader::willRemovePlaybackRegionFromRegionSequence (ARARegionSequence* regionSequence, ARAPlaybackRegion* playbackRegion)
+{
+    jassert (sequence == regionSequence);
+    jassert (ARA::contains (sequence->getPlaybackRegions(), playbackRegion));
+
+    invalidate();
+}
+
+void ARARegionSequenceSourceReader::didAddPlaybackRegionToRegionSequence (ARARegionSequence* regionSequence, ARAPlaybackRegion* playbackRegion)
+{
+    jassert (sequence == regionSequence);
+    jassert (ARA::contains (sequence->getPlaybackRegions(), playbackRegion));
+
+    invalidate();
+}
+
+void ARARegionSequenceSourceReader::willDestroyRegionSequence (ARARegionSequence* regionSequence)
+{
+    jassert (sequence == regionSequence);
+
+    invalidate();
+}
+
+void ARARegionSequenceSourceReader::willUpdatePlaybackRegionProperties (ARAPlaybackRegion* playbackRegion, ARAPlaybackRegion::PropertiesPtr newProperties)
+{
+    jassert (ARA::contains (regions, playbackRegion));
+
+    // TODO JUCE_ARA most of these tests should be unnecessary now that we're listening to contentChanged...?
+    if ((playbackRegion->getStartInAudioModificationTime() != newProperties->startInModificationTime) ||
+        (playbackRegion->getDurationInAudioModificationTime() != newProperties->durationInModificationTime) ||
+        (playbackRegion->getStartInPlaybackTime() != newProperties->startInPlaybackTime) ||
+        (playbackRegion->getDurationInPlaybackTime() != newProperties->durationInPlaybackTime) ||
+        (playbackRegion->isTimestretchEnabled() != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationTimestretch) != 0)) ||
+        (playbackRegion->isTimeStretchReflectingTempo() != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationTimestretchReflectingTempo) != 0)) ||
+        (playbackRegion->hasContentBasedFadeAtHead() != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationContentBasedFadeAtHead) != 0)) ||
+        (playbackRegion->hasContentBasedFadeAtTail() != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationContentBasedFadeAtTail) != 0)))
+        invalidate();
+}
+
+void ARARegionSequenceSourceReader::didUpdatePlaybackRegionContent (ARAPlaybackRegion* playbackRegion, ARAContentUpdateScopes scopeFlags)
+{
+    jassert (ARA::contains (regions, playbackRegion));
+
+    // don't invalidate if the audio signal is unchanged
+    if (scopeFlags.affectSamples())
+        invalidate();
+}
+
+void ARARegionSequenceSourceReader::willUpdateAudioSourceProperties (ARAAudioSource* audioSource, ARAAudioSource::PropertiesPtr newProperties)
+{
+    if (audioSource->getSampleCount() != newProperties->sampleCount ||
+        audioSource->getSampleRate() != newProperties->sampleRate ||
+        audioSource->getChannelCount() != newProperties->channelCount)
+    {
+        invalidate();
+    }
+}
+
+void ARARegionSequenceSourceReader::didUpdateAudioSourceContent (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags)
+{
+    // don't invalidate if the audio signal is unchanged
+    if (scopeFlags.affectSamples())
+        invalidate();
 }
 
 } // namespace juce

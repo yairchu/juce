@@ -115,4 +115,44 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARARegionSequenceReader)
 };
 
+// Reads the source samples for a region sequence.
+// Possible use cases for this are side-chaining without potential for dependency loops.
+class ARARegionSequenceSourceReader
+    : public AudioFormatReader
+    , ARARegionSequence::Listener
+    , ARAPlaybackRegion::Listener
+    , ARAAudioSource::Listener
+{
+public:
+    // Playback regions with differing sample rates will be ignored.
+    // Future alternative could be to perform resampling.
+    ARARegionSequenceSourceReader (ARARegionSequence* regionSequence, double sampleRate, int numChannels);
+    virtual ~ARARegionSequenceSourceReader();
+
+    bool readSamples (int** destSamples, int numDestChannels, int startOffsetInDestBuffer,
+                      int64 startSampleInFile, int numSamples) override;
+
+    // returns false if the sample content has changed
+    // since the construction of the reader
+    bool isValid() const { return sequence != nullptr; }
+    void invalidate();
+
+private:
+    void willRemovePlaybackRegionFromRegionSequence (ARARegionSequence*, ARAPlaybackRegion*) override;
+    void didAddPlaybackRegionToRegionSequence (ARARegionSequence*, ARAPlaybackRegion*) override;
+    void willDestroyRegionSequence (ARARegionSequence*) override;
+    void willUpdatePlaybackRegionProperties (ARAPlaybackRegion*, ARAPlaybackRegion::PropertiesPtr) override;
+    void didUpdatePlaybackRegionContent (ARAPlaybackRegion*, ARAContentUpdateScopes) override;
+    void willUpdateAudioSourceProperties (ARAAudioSource*, ARAAudioSource::PropertiesPtr) override;
+    void didUpdateAudioSourceContent (ARAAudioSource*, ARAContentUpdateScopes) override;
+
+    ARARegionSequence* sequence;
+    std::map<ARAAudioSource*, AudioFormatReader*> sourceReaders;
+    std::vector<ARAPlaybackRegion*> regions;
+    AudioSampleBuffer sampleBuffer;
+    ReadWriteLock lock;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARARegionSequenceSourceReader)
+};
+
 } // namespace juce
