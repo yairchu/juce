@@ -16,7 +16,7 @@ public:
 
     // Playback regions with differing sample rates will be ignored.
     // Future alternative could be to perform resampling.
-    AudioFormatReader* newReader (double sampleRate);
+    AudioFormatReader* newReader (double sampleRate, int numChannels);
 
     // These methods need to be called by the document controller in its corresponding methods:
     static void willUpdatePlaybackRegionProperties (

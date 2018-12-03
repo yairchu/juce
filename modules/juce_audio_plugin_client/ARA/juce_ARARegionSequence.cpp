@@ -13,7 +13,7 @@ class ARARegionSequence::Reader : public AudioFormatReader
     friend class ARARegionSequence;
 
 public:
-    Reader (ARARegionSequence*, double sampleRate);
+    Reader (ARARegionSequence*, double sampleRate, int numChannels);
     virtual ~Reader();
 
     bool readSamples (
@@ -55,9 +55,9 @@ ARARegionSequence::~ARARegionSequence()
     ref->reset();
 }
 
-AudioFormatReader* ARARegionSequence::newReader (double sampleRate)
+AudioFormatReader* ARARegionSequence::newReader (double sampleRate, int numChannels)
 {
-    return new Reader (this, sampleRate);
+    return new Reader (this, sampleRate, numChannels);
 }
 
 /*static*/ void ARARegionSequence::willUpdatePlaybackRegionProperties (
@@ -110,13 +110,13 @@ AudioFormatReader* ARARegionSequence::newReader (double sampleRate)
     newSequence->ref = new Ref (newSequence);
 }
 
-ARARegionSequence::Reader::Reader (ARARegionSequence* sequence, double sampleRate_)
+ARARegionSequence::Reader::Reader (ARARegionSequence* sequence, double sampleRate_, int numChannels_)
     : AudioFormatReader (nullptr, "ARARegionSequenceReader")
     , ref (sequence->ref)
 {
     bitsPerSample = 32;
     usesFloatingPointData = true;
-    numChannels = 0;
+    numChannels = numChannels_;
     lengthInSamples = 0;
     sampleRate = sampleRate_;
 
@@ -135,10 +135,7 @@ ARARegionSequence::Reader::Reader (ARARegionSequence* sequence, double sampleRat
         }
 
         if (sourceReaders.find (source) == sourceReaders.end())
-        {
-            numChannels = std::max (numChannels, (unsigned int) source->getChannelCount());
             sourceReaders[source] = new ARAAudioSourceReader (source);
-        }
 
         lengthInSamples = std::max (lengthInSamples, region->getEndInPlaybackSamples (sampleRate));
     }
