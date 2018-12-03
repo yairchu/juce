@@ -128,9 +128,6 @@ ARARegionSequence::Reader::Reader (ARARegionSequence* sequence, double sampleRat
         ARAAudioSource* source = dynamic_cast<ARAAudioSource*> (modification->getAudioSource());
         jassert (source != nullptr);
 
-        if (sampleRate == 0.0)
-            sampleRate = source->getSampleRate();
-
         if (sampleRate != source->getSampleRate())
         {
             // Skip regions with mis-matching sample-rates!

@@ -14,10 +14,9 @@ public:
     ARARegionSequence (ARADocument* document, ARA::ARARegionSequenceHostRef hostRef);
     ~ARARegionSequence();
 
-    // If not given a `sampleRate` will figure it out from the first playback region within.
     // Playback regions with differing sample rates will be ignored.
     // Future alternative could be to perform resampling.
-    AudioFormatReader* newReader (double sampleRate = 0.0);
+    AudioFormatReader* newReader (double sampleRate);
 
     // These methods need to be called by the document controller in its corresponding methods:
     static void willUpdatePlaybackRegionProperties (
