@@ -1,8 +1,5 @@
 #include "juce_ARADocumentController.h"
 
-#define notify_listeners(className, function, classInstance,  ...) \
-    static_cast<className*> (classInstance)->notifyListeners ([&] (className::Listener& l) { l.function (static_cast<className*> (classInstance), ##__VA_ARGS__); })
-
 const ARA::ARAFactory* ARA::PlugIn::DocumentController::getARAFactory() noexcept
 {
     using namespace ARA;
@@ -75,13 +72,36 @@ const ARA::ARAFactory* ARA::PlugIn::DocumentController::getARAFactory() noexcept
 
 namespace juce
 {
+
+//==============================================================================
+
+#define notify_listeners(function, ModelObjectPtrType, modelObject,  ...) \
+    static_cast<ModelObjectPtrType> (modelObject)->notifyListeners ([&] (std::remove_pointer<ModelObjectPtrType>::type::Listener& l) { l.function (static_cast<ModelObjectPtrType> (modelObject), ##__VA_ARGS__); })
+
+//==============================================================================
+
+AudioFormatReader* ARADocumentController::createAudioSourceReader (ARAAudioSource* audioSource)
+{
+    return new ARAAudioSourceReader (audioSource);
+}
+
+ARAPlaybackRegionReader* ARADocumentController::createPlaybackRegionReader (std::vector<ARAPlaybackRegion*> playbackRegions, bool nonRealtime)
+{
+    return new ARAPlaybackRegionReader (static_cast<ARAPlaybackRenderer*> (doCreatePlaybackRenderer()), playbackRegions, nonRealtime);
+}
+
+ARARegionSequenceReader* ARADocumentController::createRegionSequenceReader (ARARegionSequence* regionSequence, bool nonRealtime)
+{
+    return new ARARegionSequenceReader (static_cast<ARAPlaybackRenderer*> (doCreatePlaybackRenderer()), regionSequence, nonRealtime);
+}
+
 //==============================================================================
 
 void ARADocumentController::notifyAudioSourceContentChanged (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags, bool notifyAllAudioModificationsAndPlaybackRegions)
 {
     audioSourceUpdates[audioSource] += scopeFlags;
 
-    audioSource->notifyListeners ([audioSource, scopeFlags] (ARAAudioSource::Listener& l) { l.doUpdateAudioSourceContent (audioSource, scopeFlags); });
+    notify_listeners (doUpdateAudioSourceContent, ARAAudioSource*, audioSource, scopeFlags);
 
     if (notifyAllAudioModificationsAndPlaybackRegions)
     {
@@ -94,7 +114,7 @@ void ARADocumentController::notifyAudioModificationContentChanged (ARAAudioModif
 {
     audioModificationUpdates[audioModification] += scopeFlags;
 
-    audioModification->notifyListeners ([audioModification, scopeFlags] (ARAAudioModification::Listener& l) { l.doUpdateAudioModificationContent (audioModification, scopeFlags); });
+    notify_listeners (doUpdateAudioModificationContent, ARAAudioModification*, audioModification, scopeFlags);
 
     if (notifyAllPlaybackRegions)
     {
@@ -106,7 +126,8 @@ void ARADocumentController::notifyAudioModificationContentChanged (ARAAudioModif
 void ARADocumentController::notifyPlaybackRegionContentChanged (ARAPlaybackRegion* playbackRegion, ARAContentUpdateScopes scopeFlags)
 {
     playbackRegionUpdates[playbackRegion] += scopeFlags;
-    notify_listeners (ARAPlaybackRegion, didUpdatePlaybackRegionContent, playbackRegion, scopeFlags);
+
+    notify_listeners (didUpdatePlaybackRegionContent, ARAPlaybackRegion*, playbackRegion, scopeFlags);
 }
 
 //==============================================================================
@@ -118,12 +139,12 @@ ARA::PlugIn::Document* ARADocumentController::doCreateDocument (ARA::PlugIn::Doc
 
 void ARADocumentController::willBeginEditing() noexcept
 {
-    notify_listeners (ARADocument, willBeginEditing, getDocument());
+    notify_listeners (willBeginEditing, ARADocument*, getDocument());
 }
 
 void ARADocumentController::didEndEditing() noexcept
 {
-    notify_listeners (ARADocument, didEndEditing, getDocument());
+    notify_listeners (didEndEditing, ARADocument*, getDocument());
 }
 
 void ARADocumentController::doNotifyModelUpdates() noexcept
@@ -167,21 +188,6 @@ ARA::PlugIn::AudioSource* ARADocumentController::doCreateAudioSource (ARA::PlugI
     return new ARAAudioSource (static_cast<ARADocument*>(document), hostRef);\
 }
 
-AudioFormatReader* ARADocumentController::createAudioSourceReader (ARAAudioSource* audioSource)
-{
-    return new ARAAudioSourceReader (audioSource);
-}
-
-ARAPlaybackRegionReader* ARADocumentController::createPlaybackRegionReader (std::vector<ARAPlaybackRegion*> playbackRegions, bool nonRealtime)
-{
-    return new ARAPlaybackRegionReader (static_cast<ARAPlaybackRenderer*> (doCreatePlaybackRenderer()), playbackRegions, nonRealtime);
-}
-
-ARARegionSequenceReader* ARADocumentController::createRegionSequenceReader (ARARegionSequence* regionSequence, bool nonRealtime)
-{
-    return new ARARegionSequenceReader (static_cast<ARAPlaybackRenderer*> (doCreatePlaybackRenderer()), regionSequence, nonRealtime);
-}
-
 //==============================================================================
 
 ARA::PlugIn::AudioModification* ARADocumentController::doCreateAudioModification (ARA::PlugIn::AudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef) noexcept
@@ -220,6 +226,8 @@ ARA::PlugIn::EditorView* ARADocumentController::doCreateEditorView() noexcept
     return new ARAEditorView (this);
 }
 
-} // namespace juce
+//==============================================================================
 
 #undef notify_listeners
+
+} // namespace juce
