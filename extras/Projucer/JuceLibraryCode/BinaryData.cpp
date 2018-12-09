@@ -7566,7 +7566,7 @@ static const unsigned char temp_binary_data_58[] =
 "</dict>\n"
 "</plist>\n";
 
-const char* jucer_WorkspaceSettings_xcsettings = (const char*) temp_binary_data_56;
+const char* jucer_WorkspaceSettings_xcsettings = (const char*) temp_binary_data_58;
 
 //================== colourscheme_dark.xml ==================
 static const unsigned char temp_binary_data_59[] =
