@@ -50,7 +50,7 @@ public:
     void invalidate();
 
     void willUpdateAudioSourceProperties (ARAAudioSource* audioSource, ARAAudioSource::PropertiesPtr newProperties) override;
-    void didUpdateAudioSourceContent (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags) override;
+    void doUpdateAudioSourceContent (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags) override;
     void willEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool enable) override;
     void didEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool enable) override;
     void willDestroyAudioSource (ARAAudioSource* audioSource) override;
@@ -144,7 +144,7 @@ private:
     void willUpdatePlaybackRegionProperties (ARAPlaybackRegion*, ARAPlaybackRegion::PropertiesPtr) override;
     void didUpdatePlaybackRegionContent (ARAPlaybackRegion*, ARAContentUpdateScopes) override;
     void willUpdateAudioSourceProperties (ARAAudioSource*, ARAAudioSource::PropertiesPtr) override;
-    void didUpdateAudioSourceContent (ARAAudioSource*, ARAContentUpdateScopes) override;
+    void doUpdateAudioSourceContent (ARAAudioSource*, ARAContentUpdateScopes) override;
 
     ARARegionSequence* sequence;
     std::map<ARAAudioSource*, AudioFormatReader*> sourceReaders;

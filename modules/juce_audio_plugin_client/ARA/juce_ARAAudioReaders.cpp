@@ -49,7 +49,7 @@ void ARAAudioSourceReader::willUpdateAudioSourceProperties (ARAAudioSource* audi
     }
 }
 
-void ARAAudioSourceReader::didUpdateAudioSourceContent (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags)
+void ARAAudioSourceReader::doUpdateAudioSourceContent (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags)
 {
     jassert (audioSourceBeingRead == audioSource);
 
@@ -504,7 +504,7 @@ void ARARegionSequenceSourceReader::willUpdateAudioSourceProperties (ARAAudioSou
     }
 }
 
-void ARARegionSequenceSourceReader::didUpdateAudioSourceContent (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags)
+void ARARegionSequenceSourceReader::doUpdateAudioSourceContent (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags)
 {
     // don't invalidate if the audio signal is unchanged
     if (scopeFlags.affectSamples())
