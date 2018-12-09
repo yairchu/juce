@@ -6,14 +6,14 @@ class ARASampleProjectAudioProcessorEditor;
 class PlaybackRegionView;
 
 //==============================================================================
-/** 
+/**
     RegionSequenceView
     JUCE component used to display ARA region sequences in a host document
-    along with their name, order index, color, and selection state
+    along with their name, color, and selection state
 */
-class RegionSequenceView: public Component, 
-                          public ARAEditorView::Listener,
-                          public ARARegionSequence::Listener
+class RegionSequenceView    : public Component,
+                              private ARAEditorView::Listener,
+                              private ARARegionSequence::Listener
 {
 public:
     RegionSequenceView (ARASampleProjectAudioProcessorEditor* editor, ARARegionSequence* sequence);
@@ -38,7 +38,7 @@ private:
 
 public:
     static constexpr int kHeight = 80;
-    static constexpr int kTrackHeaderWidth = 20;
+    static constexpr int kTrackHeaderWidth = 120;
 
 private:
     ARASampleProjectAudioProcessorEditor* editorComponent;

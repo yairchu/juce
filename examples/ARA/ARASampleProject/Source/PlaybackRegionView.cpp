@@ -4,10 +4,10 @@
 
 //==============================================================================
 PlaybackRegionView::PlaybackRegionView (ARASampleProjectAudioProcessorEditor* editor, ARAPlaybackRegion* region)
-: editorComponent (editor),
-  playbackRegion (region),
-  audioThumbCache (1),
-  audioThumb (128, audioFormatManger, audioThumbCache)
+    : editorComponent (editor),
+      playbackRegion (region),
+      audioThumbCache (1),
+      audioThumb (128, audioFormatManger, audioThumbCache)
 {
     audioThumb.addChangeListener (this);
 
@@ -149,7 +149,7 @@ void PlaybackRegionView::recreatePlaybackRegionReader()
     // create a non-realtime playback region reader for our audio thumb
     auto documentController = static_cast<ARASampleProjectDocumentController*> (editorComponent->getARADocumentController());
     playbackRegionReader = documentController->createPlaybackRegionReader ({ playbackRegion }, true);
-    
+
     // see juce_AudioThumbnail.cpp line 122 - AudioThumbnail does not deal with zero length sources.
     if (playbackRegionReader->lengthInSamples <= 0)
     {

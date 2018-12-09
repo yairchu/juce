@@ -5,16 +5,10 @@
 namespace juce
 {
 
-// TODO JUCE_ARA
-// This file contains three different classes that can be 
-// used in the JUCE_ARA library - should these classes
-// be moved in to individual files, or is sharing files for
-// smaller classes preferred?
-
 //==============================================================================
 // shared base class for ARAPlaybackRenderer and ARAEditorRenderer, not to be used directly
 template <typename ARARendererType, void (ARARendererType::*setRenderingFunc) (bool), bool clearProcessBuffer>
-class ARARendererBase : public ARARendererType
+class ARARendererBase  : public ARARendererType
 {
 public:
     using ARARendererType::ARARendererType;
@@ -63,8 +57,7 @@ private:
 
 //==============================================================================
 using ARAPlaybackRendererBase = ARARendererBase<ARA::PlugIn::PlaybackRenderer, &ARA::PlugIn::PlaybackRenderer::setRendering, true>;
-
-class ARAPlaybackRenderer : public ARAPlaybackRendererBase
+class ARAPlaybackRenderer  : public ARAPlaybackRendererBase
 {
 public:
     using ARAPlaybackRendererBase::ARAPlaybackRendererBase;
@@ -84,7 +77,7 @@ private:
 
 //==============================================================================
 using ARAEditorRendererBase = ARARendererBase<ARA::PlugIn::EditorRenderer, nullptr, false>;
-class ARAEditorRenderer : public ARAEditorRendererBase
+class ARAEditorRenderer  : public ARAEditorRendererBase
 {
 public:
     using ARAEditorRendererBase::ARAEditorRendererBase;
@@ -99,7 +92,7 @@ private:
 };
 
 //==============================================================================
-class ARAEditorView : public ARA::PlugIn::EditorView
+class ARAEditorView  : public ARA::PlugIn::EditorView
 {
 public:
     ARAEditorView (ARA::PlugIn::DocumentController* documentController) noexcept;
@@ -124,7 +117,7 @@ public:
     void removeListener (Listener* l);
 
 private:
-    std::vector<Listener*> listeners;
+    ListenerList<Listener> listeners;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARAEditorView)
