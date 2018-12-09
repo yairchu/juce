@@ -368,7 +368,6 @@ ARA::PlugIn::PlaybackRegion* ARADocumentController::doCreatePlaybackRegion (ARA:
 
 void ARADocumentController::willUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion, ARA::PlugIn::PlaybackRegion::PropertiesPtr newProperties) noexcept
 {
-    jassert (dynamic_cast<ARAPlaybackRegion*> (playbackRegion) != nullptr);
     notify_listeners (ARAPlaybackRegion, willUpdatePlaybackRegionProperties, playbackRegion, newProperties);
 }
 
