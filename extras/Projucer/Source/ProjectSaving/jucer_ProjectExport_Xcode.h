@@ -395,9 +395,11 @@ public:
             overwriteFileIfDifferentOrThrow (projectFile, mo);
         }
 
-        writeWorkspaceSettings();
-
         writeInfoPlistFiles();
+
+        // This forces the project to use the legacy build system to workaround Xcode 10 issues,
+        // hopefully these will be fixed in the future and this can be removed...
+        writeWorkspaceSettings();
 
         // Deleting the .rsrc files can be needed to force Xcode to update the version number.
         deleteRsrcFiles (getTargetFolder().getChildFile ("build"));
@@ -2301,11 +2303,23 @@ private:
 
     void writeWorkspaceSettings() const
     {
-        File folder = getProjectBundle().getChildFile ("project.xcworkspace").getChildFile ("xcshareddata");
-        createDirectoryOrThrow (folder);
+        auto settingsFile = getProjectBundle().getChildFile ("project.xcworkspace")
+                                              .getChildFile ("xcshareddata")
+                                              .getChildFile ("WorkspaceSettings.xcsettings");
+
         MemoryOutputStream mo;
-        mo.write (BinaryData::jucer_WorkspaceSettings_xcsettings, BinaryData::jucer_WorkspaceSettings_xcsettingsSize);
-        overwriteFileIfDifferentOrThrow (folder.getChildFile ("WorkspaceSettings.xcsettings"), mo);
+        mo.setNewLineString ("\n");
+
+        mo << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << newLine
+           << "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" << newLine
+           << "<plist version=\"1.0\">"                    << newLine
+           << "<dict>"                                     << newLine
+           << "    <key>BuildSystemType</key>"             << newLine
+           << "    <string>Original</string>"              << newLine
+           << "</dict>"                                    << newLine
+           << "</plist>"                                   << newLine;
+
+        overwriteFileIfDifferentOrThrow (settingsFile, mo);
     }
 
     void writeInfoPlistFiles() const
