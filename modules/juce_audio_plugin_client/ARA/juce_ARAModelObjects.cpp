@@ -21,7 +21,35 @@ ARARegionSequence::ARARegionSequence (ARADocument* document, ARA::ARARegionSeque
     : ARA::PlugIn::RegionSequence (document, hostRef)
 {}
 
-double ARARegionSequence::getCommonSampleRate()
+void ARARegionSequence::getTimeRange (double& startTime, double& endTime, bool includeHeadAndTail) const
+{
+    if (getPlaybackRegions().empty())
+    {
+        startTime = 0.0;
+        endTime = 0.0;
+        return;
+    }
+
+    startTime = std::numeric_limits<double>::max();
+    endTime = std::numeric_limits<double>::lowest();
+    for (auto playbackRegion : getPlaybackRegions())
+    {
+        double regionStartTime = playbackRegion->getStartInPlaybackTime();
+        double regionEndTime = playbackRegion->getEndInPlaybackTime();
+
+        if (includeHeadAndTail)
+        {
+            auto region = static_cast<ARAPlaybackRegion*> (playbackRegion);
+            regionStartTime -= region->getHeadTime();
+            regionEndTime += region->getTailTime();
+        }
+
+        startTime = jmin (startTime, regionStartTime);
+        endTime = jmax (endTime, regionEndTime);
+    }
+}
+
+double ARARegionSequence::getCommonSampleRate() const
 {
     double commonSampleRate = 0.0;
     for (auto playbackRegion : getPlaybackRegions())

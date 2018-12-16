@@ -3,17 +3,17 @@
 #include "JuceHeader.h"
 
 class ARASampleProjectAudioProcessorEditor;
+class TrackHeaderView;
 class PlaybackRegionView;
 
 //==============================================================================
 /**
     RegionSequenceView
-    JUCE component used to display ARA region sequences in a host document
-    along with their name, color, and selection state
+    JUCE component used to display all ARA playback regions in a region sequences
 */
-class RegionSequenceView    : public Component,
-                              private ARAEditorView::Listener,
-                              private ARARegionSequence::Listener
+// TODO JUCE_ARA this is no longer a view, but rather some container/controller for all views
+//               associated with a given region sequence - must rename accordingly.
+class RegionSequenceView  : private ARARegionSequence::Listener
 {
 public:
     RegionSequenceView (ARASampleProjectAudioProcessorEditor* editor, ARARegionSequence* sequence);
@@ -21,30 +21,23 @@ public:
 
     void getTimeRange (double& startTime, double& endTime) const;
 
-    void paint (Graphics&) override;
-    void resized() override;
-
-    // ARAEditorView::Listener overrides
-    void onNewSelection (const ARA::PlugIn::ViewSelection& currentSelection) override;
+    void setRegionsViewBoundsByYRange (int y, int height);
 
     // ARARegionSequence::Listener overrides
-    void didUpdateRegionSequenceProperties (ARARegionSequence* sequence) override;
     void willRemovePlaybackRegionFromRegionSequence (ARARegionSequence* sequence, ARAPlaybackRegion* playbackRegion) override;
     void didAddPlaybackRegionToRegionSequence (ARARegionSequence* sequence, ARAPlaybackRegion* playbackRegion) override;
     void willDestroyRegionSequence (ARARegionSequence* sequence) override;
 
 private:
+    void addRegionSequenceViewAndMakeVisible (ARAPlaybackRegion* playbackRegion);
     void detachFromRegionSequence();
-
-public:
-    static constexpr int kHeight = 80;
-    static constexpr int kTrackHeaderWidth = 120;
 
 private:
     ARASampleProjectAudioProcessorEditor* editorComponent;
     ARARegionSequence* regionSequence;
+
+    std::unique_ptr<TrackHeaderView> trackHeaderView;
     OwnedArray<PlaybackRegionView> playbackRegionViews;
-    bool isSelected = false;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RegionSequenceView)

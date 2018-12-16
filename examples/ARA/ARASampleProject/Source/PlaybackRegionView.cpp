@@ -17,6 +17,7 @@ PlaybackRegionView::PlaybackRegionView (ARASampleProjectAudioProcessorEditor* ed
     static_cast<ARADocument*> (playbackRegion->getRegionSequence()->getDocument())->addListener (this);
     static_cast<ARAAudioSource*> (playbackRegion->getAudioModification()->getAudioSource())->addListener (this);
     playbackRegion->addListener (this);
+
     recreatePlaybackRegionReader();
 }
 
@@ -55,8 +56,8 @@ void PlaybackRegionView::paint (Graphics& g)
     double tailTime = playbackRegion->getTailTime();
     double totalTime = playbackRegion->getDurationInPlaybackTime() + headTime + tailTime;
     int totalWidth = rect.getWidth();
-    rect.removeFromLeft ((int) (totalWidth * headTime / totalTime + 0.5));
-    rect.removeFromRight ((int) (totalWidth * tailTime / totalTime + 0.5));
+    rect.removeFromLeft (roundToInt (totalWidth * headTime / totalTime));
+    rect.removeFromRight (roundToInt (totalWidth * tailTime / totalTime));
     g.setColour (isSelected ? Colours::yellow : Colours::black);
     g.drawRect (rect, lineThickness);
 
@@ -69,10 +70,21 @@ void PlaybackRegionView::paint (Graphics& g)
 
     if (playbackRegion->getAudioModification()->getAudioSource()->isSampleAccessEnabled())
     {
-        if (totalTime != 0.0)
+        auto clipBounds = g.getClipBounds();
+        if (clipBounds.getWidth() > 0)
         {
+            double regionStart, regionEnd;
+            getTimeRange(regionStart, regionEnd);
+            double viewStart, viewEnd;
+            editorComponent->getTimeRange (viewStart, viewEnd);
+            const double viewTimeOffset = viewStart - regionStart;
+
+            auto convertedBounds = clipBounds + getBoundsInParent().getPosition();
+            double startTime = editorComponent->getPlaybackRegionsViewsTimeForX (convertedBounds.getX()) + viewTimeOffset;
+            double endTime = editorComponent->getPlaybackRegionsViewsTimeForX (convertedBounds.getRight()) + viewTimeOffset;
+
             g.setColour (regionColour.contrasting (0.7f));
-            audioThumb.drawChannels (g, getLocalBounds(), 0.0, totalTime, 1.0f);
+            audioThumb.drawChannels (g, clipBounds, startTime, endTime, 1.0f);
         }
     }
     else
@@ -118,7 +130,7 @@ void PlaybackRegionView::didEndEditing (ARADocument* document)
     if ((playbackRegionReader ==  nullptr) || ! playbackRegionReader->isValid())
     {
         recreatePlaybackRegionReader();
-        editorComponent->setDirty();
+        editorComponent->invalidateRegionSequenceViews();
     }
 }
 
@@ -136,7 +148,7 @@ void PlaybackRegionView::willUpdatePlaybackRegionProperties (ARAPlaybackRegion* 
     if ((playbackRegion->getStartInPlaybackTime() != newProperties->startInPlaybackTime) ||
         (playbackRegion->getDurationInPlaybackTime() != newProperties->durationInPlaybackTime))
     {
-        editorComponent->setDirty();
+        editorComponent->invalidateRegionSequenceViews();
     }
 
     repaint();

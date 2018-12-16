@@ -2,7 +2,9 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "ARASampleProjectAudioProcessor.h"
-#include "RegionSequenceView.h"
+
+class RegionSequenceView;
+class RulersView;
 
 //==============================================================================
 /**
@@ -13,21 +15,40 @@
 class ARASampleProjectAudioProcessorEditor  : public AudioProcessorEditor,
                                               public AudioProcessorEditorARAExtension,
                                               private ARAEditorView::Listener,
-                                              private ARADocument::Listener
+                                              private ARADocument::Listener,
+                                              private ScrollBar::Listener,
+                                              private juce::Timer
 {
 public:
     ARASampleProjectAudioProcessorEditor (ARASampleProjectAudioProcessor&);
     ~ARASampleProjectAudioProcessorEditor();
 
-    // total visible time range
+    // total time range
     void getTimeRange (double& start, double& end) const { start = startTime; end = endTime; }
 
+    // total visible time range
+    void getVisibleTimeRange (double& start, double& end);
+
     // flag that our view needs to be rebuilt
-    void setDirty() { isViewDirty = true; }
+    void invalidateRegionSequenceViews() { regionSequenceViewsAreInvalid = true; }
+
+    Component& getTrackHeadersView() { return trackHeadersView; }
+    Component& getPlaybackRegionsView() { return playbackRegionsView; }
+
+    int getPlaybackRegionsViewsXForTime (double time) const;
+    double getPlaybackRegionsViewsTimeForX (int x) const;
+
+    double getPlayheadPositionInSeconds() const { return playheadPositionInSeconds; }
 
     //==============================================================================
     void paint (Graphics&) override;
     void resized() override;
+
+    // ScrollBar::Listener overrides
+    void scrollBarMoved (ScrollBar* scrollBarThatHasMoved, double newRangeStart) override;
+
+    // juce::Timer overrides
+    void timerCallback() override;
 
     // ARAEditorView::Listener overrides
     void onNewSelection (const ARA::PlugIn::ViewSelection& currentSelection) override;
@@ -37,29 +58,38 @@ public:
     void didEndEditing (ARADocument* document) override;
     void didReorderRegionSequencesInDocument (ARADocument* document) override;
 
-public:
-    static constexpr double kPixelsPerSecond = 100.0;
-    static constexpr double kPadSeconds = 1.0;
-    static constexpr int kMinWidth = 500;
-    static constexpr int kWidth = 1000;
-    static constexpr int kMinHeight = 1 * RegionSequenceView::kHeight;
-    static constexpr int kHeight = 5 * RegionSequenceView::kHeight;
+private:
+    void rebuildRegionSequenceViews();
+    void storeRelativePosition();
 
 private:
-    void rebuildView();
-    void clearView();
-
-private:
-
-    // we'll be displaying all region sequences in the document in a scrollable view
-    Viewport regionSequenceViewPort;
-    Component regionSequenceListView;
+    // simple utility class to show playhead position
+    class PlayheadView : public Component
+    {
+    public:
+        PlayheadView (ARASampleProjectAudioProcessorEditor& editorComponent);
+        void paint (Graphics&) override;
+    private:
+        ARASampleProjectAudioProcessorEditor& editorComponent;
+        static constexpr int kPlayheadWidth = 3;
+    };
 
     OwnedArray<RegionSequenceView> regionSequenceViews;
 
-    bool isViewDirty = false;
+    Viewport trackHeadersViewPort, rulersViewPort, playbackRegionsViewPort;
+    Component trackHeadersView, playbackRegionsView;
+    std::unique_ptr<RulersView> rulersView;
+    PlayheadView playheadView;
+
+    TextButton zoomInButton, zoomOutButton;
+    ToggleButton followPlayheadToggleButton;
+
+    bool regionSequenceViewsAreInvalid = true;
     double startTime = 0.0;
     double endTime = 0.0;
+    double pixelsPerSecond = 0.0;
+    double playheadPositionInSeconds = 0.0;
+    double pixelsUntilPlayhead = 0.0;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARASampleProjectAudioProcessorEditor)
