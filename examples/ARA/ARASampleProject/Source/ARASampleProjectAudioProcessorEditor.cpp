@@ -65,7 +65,7 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
 
         document->addListener (this);
 
-        rulersView.reset (new RulersView (document));
+        rulersView.reset (new RulersView (*this));
 
         rulersViewPort.setScrollBarsShown (false, false, false, false);
         rulersViewPort.setViewedComponent (rulersView.get(), false);
@@ -153,7 +153,7 @@ void ARASampleProjectAudioProcessorEditor::resized()
     double maxPixelsPerSecond = jmax (processor.getSampleRate(), 300.0);
 
     // min zoom covers entire view range
-    double minPixelsPerSecond = (getWidth() - kTrackHeaderWidth) / (endTime - startTime);
+    double minPixelsPerSecond = (getWidth() - kTrackHeaderWidth - rulersViewPort.getScrollBarThickness()) / (endTime - startTime);
 
     // enforce zoom in/out limits, update zoom buttons
     pixelsPerSecond = jmax (minPixelsPerSecond, jmin (pixelsPerSecond, maxPixelsPerSecond));
@@ -187,9 +187,9 @@ void ARASampleProjectAudioProcessorEditor::resized()
     followPlayheadToggleButton.setBounds (0, zoomInButton.getY(), 200, kStatusBarHeight);
 
     // keep viewport position relative to playhead
-    const double newPixelBasedPositionInSeconds = pixelsUntilPlayhead / pixelsPerSecond;
+    const double secondsBeforePlayhead = pixelsUntilPlayhead / pixelsPerSecond;
     auto relativeViewportPosition = playbackRegionsViewPort.getViewPosition();
-    relativeViewportPosition.setX (roundToInt ((playheadPositionInSeconds - newPixelBasedPositionInSeconds) * pixelsPerSecond));
+    relativeViewportPosition.setX (getPlaybackRegionsViewsXForTime (playheadPositionInSeconds - secondsBeforePlayhead));
     playbackRegionsViewPort.setViewPosition (relativeViewportPosition);
     rulersViewPort.setViewPosition (relativeViewportPosition.getX(), 0);
     trackHeadersViewPort.setViewPosition (0, relativeViewportPosition.getY());
@@ -220,7 +220,7 @@ void ARASampleProjectAudioProcessorEditor::rebuildRegionSequenceViews()
 
 void ARASampleProjectAudioProcessorEditor::storeRelativePosition()
 {
-    pixelsUntilPlayhead = roundToInt (pixelsPerSecond * playheadPositionInSeconds - playbackRegionsViewPort.getViewPosition().getX());
+    pixelsUntilPlayhead = roundToInt (getPlaybackRegionsViewsXForTime (playheadPositionInSeconds) - playbackRegionsViewPort.getViewPosition().getX());
 }
 
 //==============================================================================
@@ -254,7 +254,7 @@ void ARASampleProjectAudioProcessorEditor::didReorderRegionSequencesInDocument (
     invalidateRegionSequenceViews();
 }
 
-void ARASampleProjectAudioProcessorEditor::getVisibleTimeRange(double &start, double &end)
+void ARASampleProjectAudioProcessorEditor::getVisibleTimeRange(double &start, double &end) const
 {
     start = getPlaybackRegionsViewsTimeForX (playbackRegionsViewPort.getViewArea().getX());
     end = getPlaybackRegionsViewsTimeForX (playbackRegionsViewPort.getViewArea().getRight());

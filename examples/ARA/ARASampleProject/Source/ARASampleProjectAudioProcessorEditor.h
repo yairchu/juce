@@ -27,7 +27,7 @@ public:
     void getTimeRange (double& start, double& end) const { start = startTime; end = endTime; }
 
     // total visible time range
-    void getVisibleTimeRange (double& start, double& end);
+    void getVisibleTimeRange (double& start, double& end) const;
 
     // flag that our view needs to be rebuilt
     void invalidateRegionSequenceViews() { regionSequenceViewsAreInvalid = true; }
@@ -37,6 +37,7 @@ public:
 
     int getPlaybackRegionsViewsXForTime (double time) const;
     double getPlaybackRegionsViewsTimeForX (int x) const;
+    double getPixelsPerSecond () const { return pixelsPerSecond; }
 
     double getPlayheadPositionInSeconds() const { return playheadPositionInSeconds; }
 
