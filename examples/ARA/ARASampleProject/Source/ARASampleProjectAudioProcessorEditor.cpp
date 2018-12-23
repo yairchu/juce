@@ -16,6 +16,7 @@ constexpr int kHeight = kMinHeight + 5 * kTrackHeight;
 ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARASampleProjectAudioProcessor& p)
     : AudioProcessorEditor (&p),
       AudioProcessorEditorARAExtension (&p),
+      playbackRegionsViewPort (*this),
       playheadView (*this)
 {
     setSize (kWidth, kHeight);
@@ -26,8 +27,6 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
     playbackRegionsView.addAndMakeVisible (playheadView);
 
     playbackRegionsViewPort.setScrollBarsShown (true, true, false, false);
-    playbackRegionsViewPort.getHorizontalScrollBar().addListener (this);
-    playbackRegionsViewPort.getVerticalScrollBar().addListener (this);
     playbackRegionsViewPort.setViewedComponent (&playbackRegionsView, false);
     addAndMakeVisible (playbackRegionsViewPort);
 
@@ -40,13 +39,11 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
     constexpr double zoomStepFactor = 1.5;
     zoomInButton.onClick = [this, zoomStepFactor]
     {
-        storeRelativePosition();
         pixelsPerSecond *= zoomStepFactor;
         resized();
     };
     zoomOutButton.onClick = [this, zoomStepFactor]
     {
-        storeRelativePosition();
         pixelsPerSecond /= zoomStepFactor;
         resized();
     };
@@ -61,9 +58,7 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
     {
         getARAEditorView()->addListener (this);
 
-        auto document = static_cast<ARADocument*> (getARADocumentController()->getDocument());
-
-        document->addListener (this);
+        getARADocumentController()->getDocument<ARADocument>()->addListener (this);
 
         rulersView.reset (new RulersView (*this));
 
@@ -80,13 +75,10 @@ ARASampleProjectAudioProcessorEditor::~ARASampleProjectAudioProcessorEditor()
 {
     if (isARAEditorView())
     {
-        static_cast<ARADocument*> (getARADocumentController()->getDocument())->removeListener (this);
+        getARADocumentController()->getDocument<ARADocument>()->removeListener (this);
 
         getARAEditorView()->removeListener (this);
     }
-
-    playbackRegionsViewPort.getHorizontalScrollBar().removeListener (this);
-    playbackRegionsViewPort.getVerticalScrollBar().removeListener (this);
 }
 
 //==============================================================================
@@ -97,7 +89,7 @@ int ARASampleProjectAudioProcessorEditor::getPlaybackRegionsViewsXForTime (doubl
 
 double ARASampleProjectAudioProcessorEditor::getPlaybackRegionsViewsTimeForX (int x) const
 {
-    return ((double) x / (double) playbackRegionsView.getWidth()) * (endTime - startTime);
+    return startTime + ((double) x / (double) playbackRegionsView.getWidth()) * (endTime - startTime);
 }
 
 //==============================================================================
@@ -115,7 +107,10 @@ void ARASampleProjectAudioProcessorEditor::paint (Graphics& g)
 
 void ARASampleProjectAudioProcessorEditor::resized()
 {
-    // calculate visible time range
+    // store visible playhead postion (in main view coordinates)
+    int previousPlayheadX = getPlaybackRegionsViewsXForTime (playheadTimePosition) - playbackRegionsViewPort.getViewPosition().getX();
+
+    // calculate maximum visible time range
     if (regionSequenceViews.isEmpty())
     {
         startTime = 0.0;
@@ -127,11 +122,9 @@ void ARASampleProjectAudioProcessorEditor::resized()
         endTime = std::numeric_limits<double>::lowest();
         for (auto v : regionSequenceViews)
         {
-            double sequenceStartTime, sequenceEndTime;
-            v->getTimeRange (sequenceStartTime, sequenceEndTime);
-
-            startTime = jmin (startTime, sequenceStartTime);
-            endTime = jmax (endTime, sequenceEndTime);
+            auto sequenceTimeRange = v->getTimeRange();
+            startTime = jmin (startTime, sequenceTimeRange.getStart());
+            endTime = jmax (endTime, sequenceTimeRange.getEnd());
         }
     }
 
@@ -162,6 +155,7 @@ void ARASampleProjectAudioProcessorEditor::resized()
 
     // update sizes and positions of all views
     playbackRegionsView.setBounds (0, 0, roundToInt ((endTime - startTime) * pixelsPerSecond), kTrackHeight * regionSequenceViews.size());
+    pixelsPerSecond = playbackRegionsView.getWidth() / (endTime - startTime);       // prevent potential rounding issues
     playbackRegionsViewPort.setBounds (kTrackHeaderWidth, kRulersViewHeight, getWidth() - kTrackHeaderWidth, getHeight() - kRulersViewHeight - kStatusBarHeight);
 
     trackHeadersView.setBounds (0, 0, kTrackHeaderWidth, playbackRegionsView.getHeight());
@@ -187,50 +181,28 @@ void ARASampleProjectAudioProcessorEditor::resized()
     followPlayheadToggleButton.setBounds (0, zoomInButton.getY(), 200, kStatusBarHeight);
 
     // keep viewport position relative to playhead
-    const double secondsBeforePlayhead = pixelsUntilPlayhead / pixelsPerSecond;
+    // TODO JUCE_ARA if playhead is not visible in new position, we should rather keep the
+    //               left or right border stable, depending on which side the playhead is.
     auto relativeViewportPosition = playbackRegionsViewPort.getViewPosition();
-    relativeViewportPosition.setX (getPlaybackRegionsViewsXForTime (playheadPositionInSeconds - secondsBeforePlayhead));
+    relativeViewportPosition.setX (getPlaybackRegionsViewsXForTime (playheadTimePosition) - previousPlayheadX);
     playbackRegionsViewPort.setViewPosition (relativeViewportPosition);
     rulersViewPort.setViewPosition (relativeViewportPosition.getX(), 0);
-    trackHeadersViewPort.setViewPosition (0, relativeViewportPosition.getY());
-}
-
-void ARASampleProjectAudioProcessorEditor::scrollBarMoved (ScrollBar* scrollBarThatHasMoved, double newRangeStart)
-{
-    if (scrollBarThatHasMoved == &playbackRegionsViewPort.getHorizontalScrollBar())
-        rulersViewPort.setViewPosition (roundToInt (newRangeStart), 0);
-    else if (scrollBarThatHasMoved == &playbackRegionsViewPort.getVerticalScrollBar())
-        trackHeadersViewPort.setViewPosition (0, roundToInt (newRangeStart));
-    else
-        jassertfalse;
 }
 
 void ARASampleProjectAudioProcessorEditor::rebuildRegionSequenceViews()
 {
     regionSequenceViews.clear();
 
-    for (auto regionSequence : getARADocumentController()->getDocument()->getRegionSequences())
+    for (auto regionSequence : getARADocumentController()->getDocument()->getRegionSequences<ARARegionSequence>())
     {
         if (! ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
-            regionSequenceViews.add (new RegionSequenceView (this, static_cast<ARARegionSequence*> (regionSequence)));
+            regionSequenceViews.add (new RegionSequenceView (this, regionSequence));
     }
 
     resized();
 }
 
-void ARASampleProjectAudioProcessorEditor::storeRelativePosition()
-{
-    pixelsUntilPlayhead = roundToInt (getPlaybackRegionsViewsXForTime (playheadPositionInSeconds) - playbackRegionsViewPort.getViewPosition().getX());
-}
-
 //==============================================================================
-void ARASampleProjectAudioProcessorEditor::onNewSelection (const ARA::PlugIn::ViewSelection& /*currentSelection*/)
-{
-// TODO JUCE_ARA the following was added as workaround for Logic, but it breaks navigating
-//               in other hosts while zoomed in - disabled for now.
-//    rebuildRegionSequenceViews();
-}
-
 void ARASampleProjectAudioProcessorEditor::onHideRegionSequences (std::vector<ARARegionSequence*> const& /*regionSequences*/)
 {
     rebuildRegionSequenceViews();
@@ -254,25 +226,25 @@ void ARASampleProjectAudioProcessorEditor::didReorderRegionSequencesInDocument (
     invalidateRegionSequenceViews();
 }
 
-void ARASampleProjectAudioProcessorEditor::getVisibleTimeRange(double &start, double &end) const
+Range<double> ARASampleProjectAudioProcessorEditor::getVisibleTimeRange() const
 {
-    start = getPlaybackRegionsViewsTimeForX (playbackRegionsViewPort.getViewArea().getX());
-    end = getPlaybackRegionsViewsTimeForX (playbackRegionsViewPort.getViewArea().getRight());
+    double start = getPlaybackRegionsViewsTimeForX (playbackRegionsViewPort.getViewArea().getX());
+    double end = getPlaybackRegionsViewsTimeForX (playbackRegionsViewPort.getViewArea().getRight());
+    return Range<double> (start, end);
 }
 
 void ARASampleProjectAudioProcessorEditor::timerCallback()
 {
     auto position = static_cast<ARASampleProjectAudioProcessor*> (getAudioProcessor())->getLastKnownPositionInfo();
-    if (playheadPositionInSeconds != position.timeInSeconds)
+    if (playheadTimePosition != position.timeInSeconds)
     {
-        playheadPositionInSeconds = position.timeInSeconds;
+        playheadTimePosition = position.timeInSeconds;
 
         if (followPlayheadToggleButton.getToggleState())
         {
-            double visibleStart, visibleEnd;
-            getVisibleTimeRange (visibleStart, visibleEnd);
-            if (playheadPositionInSeconds < visibleStart || playheadPositionInSeconds > visibleEnd)
-                playbackRegionsViewPort.setViewPosition (playbackRegionsViewPort.getViewPosition().withX (getPlaybackRegionsViewsXForTime (playheadPositionInSeconds)));
+            Range<double> visibleRange = getVisibleTimeRange();
+            if (playheadTimePosition < visibleRange.getStart() || playheadTimePosition > visibleRange.getEnd())
+                playbackRegionsViewPort.setViewPosition (playbackRegionsViewPort.getViewPosition().withX (getPlaybackRegionsViewsXForTime (playheadTimePosition)));
         };
 
         playheadView.repaint();
@@ -286,7 +258,17 @@ ARASampleProjectAudioProcessorEditor::PlayheadView::PlayheadView (ARASampleProje
 
 void ARASampleProjectAudioProcessorEditor::PlayheadView::paint (juce::Graphics &g)
 {
-    int playheadX = editorComponent.getPlaybackRegionsViewsXForTime (editorComponent.getPlayheadPositionInSeconds());
+    int playheadX = editorComponent.getPlaybackRegionsViewsXForTime (editorComponent.getPlayheadTimePosition());
     g.setColour (findColour (ScrollBar::ColourIds::thumbColourId));
     g.fillRect (playheadX - kPlayheadWidth / 2, 0, kPlayheadWidth, getHeight());
+}
+
+//==============================================================================
+// see https://forum.juce.com/t/viewport-scrollbarmoved-mousewheelmoved/20226
+void ARASampleProjectAudioProcessorEditor::ScrollMasterViewPort::visibleAreaChanged (const Rectangle<int>& newVisibleArea)
+{
+    Viewport::visibleAreaChanged (newVisibleArea);
+
+    editorComponent.getRulersViewPort().setViewPosition (newVisibleArea.getX(), 0);
+    editorComponent.getTrackHeadersViewPort().setViewPosition (0, newVisibleArea.getY());
 }

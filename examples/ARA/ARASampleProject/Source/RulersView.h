@@ -10,6 +10,7 @@ class ARASampleProjectAudioProcessorEditor;
     JUCE component used to display rulers for song time (in seconds and musical beats) and chords
 */
 class RulersView  : public Component,
+                    private ARAEditorView::Listener,
                     private ARADocument::Listener,
                     private ARAMusicalContext::Listener
 {
@@ -17,19 +18,10 @@ public:
     RulersView (ARASampleProjectAudioProcessorEditor& owner);
     ~RulersView();
 
-    enum ColourIds
-    {
-        borderColourId                 = 0x1009110,  /**< The colour to use for the rulers border */
-        musicalRulerBackgroundColourId = 0x1009111,  /**< The colour to use for the musical ruler background */
-        timeRulerBackgroundColourId    = 0x1009112,  /**< The colour to use for the time    ruler background */
-        chordsRulerBackgroundColourId  = 0x1009113,  /**< The colour to use for the chords  ruler background */
-        musicalGridColourId            = 0x1009114,  /**< The colour to use for the musical grid */
-        timeGridColourId               = 0x1009115,  /**< The colour to use for the time grid    */
-        chordsColourId                 = 0x1009116   /**< The colour to use for chords           */
-
-    };
-
     void paint (Graphics&) override;
+
+    // ARAEditorView::Listener overrides
+    void onNewSelection (const ARA::PlugIn::ViewSelection& currentSelection) override;
 
     // ARADocument::Listener overrides
     void didEndEditing (ARADocument* document) override;
@@ -40,16 +32,19 @@ public:
     // ARAMusicalContext::Listener overrides
     void doUpdateMusicalContextContent (ARAMusicalContext* context, ARAContentUpdateScopes scopeFlags) override;
 
+    // MouseListener overrides
+    void mouseDown (const MouseEvent& event) override;
+    void mouseDoubleClick (const MouseEvent& event) override;
+
 private:
     void detachFromDocument();
     void detachFromMusicalContext();
-    bool findMusicalContext ();
+    void findMusicalContext();
 
 private:
     ARASampleProjectAudioProcessorEditor& owner;
     ARADocument* document;
     ARAMusicalContext* musicalContext;
 
-    //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RulersView)
 };

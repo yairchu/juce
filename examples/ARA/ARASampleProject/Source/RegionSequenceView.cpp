@@ -9,14 +9,14 @@
 RegionSequenceView::RegionSequenceView (ARASampleProjectAudioProcessorEditor* editor, ARARegionSequence* sequence)
     : editorComponent (editor),
       regionSequence (sequence),
-      trackHeaderView (new TrackHeaderView (editor->getARAEditorView(), static_cast<ARARegionSequence*> (regionSequence)))
+      trackHeaderView (new TrackHeaderView (editor->getARAEditorView(), regionSequence))
 {
     regionSequence->addListener (this);
 
     editorComponent->getTrackHeadersView().addAndMakeVisible (*trackHeaderView);
 
-    for (auto playbackRegion : regionSequence->getPlaybackRegions())
-        addRegionSequenceViewAndMakeVisible (static_cast<ARAPlaybackRegion*> (playbackRegion));
+    for (auto playbackRegion : regionSequence->getPlaybackRegions<ARAPlaybackRegion>())
+        addRegionSequenceViewAndMakeVisible (playbackRegion);
 }
 
 RegionSequenceView::~RegionSequenceView()
@@ -42,16 +42,12 @@ void RegionSequenceView::detachFromRegionSequence()
 }
 
 //==============================================================================
-void RegionSequenceView::getTimeRange (double& startTime, double& endTime) const
+Range<double> RegionSequenceView::getTimeRange() const
 {
     if (regionSequence == nullptr)
-    {
-        startTime = 0.0;
-        endTime = 0.0;
-        return;
-    }
+        return {};
 
-    regionSequence->getTimeRange (startTime, endTime, true);
+    return regionSequence->getTimeRange();
 }
 
 void RegionSequenceView::setRegionsViewBoundsByYRange (int y, int height)
@@ -60,10 +56,9 @@ void RegionSequenceView::setRegionsViewBoundsByYRange (int y, int height)
 
     for (auto regionView : playbackRegionViews)
     {
-        double regionViewStartTime, regionViewEndTime;
-        regionView->getTimeRange (regionViewStartTime, regionViewEndTime);
-        int startX = editorComponent->getPlaybackRegionsViewsXForTime (regionViewStartTime);
-        int endX = editorComponent->getPlaybackRegionsViewsXForTime (regionViewEndTime);
+        Range<double> regionTimeRange = regionView->getTimeRange();
+        int startX = editorComponent->getPlaybackRegionsViewsXForTime (regionTimeRange.getStart());
+        int endX = editorComponent->getPlaybackRegionsViewsXForTime (regionTimeRange.getEnd());
         regionView->setBounds (startX, y, endX - startX, height);
     }
 }

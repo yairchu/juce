@@ -19,7 +19,7 @@ public:
     RegionSequenceView (ARASampleProjectAudioProcessorEditor* editor, ARARegionSequence* sequence);
     ~RegionSequenceView();
 
-    void getTimeRange (double& startTime, double& endTime) const;
+    Range<double> getTimeRange() const;
 
     void setRegionsViewBoundsByYRange (int y, int height);
 
@@ -39,6 +39,5 @@ private:
     std::unique_ptr<TrackHeaderView> trackHeaderView;
     OwnedArray<PlaybackRegionView> playbackRegionViews;
 
-    //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RegionSequenceView)
 };

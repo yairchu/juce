@@ -21,32 +21,20 @@ ARARegionSequence::ARARegionSequence (ARADocument* document, ARA::ARARegionSeque
     : ARA::PlugIn::RegionSequence (document, hostRef)
 {}
 
-void ARARegionSequence::getTimeRange (double& startTime, double& endTime, bool includeHeadAndTail) const
+Range<double> ARARegionSequence::getTimeRange (bool includeHeadAndTail) const
 {
     if (getPlaybackRegions().empty())
+        return {};
+
+    double startTime = std::numeric_limits<double>::max();
+    double endTime = std::numeric_limits<double>::lowest();
+    for (auto playbackRegion : getPlaybackRegions<ARAPlaybackRegion>())
     {
-        startTime = 0.0;
-        endTime = 0.0;
-        return;
+        auto regionTimeRange = playbackRegion->getTimeRange (includeHeadAndTail);
+        startTime = jmin (startTime, regionTimeRange.getStart());
+        endTime = jmax (endTime, regionTimeRange.getEnd());
     }
-
-    startTime = std::numeric_limits<double>::max();
-    endTime = std::numeric_limits<double>::lowest();
-    for (auto playbackRegion : getPlaybackRegions())
-    {
-        double regionStartTime = playbackRegion->getStartInPlaybackTime();
-        double regionEndTime = playbackRegion->getEndInPlaybackTime();
-
-        if (includeHeadAndTail)
-        {
-            auto region = static_cast<ARAPlaybackRegion*> (playbackRegion);
-            regionStartTime -= region->getHeadTime();
-            regionEndTime += region->getTailTime();
-        }
-
-        startTime = jmin (startTime, regionStartTime);
-        endTime = jmax (endTime, regionEndTime);
-    }
+    return { startTime, endTime };
 }
 
 double ARARegionSequence::getCommonSampleRate() const
@@ -71,7 +59,7 @@ ARAAudioSource::ARAAudioSource (ARADocument* document, ARA::ARAAudioSourceHostRe
 
 void ARAAudioSource::notifyContentChanged (ARAContentUpdateScopes scopeFlags, bool notifyAllAudioModificationsAndPlaybackRegions)
 {
-    static_cast<ARADocumentController*> (getDocument()->getDocumentController())->
+    getDocument()->getDocumentController<ARADocumentController>()->
                                 notifyAudioSourceContentChanged (this, scopeFlags, notifyAllAudioModificationsAndPlaybackRegions);
 }
 
@@ -83,7 +71,7 @@ ARAAudioModification::ARAAudioModification (ARAAudioSource* audioSource, ARA::AR
 
 void ARAAudioModification::notifyContentChanged (ARAContentUpdateScopes scopeFlags, bool notifyAllPlaybackRegions)
 {
-    static_cast<ARADocumentController*> (getAudioSource()->getDocument()->getDocumentController())->
+    getAudioSource()->getDocument()->getDocumentController<ARADocumentController>()->
                                 notifyAudioModificationContentChanged (this, scopeFlags, notifyAllPlaybackRegions);
 }
 
@@ -112,9 +100,14 @@ void ARAPlaybackRegion::setHeadAndTailTime (double newHeadTime, double newTailTi
     notifyContentChanged (ARAContentUpdateScopes::samplesAreAffected());
 }
 
+Range<double> ARAPlaybackRegion::getTimeRange (bool includeHeadAndTail) const
+{
+    return { getStartInPlaybackTime() - (includeHeadAndTail ? headTime : 0.0), getEndInPlaybackTime() + (includeHeadAndTail ? tailTime : 0.0) };
+}
+
 void ARAPlaybackRegion::notifyContentChanged (ARAContentUpdateScopes scopeFlags)
 {
-    static_cast<ARADocumentController*> (getAudioModification()->getAudioSource()->getDocument()->getDocumentController())->
+    getAudioModification()->getAudioSource()->getDocument()->getDocumentController<ARADocumentController>()->
                             notifyPlaybackRegionContentChanged (this, scopeFlags);
 }
 

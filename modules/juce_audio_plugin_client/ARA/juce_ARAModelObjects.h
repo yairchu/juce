@@ -39,7 +39,6 @@ public:
 private:
     ListenerList<Listener> listeners;
 
-    //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARAListenableModelClass)
 };
 
@@ -117,7 +116,7 @@ public:
     };
 
     // Returns time range covered by the regions in this sequence.
-    void getTimeRange (double& startTime, double& endTime, bool includeHeadAndTail = false) const;
+    Range<double> getTimeRange (bool includeHeadAndTail = false) const;
 
     // If all audio sources used by the playback regions in this region sequence have the
     // same sample rate, this rate is returned here, otherwise 0.0 is returned.
@@ -209,6 +208,9 @@ public:
     void setHeadTime (double newHeadTime);
     void setTailTime (double newTailTime);
     void setHeadAndTailTime (double newHeadTime, double newTailTime);
+
+    // Returns time range covered by the region
+    Range<double> getTimeRange (bool includeHeadAndTail = false) const;
 
     void notifyContentChanged (ARAContentUpdateScopes scopeFlags);
 

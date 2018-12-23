@@ -21,7 +21,7 @@ public:
     ~PlaybackRegionView();
 
     ARAPlaybackRegion* getPlaybackRegion() const { return playbackRegion; }
-    void getTimeRange (double& startTime, double& endTime) const;
+    Range<double> getTimeRange() const { return playbackRegion->getTimeRange(); }
 
     void paint (Graphics&) override;
 
@@ -39,6 +39,7 @@ public:
 
     // ARAPlaybackRegion::Listener overrides
     void willUpdatePlaybackRegionProperties (ARAPlaybackRegion* playbackRegion, ARAPlaybackRegion::PropertiesPtr newProperties) override;
+    void didUpdatePlaybackRegionContent (ARAPlaybackRegion* playbackRegion, ARAContentUpdateScopes scopeFlags) override;
 
 private:
     void recreatePlaybackRegionReader();
@@ -53,6 +54,5 @@ private:
     AudioThumbnailCache audioThumbCache;
     AudioThumbnail audioThumb;
 
-    //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PlaybackRegionView)
 };

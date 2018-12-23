@@ -1,5 +1,6 @@
 #include "RulersView.h"
 #include "ARASampleProjectAudioProcessorEditor.h"
+#include "ARA_Library/Utilities/ARAChordAndScaleNames.h"
 
 //==============================================================================
 RulersView::RulersView (ARASampleProjectAudioProcessorEditor& owner)
@@ -7,20 +8,11 @@ RulersView::RulersView (ARASampleProjectAudioProcessorEditor& owner)
       document (nullptr),
       musicalContext (nullptr)
 {
-    setColour (borderColourId, Colours::darkgrey);
-    setColour (musicalRulerBackgroundColourId, (Colours::green).withAlpha(0.2f));
-    setColour (timeRulerBackgroundColourId, (Colours::blue).withAlpha(0.2f));
-    setColour (chordsRulerBackgroundColourId, Colours::transparentBlack);
-    setColour (musicalGridColourId, Colours::slategrey);
-    setColour (timeGridColourId, Colours::slateblue);
-    setColour (chordsColourId, Colours::slategrey);
-
     if (owner.isARAEditorView())
     {
-        document = static_cast<ARADocument*>(owner.getARADocumentController()->getDocument());
+        document = owner.getARADocumentController()->getDocument<ARADocument>();
         document->addListener (this);
-        if (findMusicalContext())
-            musicalContext->addListener (this);
+        findMusicalContext();
     }
 }
 
@@ -50,250 +42,359 @@ void RulersView::detachFromMusicalContext()
     musicalContext = nullptr;
 }
 
-// walk through our ARA document to find a suitable musical context
-bool RulersView::findMusicalContext()
+void RulersView::findMusicalContext()
 {
-    detachFromMusicalContext();
-
     if (! owner.isARAEditorView())
-        return false;
+        return;
 
-    auto findMusicalContextLambda = [] (ARASampleProjectAudioProcessorEditor& editor)
+    // evaluate selection
+    ARAMusicalContext* newMusicalContext = nullptr;
+    auto viewSelection = owner.getARAEditorView()->getViewSelection();
+    if (! viewSelection.getRegionSequences().empty())
+        newMusicalContext = viewSelection.getRegionSequences().front()->getMusicalContext<ARAMusicalContext>();
+    else if (! viewSelection.getPlaybackRegions().empty())
+        newMusicalContext = viewSelection.getPlaybackRegions().front()->getRegionSequence()->getMusicalContext<ARAMusicalContext>();
+
+    // if no context used yet and selection does not yield a new one, use the first musical context in the docment
+    if (musicalContext == nullptr && newMusicalContext == nullptr &&
+        ! owner.getARADocumentController()->getDocument()->getMusicalContexts().empty())
     {
-        ARAMusicalContext* musicalContext = nullptr;
-
-        // first try the first selected region sequence
-        auto viewSelection = editor.getARAEditorView()->getViewSelection();
-        if (! viewSelection.getRegionSequences().empty())
-        {
-            musicalContext = static_cast<ARAMusicalContext*>(viewSelection.getRegionSequences()[0]->getMusicalContext());
-            if (musicalContext != nullptr)
-                return musicalContext;
-        }
-
-        // then try the first selected playback region's region sequence
-        if (! viewSelection.getPlaybackRegions().empty())
-        {
-            musicalContext = static_cast<ARAMusicalContext*>(viewSelection.getPlaybackRegions()[0]->getRegionSequence()->getMusicalContext());
-            if (musicalContext != nullptr)
-                return musicalContext;
-        }
-
-        // no selection? if we have an editor renderer try the first region sequence / playback region
-        if (auto editorRenderer = editor.getAudioProcessorARAExtension()->getARAEditorRenderer())
-        {
-            if (! editorRenderer->getRegionSequences().empty())
-            {
-                musicalContext = static_cast<ARAMusicalContext*>(editorRenderer->getRegionSequences()[0]->getMusicalContext());
-                if (musicalContext != nullptr)
-                    return musicalContext;
-            }
-
-            if (! editorRenderer->getPlaybackRegions().empty())
-            {
-                musicalContext = static_cast<ARAMusicalContext*>(editorRenderer->getPlaybackRegions()[0]->getRegionSequence()->getMusicalContext());
-                if (musicalContext != nullptr)
-                    return musicalContext;
-            }
-        }
-
-        // otherwise if we're a playback renderer try the first playback region
-        if (auto playbackRenderer = editor.getAudioProcessorARAExtension()->getARAPlaybackRenderer())
-        {
-            if (! playbackRenderer->getPlaybackRegions().empty())
-            {
-                musicalContext = static_cast<ARAMusicalContext*>(playbackRenderer->getPlaybackRegions()[0]->getRegionSequence()->getMusicalContext());
-                if (musicalContext != nullptr)
-                    return musicalContext;
-            }
-        }
-
-        // still nothing? try the first musical context in the docment
-        auto document = editor.getARADocumentController()->getDocument();
-        jassert (! document->getMusicalContexts().empty());
-        return static_cast<ARAMusicalContext*>(editor.getARADocumentController()->getDocument()->getMusicalContexts()[0]);
-    };
-
-    musicalContext = findMusicalContextLambda (owner);
-    if (musicalContext != nullptr)
-    {
-        musicalContext->addListener (this);
-        return true;
+        newMusicalContext = owner.getARADocumentController()->getDocument()->getMusicalContexts<ARAMusicalContext>().front();
     }
 
-    return false;
+    if (newMusicalContext != musicalContext)
+    {
+        detachFromMusicalContext();
+
+        musicalContext = newMusicalContext;
+        musicalContext->addListener (this);
+
+        repaint();
+    }
 }
+
+//==============================================================================
+
+// TODO JUCE_ARA these two classes should be moved down to the ARA SDK,
+// so that both hosts and plug-ins can use it when converting the ARA data to their internal formats.
+
+// TODO JUCE_ARA the caching may be improved by trying the next entry before searching with upper_bounds
+
+template <typename TempoContentReader>
+class TempoConverter
+{
+public:
+    TempoConverter (const TempoContentReader& reader)
+    : contentReader (reader), leftEntryCache (reader.begin()), rightEntryCache (std::next (leftEntryCache)) {}
+
+    ARA::ARAQuarterPosition getQuarterForTime (ARA::ARATimePosition timePosition) const
+    {
+        if ((timePosition < leftEntryCache->timePosition && ! isFirst (leftEntryCache)) ||
+            (timePosition >= rightEntryCache->timePosition && ! isLast (rightEntryCache)))
+        {
+            // find the tempo entry after timePosition (or last entry)
+            auto itTempo = std::upper_bound (contentReader.begin(), std::prev (contentReader.end()), timePosition,
+                                             [] (ARA::ARATimePosition timePosition, ARA::ARAContentTempoEntry tempoEntry)
+            {
+                return timePosition < tempoEntry.timePosition;
+            });
+
+            // pick left and right entry based on found position
+            bool isFirstEntry = (itTempo == contentReader.begin());
+            leftEntryCache = isFirstEntry ? itTempo : std::prev (itTempo);
+            rightEntryCache = isFirstEntry ? std::next (itTempo) : itTempo;
+        }
+
+        // linear interpolation of result
+        double quartersPerSecond = (rightEntryCache->quarterPosition - leftEntryCache->quarterPosition) / (rightEntryCache->timePosition - leftEntryCache->timePosition);
+        return leftEntryCache->quarterPosition + (timePosition - leftEntryCache->timePosition) * quartersPerSecond;
+    }
+
+    double getTimeForQuarter (ARA::ARAQuarterPosition quarterPosition) const
+    {
+        if ((quarterPosition < leftEntryCache->quarterPosition && ! isFirst (leftEntryCache)) ||
+            (quarterPosition >= rightEntryCache->quarterPosition && ! isLast (rightEntryCache)))
+        {
+            // find the tempo entry after timePosition (or last entry)
+            auto itTempo = std::upper_bound (contentReader.begin(), std::prev (contentReader.end()), quarterPosition,
+                                             [] (ARA::ARAQuarterPosition quarterPosition, ARA::ARAContentTempoEntry tempoEntry)
+            {
+                return quarterPosition < tempoEntry.quarterPosition;
+            });
+
+            // pick left and right entry based on found position
+            bool isFirstEntry = (itTempo == contentReader.begin());
+            leftEntryCache = isFirstEntry ? itTempo : std::prev (itTempo);
+            rightEntryCache = isFirstEntry ? std::next (itTempo) : itTempo;
+        }
+
+        // linear interpolation of result
+        double secondsPerQuarter = (rightEntryCache->timePosition - leftEntryCache->timePosition) / (rightEntryCache->quarterPosition - leftEntryCache->quarterPosition);
+        return leftEntryCache->timePosition + (quarterPosition - leftEntryCache->quarterPosition) * secondsPerQuarter;
+    }
+
+private:
+    bool isFirst (const typename TempoContentReader::const_iterator& it) const { return it != contentReader.begin(); }
+    bool isLast (const typename TempoContentReader::const_iterator& it) const { return std::next (it) != contentReader.end(); }
+
+    const TempoContentReader& contentReader;
+    mutable typename TempoContentReader::const_iterator leftEntryCache, rightEntryCache;
+};
+
+// TODO JUCE_ARA add caching just as done in the TempoContentReader, but also cache beatAtSigStart.
+//               beatAtSigStart can set to -1 to indicate outdated cache.
+template <typename BarSignaturesContentReader>
+class BarSignaturesConverter
+{
+public:
+    BarSignaturesConverter (const BarSignaturesContentReader& reader) : contentReader (reader) {}
+
+    ARA::ARAContentBarSignature getBarSignatureForQuarter (ARA::ARAQuarterPosition quarterPosition) const
+    {
+        // search for the bar signature entry just after quarterPosition
+        auto itBarSig = std::upper_bound (contentReader.begin(), contentReader.end(), quarterPosition,
+                                          [] (ARA::ARAQuarterPosition quarterPosition, ARA::ARAContentBarSignature barSignature)
+        {
+            return quarterPosition < barSignature.position;
+        });
+
+        // move one step back, if we can, to find the bar signature for quarterPos
+        if (itBarSig != contentReader.begin())
+            --itBarSig;
+
+        return *itBarSig;
+    }
+
+    double getBeatForQuarter (ARA::ARAQuarterPosition quarterPosition) const
+    {
+        auto itBarSig = contentReader.begin();
+        double beatPosition = 0.0;
+
+        if (itBarSig->position < quarterPosition)
+        {
+            // use each bar signature entry before quarterPosition to count the # of beats
+            auto itNextBarSig = std::next (itBarSig);
+            while (itNextBarSig != contentReader.end() &&
+                   itNextBarSig->position <= quarterPosition)
+            {
+                beatPosition += quartersToBeats (*itBarSig, itNextBarSig->position - itBarSig->position);
+                itBarSig = itNextBarSig++;
+            }
+        }
+
+        // the last change in quarter position comes after the latest bar signature change
+        beatPosition += quartersToBeats (*itBarSig, quarterPosition - itBarSig->position);
+        return beatPosition;
+    }
+
+    ARA::ARAQuarterPosition getQuarterForBeat (double beatPosition) const
+    {
+        auto itBarSig = contentReader.begin();
+        double currentSigBeat = 0.0;
+
+        if (0.0 < beatPosition)
+        {
+            // use each bar signature entry before beatPositon to count the # of beats
+            auto itNextBarSig = std::next (itBarSig);
+            while (itNextBarSig != contentReader.end())
+            {
+                double beatsDuration = quartersToBeats (*itBarSig, itNextBarSig->position - itBarSig->position);
+                double nextSigBeat = currentSigBeat + beatsDuration;
+                if (beatPosition < nextSigBeat)
+                    break;
+                currentSigBeat = nextSigBeat;
+                itBarSig = itNextBarSig++;
+            }
+        }
+
+        // transform the change in beats to quarters using the time signature at beatPosition
+        double quarterForBeat = itBarSig->position + beatsToQuarters (*itBarSig, beatPosition - currentSigBeat);
+        return quarterForBeat;
+    }
+
+private:
+    static double quartersToBeats (const ARA::ARAContentBarSignature& barSignature, ARA::ARAQuarterDuration quarterDuration)
+    {
+        return barSignature.denominator * quarterDuration / 4.0;
+    }
+
+    static double beatsToQuarters (ARA::ARAContentBarSignature barSignature, double beatDuration)
+    {
+        return 4.0 * beatDuration / barSignature.denominator;
+    }
+
+private:
+    const BarSignaturesContentReader& contentReader;
+};
 
 //==============================================================================
 void RulersView::paint (juce::Graphics& g)
 {
-    const auto bounds = getLocalBounds();
+    const auto bounds = g.getClipBounds();
+
+    g.setColour (Colours::lightslategrey);
+
     if (musicalContext == nullptr)
     {
-        g.setColour (Colours::darkgrey);
-        g.drawRect (bounds, 3);
-
-        g.setColour (Colours::white);
         g.setFont (Font (12.0f));
         g.drawText ("No musical context found in ARA document!", bounds, Justification::centred);
-        
         return;
     }
 
+    Range<double> visibleRange = owner.getVisibleTimeRange();
+
+    using TempoContentReader = ARA::PlugIn::HostContentReader<ARA::kARAContentTypeTempoEntries>;
+    using BarSignaturesContentReader = ARA::PlugIn::HostContentReader<ARA::kARAContentTypeBarSignatures>;
+    using ChordsContentReader = ARA::PlugIn::HostContentReader<ARA::kARAContentTypeSheetChords>;
+    const TempoContentReader tempoReader (musicalContext);
+    const BarSignaturesContentReader barSignaturesReader (musicalContext);
+    const ChordsContentReader chordsReader (musicalContext);
+
+    const TempoConverter<TempoContentReader> tempoConverter (tempoReader);
+
     // we'll draw three rulers: seconds, beats, and chords
-    int rulerHeight = bounds.getHeight() / 3;
-
-    // TODO JUCE_ARA
-    // we should only be doing this on the visible time range
-    double timeStart (0), timeEnd (0);
-    owner.getTimeRange (timeStart, timeEnd);
-
-    // find the next whole second after time start
-    int nextWholeSecond = (int) (timeStart + 0.5);
-    int lastWholeSecond = (int) (timeEnd + 0.5);
-    double secondsTillWholeSecond = (double) nextWholeSecond - timeStart;
-    double pixelsPerSecond = owner.getPixelsPerSecond();
-    int pixelStartSeconds = (int) (secondsTillWholeSecond * pixelsPerSecond);
+    constexpr int lightLineWidth = 1;
+    constexpr int heavyLineWidth = 3;
+    const int chordRulerY = 0;
+    const int chordRulerHeight = getBounds().getHeight() / 3;
+    const int beatsRulerY = chordRulerY + chordRulerHeight;
+    const int beatsRulerHeight = (getBounds().getHeight() - chordRulerHeight) / 2;
+    const int secondsRulerY = beatsRulerY + beatsRulerHeight;
+    const int secondsRulerHeight = getBounds().getHeight() - chordRulerHeight - beatsRulerHeight;
 
     // seconds ruler: one tick for each second
-    g.setColour (findColour (ColourIds::timeRulerBackgroundColourId));
-    g.fillRect (0, 0, bounds.getWidth(), rulerHeight);
-    RectangleList <int> timeSecondsRects;
-    for (int s = nextWholeSecond; s < lastWholeSecond; s++)
     {
-        int secondPixel = (int) (pixelStartSeconds + s * pixelsPerSecond);
-        timeSecondsRects.addWithoutMerging (Rectangle<int>(secondPixel, 0, 2, rulerHeight));
-    }
-    g.setColour (findColour (ColourIds::timeGridColourId));
-    g.fillRectList (timeSecondsRects);
-
-    // beat ruler
-    // use our musical context to read tempo and bar signature data using content readers
-    ARA::PlugIn::HostContentReader<ARA::kARAContentTypeTempoEntries> tempoReader (musicalContext);
-    ARA::PlugIn::HostContentReader<ARA::kARAContentTypeBarSignatures> barSignatureReader (musicalContext);
-
-    // we must have at least two tempo entries and a bar signature in order to have a proper musical context
-    const int tempoEntryCount = tempoReader.getEventCount();
-    const int barSigEventCount = barSignatureReader.getEventCount();
-    jassert (tempoEntryCount >= 2 && barSigEventCount >= 1);
-
-    // tempo ruler: one tick for each beat
-    g.setColour (findColour (ColourIds::musicalRulerBackgroundColourId));
-    g.fillRect (0, rulerHeight, bounds.getWidth(), rulerHeight);
-    RectangleList <int> musicalRects;
-
-    // find the first tempo entry for our starting time
-    int ixT = 0;
-    for (; ixT < tempoEntryCount - 2 && tempoReader.getDataForEvent (ixT + 1)->timePosition < timeStart; ++ixT);
-
-    // use a lambda to update our tempo state while reading the host tempo map
-    double tempoBPM (120);
-    double secondsToBeats (0), pixelsPerBeat (0);
-    double beatEnd (0);
-    auto updateTempoState = [&, this] (bool advance)
-    {
-        if (advance)
-            ++ixT;
-        
-        double deltaT = (tempoReader.getDataForEvent (ixT + 1)->timePosition - tempoReader.getDataForEvent (ixT)->timePosition);
-        double deltaQ = (tempoReader.getDataForEvent (ixT + 1)->quarterPosition - tempoReader.getDataForEvent (ixT)->quarterPosition);
-        tempoBPM = 60 * deltaQ / deltaT;
-        secondsToBeats = (tempoBPM / 60);
-        pixelsPerBeat = pixelsPerSecond / secondsToBeats;
-        beatEnd = secondsToBeats * timeEnd;
-    };
-
-    // update our tempo state using the first two tempo entries
-    updateTempoState (false);
-
-    // convert the starting time to beats
-    double beatStart = secondsToBeats * timeStart;
-
-    // get the bar signature entry just before beat start (or the last bar signature in the reader)
-    int ixB = 0;
-    for (; ixB < barSigEventCount - 1 && barSignatureReader.getDataForEvent (ixB + 1)->position < beatStart; ++ixB);
-    int barSigNumerator = barSignatureReader.getDataForEvent (ixB)->numerator;
-
-    // find the next whole beat and see if it's in our range
-    int nextWholeBeat = roundToInt (ceil (beatStart));
-    if (nextWholeBeat < beatEnd)
-    {
-        // read the tempo map to find the starting beat position in pixels
-        double beatPixelPosX = 0;
-        double beatsTillWholeBeat = nextWholeBeat - beatStart;
-        for (; ixT < tempoEntryCount - 2 && tempoReader.getDataForEvent (ixT + 1)->quarterPosition < nextWholeBeat;)
+        RectangleList<int> rects;
+        const int endTime = roundToInt (floor (visibleRange.getEnd()));
+        for (int time = roundToInt (ceil (visibleRange.getStart())); time <= endTime; ++time)
         {
-            beatPixelPosX += pixelsPerBeat * (tempoReader.getDataForEvent (ixT + 1)->quarterPosition - tempoReader.getDataForEvent (ixT)->quarterPosition);
-            updateTempoState (true);
+            const int lineWidth = (time % 60 == 0) ? heavyLineWidth : lightLineWidth;
+            const int lineHeight = (time % 10 == 0) ? secondsRulerHeight : secondsRulerHeight / 2;
+            const int x = owner.getPlaybackRegionsViewsXForTime (time);
+            rects.addWithoutMerging (Rectangle<int> (x - lineWidth / 2, secondsRulerY + secondsRulerHeight - lineHeight, lineWidth, lineHeight));
         }
+        g.drawText ("seconds", bounds, Justification::bottomRight);
+        g.fillRectList (rects);
+    }
 
-        if (tempoReader.getDataForEvent (ixT)->quarterPosition < nextWholeBeat)
-            beatPixelPosX += pixelsPerBeat * (nextWholeBeat - tempoReader.getDataForEvent (ixT)->quarterPosition);
+    // beat ruler: evaluates tempo and bar signatures to draw a line for each beat
+    {
+        RectangleList<int> rects;
 
-        // use a lambda to draw beat markers 
-        auto drawBeatRects = [&] (int beatsToDraw)
+        const BarSignaturesConverter<BarSignaturesContentReader> barSignaturesConverter (barSignaturesReader);
+
+        double beatStart = barSignaturesConverter.getBeatForQuarter (tempoConverter.getQuarterForTime (visibleRange.getStart()));
+        double beatEnd = barSignaturesConverter.getBeatForQuarter (tempoConverter.getQuarterForTime (visibleRange.getEnd()));
+        int endBeat = roundToInt (floor (beatEnd));
+        for (int beat = roundToInt (ceil (beatStart)); beat <= endBeat; ++beat)
         {
-            // for each beat, advance beat pixel by the current pixelsPerBeat value
-            for (int b = 0; b < beatsToDraw; b++)
-            {
-                int curBeat = nextWholeBeat + b;
-                int tickWidth = 1;
-                if ((curBeat % barSigNumerator) == 0)
-                    tickWidth *= 2;
-                musicalRects.addWithoutMerging (Rectangle<int> (roundToInt(beatPixelPosX), rulerHeight, tickWidth, rulerHeight));
-                beatPixelPosX += pixelsPerBeat;
-            }
+            const ARA::ARAQuarterPosition quarterPos = barSignaturesConverter.getQuarterForBeat (beat);
+            const ARA::ARATimePosition timePos = tempoConverter.getTimeForQuarter (quarterPos);
+
+            const ARA::ARAContentBarSignature barSignature = barSignaturesConverter.getBarSignatureForQuarter (quarterPos);
+            const int barSigBeatStart = roundToInt (barSignaturesConverter.getBeatForQuarter (barSignature.position));
+            const int beatsSinceBarSigStart = beat - barSigBeatStart;
+            const bool isDownBeat = ((beatsSinceBarSigStart % barSignature.numerator) == 0);
+
+            const int lineWidth = isDownBeat ? heavyLineWidth : lightLineWidth;
+            const int x = owner.getPlaybackRegionsViewsXForTime (timePos);
+            rects.addWithoutMerging (Rectangle<int> (x, beatsRulerY, lineWidth, beatsRulerHeight));
+        }
+        g.drawText ("beats", bounds, Justification::centredRight);
+        g.fillRectList (rects);
+    }
+
+    // chord ruler: one rect per chord, skipping empty "no chords"
+    {
+        RectangleList<int> rects;
+
+        // a chord is considered "no chord" if its intervals are all zero
+        auto isNoChord = [] (ARA::ARAContentChord chord)
+        {
+            return std::all_of (chord.intervals, chord.intervals + sizeof (chord.intervals), [] (ARA::ARAChordIntervalUsage i) { return i == 0; });
         };
 
-        // read tempo entries from the host tempo map until we run out of entries or reach timeEnd
-        while (ixT < tempoEntryCount - 2 && tempoReader.getDataForEvent (ixT + 1)->timePosition < timeEnd)
+        for (auto itChord = chordsReader.begin(); itChord != chordsReader.end(); ++itChord)
         {
-            // draw rects for each whole beat from nextWholeBeat to the next tempo entry
-            // keep offsetting pixelStartBeats so we know where to draw the next one
+            if (isNoChord (*itChord))
+                continue;
 
-            // draw a beat rect for each beat that's passed since we 
-            // drew a beat marker and advance to the next whole beat 
-            int beatsToNextTempoEntry = (int) (tempoReader.getDataForEvent (ixT)->quarterPosition - nextWholeBeat);
-            drawBeatRects (beatsToNextTempoEntry);
-            nextWholeBeat += beatsToNextTempoEntry;
+            Rectangle<int> chordRect = bounds;
+            chordRect.setVerticalRange (Range<int> (chordRulerY, chordRulerY + chordRulerHeight));
+            
+            // find the starting position of the chord in pixels
+            const ARA::ARATimePosition chordStartSecond = tempoConverter.getTimeForQuarter (itChord->position);
+            if (chordStartSecond >= visibleRange.getEnd())
+                break;
+            chordRect.setLeft (owner.getPlaybackRegionsViewsXForTime (chordStartSecond));
 
-            // find the new tempo
-            updateTempoState (true);
+            // if we have a chord after this one, use its starting position to end our rect
+            if (std::next(itChord) != chordsReader.end())
+            {
+                const ARA::ARATimePosition nextChordStartSecond = tempoConverter.getTimeForQuarter (std::next (itChord)->position);
+                if (nextChordStartSecond < visibleRange.getStart())
+                    continue;
+                chordRect.setRight (owner.getPlaybackRegionsViewsXForTime (nextChordStartSecond));
+            }
 
-            // advance bar signature numerator if our beat position passes the most recent entry
-            if (ixB < barSigEventCount - 1 && barSignatureReader.getDataForEvent(ixB)->position < nextWholeBeat)
-                barSigNumerator= barSignatureReader.getDataForEvent (++ixB)->numerator;
+            // get the chord name
+            String chordName = ARA::getNameForChord (*itChord);
+
+            // use the chord name as a hash to pick a random color
+            auto& random = Random::getSystemRandom();
+            random.setSeed (chordName.hash() + itChord->bass);
+            Colour chordColour ((uint8) random.nextInt (256), (uint8) random.nextInt (256), (uint8) random.nextInt (256));
+
+            // draw chord rect and name
+            g.setColour (chordColour);
+            g.fillRect (chordRect);
+            g.setColour (chordColour.contrasting (1.0f));
+            g.setFont (Font (12.0f));
+            g.drawText (chordName, chordRect, Justification::centred);
         }
 
-        // draw the remaining rects until beat end
-        int remainingBeats = roundToInt (ceil (beatEnd) - nextWholeBeat);
-        drawBeatRects (remainingBeats);
+        g.setColour (Colours::lightslategrey);
+        g.drawText ("chords", bounds, Justification::topRight);
     }
 
-    g.setColour (findColour (ColourIds::musicalGridColourId));
-    g.fillRectList (musicalRects);
-
-    // TODO JUCE_ARA chord ruler
-    g.setColour (findColour (ColourIds::chordsRulerBackgroundColourId));
-    g.fillRect (0, rulerHeight * 2, bounds.getWidth(), rulerHeight);
-    g.setColour (findColour (ColourIds::chordsColourId));
-
-    g.setColour (findColour (ColourIds::borderColourId));
-    auto borderBounds = g.getClipBounds();
-    borderBounds.setHeight (rulerHeight);
-    for (int i = 0; i < 3; i++)
+    // borders
     {
+        g.setColour (Colours::darkgrey);
+        g.drawLine ((float) bounds.getX(), (float) beatsRulerY, (float) bounds.getRight(), (float) beatsRulerY);
+        g.drawLine ((float) bounds.getX(), (float) secondsRulerY, (float) bounds.getRight(), (float) secondsRulerY);
         g.drawRect (bounds);
-        borderBounds.translate (0, rulerHeight);
     }
 }
 
 //==============================================================================
 
+void RulersView::mouseDown (const MouseEvent& event)
+{
+    // use mouse click to set the playhead position in the host (if they provide a playback controller interface)
+    auto playbackController = musicalContext->getDocument()->getDocumentController()->getHostInstance()->getPlaybackController();
+    if (playbackController != nullptr)
+        playbackController->requestSetPlaybackPosition (owner.getPlaybackRegionsViewsTimeForX (roundToInt (event.position.x)));
+}
+
+void RulersView::mouseDoubleClick (const MouseEvent& /*event*/)
+{
+    // use mouse double click to start host playback (if they provide a playback controller interface)
+    auto playbackController = musicalContext->getDocument()->getDocumentController()->getHostInstance()->getPlaybackController();
+    if (playbackController != nullptr)
+        playbackController->requestStartPlayback();
+}
+
+//==============================================================================
+
+void RulersView::onNewSelection (const ARA::PlugIn::ViewSelection& /*currentSelection*/)
+{
+    findMusicalContext();
+}
+
 void RulersView::didEndEditing (ARADocument* /*doc*/)
 {
-    if (findMusicalContext())
-        musicalContext->addListener (this);
+    if (musicalContext == nullptr)
+        findMusicalContext();
 }
 
 void RulersView::willRemoveMusicalContextFromDocument (ARADocument* doc, ARAMusicalContext* context)
@@ -301,10 +402,7 @@ void RulersView::willRemoveMusicalContextFromDocument (ARADocument* doc, ARAMusi
     jassert (document == doc);
 
     if (musicalContext == context)
-    {
-        detachFromMusicalContext();
-        repaint();
-    }
+        detachFromMusicalContext();     // will restore in didEndEditing()
 }
 
 void RulersView::didReorderMusicalContextsInDocument (ARADocument* doc)
@@ -312,13 +410,9 @@ void RulersView::didReorderMusicalContextsInDocument (ARADocument* doc)
     jassert (document == doc);
 
     if (musicalContext != document->getMusicalContexts().front())
-    {
-        detachFromMusicalContext();
-        repaint();
-    }
+        detachFromMusicalContext();     // will restore in didEndEditing()
 }
-
-void RulersView::willDestroyDocument (ARADocument* doc)
+ void RulersView::willDestroyDocument (ARADocument* doc)
 {
     jassert (document == doc);
 

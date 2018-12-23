@@ -8,9 +8,10 @@ ARASampleProjectPlaybackRenderer::ARASampleProjectPlaybackRenderer (ARADocumentC
 void ARASampleProjectPlaybackRenderer::prepareToPlay (double newSampleRate, int newNumChannels, int newMaxSamplesPerBlock, bool mayBeRealtime)
 {
     bool needAllocate = ! isPrepared() ||
-                        (newSampleRate != getSampleRate()) ||
-                        (newNumChannels != getNumChannels()) ||
-                        (newMaxSamplesPerBlock != getMaxSamplesPerBlock());
+                        newSampleRate != getSampleRate() ||
+                        newNumChannels != getNumChannels() ||
+                        newMaxSamplesPerBlock != getMaxSamplesPerBlock() ||
+                        mayBeRealtime != isPreparedForRealtime();
 
     ARAPlaybackRenderer::prepareToPlay (newSampleRate, newNumChannels, newMaxSamplesPerBlock, mayBeRealtime);
 
@@ -18,11 +19,11 @@ void ARASampleProjectPlaybackRenderer::prepareToPlay (double newSampleRate, int 
     {
         audioSourceReaders.clear();
 
-        const auto documentController = static_cast<ARASampleProjectDocumentController*> (getDocumentController());
+        const auto documentController = getDocumentController<ARASampleProjectDocumentController>();
 
         for (auto playbackRegion : getPlaybackRegions())
         {
-            auto audioSource = static_cast<ARAAudioSource*> (playbackRegion->getAudioModification()->getAudioSource());
+            auto audioSource = playbackRegion->getAudioModification()->getAudioSource<ARAAudioSource>();
             if (audioSourceReaders.count (audioSource) == 0)
             {
                 auto sourceReader = documentController->createAudioSourceReader (audioSource);
@@ -64,6 +65,7 @@ void ARASampleProjectPlaybackRenderer::releaseResources()
 bool ARASampleProjectPlaybackRenderer::processBlock (AudioBuffer<float>& buffer, int64 timeInSamples, bool isPlayingBack, bool isNonRealtime)
 {
     jassert (buffer.getNumSamples() <= getMaxSamplesPerBlock());
+    jassert (isNonRealtime || isPreparedForRealtime());
 
     bool success = true;
     bool didRenderFirstRegion = false;
@@ -75,7 +77,7 @@ bool ARASampleProjectPlaybackRenderer::processBlock (AudioBuffer<float>& buffer,
         for (auto playbackRegion : getPlaybackRegions())
         {
             // get the audio source for this region and make sure we have an audio source reader for it
-            auto audioSource = static_cast<ARAAudioSource*> (playbackRegion->getAudioModification()->getAudioSource());
+            auto audioSource = playbackRegion->getAudioModification()->getAudioSource<ARAAudioSource>();
             auto readerIt = audioSourceReaders.find(audioSource);
             if (readerIt == audioSourceReaders.end())
             {
@@ -124,9 +126,12 @@ bool ARASampleProjectPlaybackRenderer::processBlock (AudioBuffer<float>& buffer,
             int numSamplesToRead = (int) (endSongSample - startSongSample);
 
             // if we're using a buffering reader then set the appropriate timeout
-            BufferingAudioReader* bufferingReader = dynamic_cast<BufferingAudioReader*> (reader.get());
-            if (bufferingReader != nullptr)
+            if (isPreparedForRealtime())
+            {
+                jassert (dynamic_cast<BufferingAudioReader*> (reader.get()) != nullptr);
+                auto bufferingReader = static_cast<BufferingAudioReader*> (reader.get());
                 bufferingReader->setReadTimeout (isNonRealtime ? 100 : 0);
+            }
 
             // read samples
             bool bufferSuccess;

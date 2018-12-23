@@ -57,7 +57,14 @@ bool ARASampleProjectAudioProcessor::isMidiEffect() const
 
 double ARASampleProjectAudioProcessor::getTailLengthSeconds() const
 {
-    return 0.0;
+    double tail = 0.0;
+    if (auto playbackRenderer = getARAPlaybackRenderer())
+    {
+        for (auto playbackRegion : playbackRenderer->getPlaybackRegions<ARAPlaybackRegion>())
+            tail = jmax (tail, playbackRegion->getTailTime());
+    }
+
+    return tail;
 }
 
 int ARASampleProjectAudioProcessor::getNumPrograms()
@@ -139,13 +146,13 @@ void ARASampleProjectAudioProcessor::processBlock (AudioBuffer<float>& buffer, M
 
     if (isBoundToARA())
     {
-        // render our ARA playback regions for this buffer
+        // render our ARA playback regions for this buffer, realtime or offline
         if (isARAPlaybackRenderer())
             getARAPlaybackRenderer()->processBlock (buffer, timeInSamples, isPlaying, isNonRealtime());
 
-        // render our ARA editing preview
-        if (isARAEditorRenderer())
-            getARAEditorRenderer()->processBlock (buffer, timeInSamples, isPlaying, isNonRealtime());
+        // render our ARA editing preview only if in real time
+        if (isARAEditorRenderer() && ! isNonRealtime())
+            getARAEditorRenderer()->processBlock (buffer, timeInSamples, isPlaying);
     }
     else
     {
