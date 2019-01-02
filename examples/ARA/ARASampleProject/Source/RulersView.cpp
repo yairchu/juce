@@ -1,16 +1,16 @@
 #include "RulersView.h"
-#include "ARASampleProjectAudioProcessorEditor.h"
 #include "ARA_Library/Utilities/ARAChordAndScaleNames.h"
+#include "ARA_Library/Utilities/ARATimelineConversion.h"
 
 //==============================================================================
-RulersView::RulersView (ARASampleProjectAudioProcessorEditor& owner)
-    : owner (owner),
+RulersView::RulersView (DocumentView& documentView)
+    : documentView (documentView),
       document (nullptr),
       musicalContext (nullptr)
 {
-    if (owner.isARAEditorView())
+    if (documentView.isARAEditorView())
     {
-        document = owner.getARADocumentController()->getDocument<ARADocument>();
+        document = documentView.getARADocumentController()->getDocument<ARADocument>();
         document->addListener (this);
         findMusicalContext();
     }
@@ -44,23 +44,20 @@ void RulersView::detachFromMusicalContext()
 
 void RulersView::findMusicalContext()
 {
-    if (! owner.isARAEditorView())
+    if (! documentView.isARAEditorView())
         return;
 
     // evaluate selection
     ARAMusicalContext* newMusicalContext = nullptr;
-    auto viewSelection = owner.getARAEditorView()->getViewSelection();
+    auto viewSelection = documentView.getARAEditorView()->getViewSelection();
     if (! viewSelection.getRegionSequences().empty())
         newMusicalContext = viewSelection.getRegionSequences().front()->getMusicalContext<ARAMusicalContext>();
     else if (! viewSelection.getPlaybackRegions().empty())
         newMusicalContext = viewSelection.getPlaybackRegions().front()->getRegionSequence()->getMusicalContext<ARAMusicalContext>();
 
     // if no context used yet and selection does not yield a new one, use the first musical context in the docment
-    if (musicalContext == nullptr && newMusicalContext == nullptr &&
-        ! owner.getARADocumentController()->getDocument()->getMusicalContexts().empty())
-    {
-        newMusicalContext = owner.getARADocumentController()->getDocument()->getMusicalContexts<ARAMusicalContext>().front();
-    }
+    if (musicalContext == nullptr && newMusicalContext == nullptr && ! document->getMusicalContexts().empty())
+        newMusicalContext = document->getMusicalContexts<ARAMusicalContext>().front();
 
     if (newMusicalContext != musicalContext)
     {
@@ -72,307 +69,6 @@ void RulersView::findMusicalContext()
         repaint();
     }
 }
-
-//==============================================================================
-
-// TODO JUCE_ARA this class has been highly optimized and will soon be moved down to the ARA SDK,
-// so that both hosts and plug-ins can use it when converting the ARA data to their internal formats.
-
-template <typename TempoContentReader>
-class TempoConverter
-{
-public:
-    TempoConverter (const TempoContentReader& reader)
-    : contentReader (reader), leftEntryCache (contentReader.begin()), rightEntryCache (std::next (leftEntryCache)) {}
-
-    ARA::ARAQuarterPosition getQuarterForTime (ARA::ARATimePosition timePosition) const
-    {
-        updateCacheByPosition (timePosition, findByTimePosition);
-
-        const auto quartersPerSecond = (rightEntryCache->quarterPosition - leftEntryCache->quarterPosition) / (rightEntryCache->timePosition - leftEntryCache->timePosition);
-        return leftEntryCache->quarterPosition + (timePosition - leftEntryCache->timePosition) * quartersPerSecond;
-    }
-
-    ARA::ARATimePosition getTimeForQuarter (ARA::ARAQuarterPosition quarterPosition) const
-    {
-        updateCacheByPosition (quarterPosition, findByQuarterPosition);
-
-        const auto secondsPerQuarter = (rightEntryCache->timePosition - leftEntryCache->timePosition) / (rightEntryCache->quarterPosition - leftEntryCache->quarterPosition);
-        return leftEntryCache->timePosition + (quarterPosition - leftEntryCache->quarterPosition) * secondsPerQuarter;
-    }
-
-private:
-    static bool findByTimePosition (ARA::ARATimePosition timePosition, const ARA::ARAContentTempoEntry& tempoEntry)
-    {
-        return timePosition < tempoEntry.timePosition;
-    };
-
-    static bool findByQuarterPosition (ARA::ARAQuarterPosition quarterPosition, const ARA::ARAContentTempoEntry& tempoEntry)
-    {
-        return quarterPosition < tempoEntry.quarterPosition;
-    };
-
-    // TODO JUCE_ARA maybe use a template argument instead of a function pointer for findByPosition? Seems to require C++17 template auto...
-    template <typename T>
-    void updateCacheByPosition (T position, bool (*findByPosition) (T position, const ARA::ARAContentTempoEntry& tempoEntry)) const
-    {
-        if (findByPosition (position, *leftEntryCache))
-        {
-            if (leftEntryCache != contentReader.begin())
-            {
-                // test if we're hitting the entries pair right before the current entries pair
-                auto prevLeft = std::prev (leftEntryCache);
-                if ((prevLeft == contentReader.begin()) || ! findByPosition (position, *prevLeft))
-                {
-                    rightEntryCache = leftEntryCache;
-                    leftEntryCache = prevLeft;
-                }
-                else
-                {
-                    // find the entry after position, then pick left and right entry based on position being before or after first entry
-                    auto it = std::upper_bound (contentReader.begin(), prevLeft, position, findByPosition);
-                    if (it == contentReader.begin())
-                    {
-                        leftEntryCache = it;
-                        rightEntryCache = std::next (it);
-                    }
-                    else
-                    {
-                        leftEntryCache = std::prev (it);
-                        rightEntryCache = it;
-                    }
-                }
-            }
-        }
-        else if (! findByPosition (position, *rightEntryCache))
-        {
-            auto nextRight = std::next (rightEntryCache);
-            if (nextRight != contentReader.end())
-            {
-                // test if we're hitting the entries pair right after the current entries pair
-                auto last = std::prev (contentReader.end());
-                if ((nextRight == last) || findByPosition (position, *nextRight))
-                {
-                    leftEntryCache = rightEntryCache;
-                    rightEntryCache = nextRight;
-                }
-                else
-                {
-                    // find the entry after position (or last entry)
-                    rightEntryCache = std::upper_bound (std::next (nextRight), last, position, findByPosition);
-                    leftEntryCache = std::prev (rightEntryCache);
-                }
-            }
-        }
-        jassert(! findByPosition (position, *leftEntryCache) || leftEntryCache == contentReader.begin());
-        jassert(findByPosition (position, *rightEntryCache) || std::next (rightEntryCache) == contentReader.end());
-        jassert(leftEntryCache == std::prev (rightEntryCache));
-    }
-
-private:
-    const TempoContentReader& contentReader;
-    mutable typename TempoContentReader::const_iterator leftEntryCache, rightEntryCache;
-};
-
-//==============================================================================
-
-// TODO JUCE_ARA this class has been highly optimized and will soon be moved down to the ARA SDK,
-// so that both hosts and plug-ins can use it when converting the ARA data to their internal formats.
-
-template <typename BarSignaturesContentReader>
-class BarSignaturesConverter
-{
-public:
-    BarSignaturesConverter (const BarSignaturesContentReader& reader)
-    : contentReader (reader) { setCacheToFirstEntry(); }
-
-    const ARA::ARAContentBarSignature getBarSignatureForQuarter (ARA::ARAQuarterPosition quarterPosition) const
-    {
-        updateCacheByQuarterPosition (quarterPosition);
-        return *entryCache;
-    }
-
-    const ARA::ARAContentBarSignature getBarSignatureForBeat (double beatPosition) const
-    {
-        updateCacheByBeatPosition (beatPosition);
-        return *entryCache;
-    }
-
-    static double getBeatsPerQuarter (const ARA::ARAContentBarSignature& barSignature)
-    {
-        return ((double) barSignature.denominator) / 4.0;
-    }
-
-    static double getQuartersPerBar (const ARA::ARAContentBarSignature& barSignature)
-    {
-        return ((double) barSignature.numerator) / getBeatsPerQuarter (barSignature);
-    }
-
-    double getBeatForQuarter (ARA::ARAQuarterPosition quarterPosition) const
-    {
-        updateCacheByQuarterPosition (quarterPosition);
-        return entryStartBeatCache + getBeatDistanceFromQuarterPosition (entryCache, quarterPosition);
-    }
-
-    ARA::ARAQuarterPosition getQuarterForBeat (double beatPosition) const
-    {
-        updateCacheByBeatPosition (beatPosition);
-        return entryCache->position + (beatPosition - entryStartBeatCache) / getBeatsPerQuarter (*entryCache);
-    }
-
-    int getBarIndexForQuarter (ARA::ARAQuarterPosition quarterPosition) const
-    {
-        updateCacheByQuarterPosition (quarterPosition);
-        double bars = floor ((quarterPosition - entryCache->postion) / getQuartersPerBar (*entryCache));
-        auto it = entryCache;
-        while (it != contentReader.begin())
-        {
-            ARA::ARAQuarterPosition prevEndQuarter = it->position;
-            --it;
-            bars += (prevEndQuarter - it->postion) / getQuartersPerBar (*it);
-        }
-        return roundToInt (bars);
-    }
-
-    ARA::ARAQuarterPosition getQuarterForBarIndex (int barIndex) const
-    {
-        setCacheToFirstEntry();
-        bool didUpdateEntryStartBeatCache = false;
-        int startBar = 0;
-
-        while (true)
-        {
-            auto next = std::next (entryCache);
-            if (next == contentReader.end())
-                break;
-
-            int nextStartBar = startBar + roundToInt ((next->position - entryCache->position) / getQuartersPerBar (*entryCache));
-            if (nextStartBar > barIndex)
-                break;
-
-            startBar = nextStartBar;
-            entryStartBeatCache = entryStartBeatCache + getBeatDistanceFromQuarterPosition(entryCache, next->position);
-            didUpdateEntryStartBeatCache = true;
-            entryCache = next;
-        }
-
-        // to avoid errors adding up over time, we round the cache to an integer value after modification
-        if (didUpdateEntryStartBeatCache)
-            entryStartBeatCache = round (entryStartBeatCache);
-
-        return entryCache->position + (barIndex - startBar) * getQuartersPerBar (*entryCache);
-    }
-
-    double getBeatDistanceFromBarStartForQuarter (ARA::ARAQuarterPosition quarterPosition) const
-    {
-        updateCacheByQuarterPosition (quarterPosition);
-        const double beatDistance = getBeatDistanceFromQuarterPosition(entryCache, quarterPosition);
-        const double beatsPerBar = (double) entryCache->numerator;
-        const double remainder = fmod (beatDistance, beatsPerBar);
-        return (beatDistance >= 0) ? remainder : beatsPerBar + remainder;
-    }
-
-private:
-
-    void setCacheToFirstEntry() const
-    {
-        entryCache = contentReader.begin();
-        entryStartBeatCache = 0.0;
-    }
-
-    static double getBeatDistanceFromQuarterPosition (const typename BarSignaturesContentReader::const_iterator& it, ARA::ARAQuarterPosition quarterPosition)
-    {
-        return (quarterPosition - it->position) * getBeatsPerQuarter (*it);
-    }
-
-    static bool findByQuarterPosition (ARA::ARAQuarterPosition position, const ARA::ARAContentBarSignature& barSignature)
-    {
-        return position < barSignature.position;
-    };
-
-    void updateCacheByQuarterPosition (ARA::ARAQuarterPosition quarterPosition) const
-    {
-        bool didUpdateEntryStartBeatCache = false;
-
-        if (quarterPosition < entryCache->position)
-        {
-            // before our entry - go back until first entry or entry before quarter
-            while (entryCache != contentReader.begin())
-            {
-                ARA::ARAQuarterPosition prevEndQuarter = entryCache->position;
-                --entryCache;
-                entryStartBeatCache -= getBeatDistanceFromQuarterPosition (entryCache, prevEndQuarter);
-                didUpdateEntryStartBeatCache = true;
-                if (entryCache->position <= quarterPosition)
-                    break;
-            }
-        }
-        else
-        {
-            // at or after our entry - go forward until last entry or entry before quarter
-            while (true)
-            {
-                auto next = std::next (entryCache);
-                if ((next == contentReader.end()) || (next->position > quarterPosition))
-                    break;
-
-                entryStartBeatCache += getBeatDistanceFromQuarterPosition(entryCache, next->position);
-                didUpdateEntryStartBeatCache = true;
-                entryCache = next;
-            }
-        }
-
-        // to avoid errors adding up over time, we round the cache to an integer value after modification
-        if (didUpdateEntryStartBeatCache)
-            entryStartBeatCache = round (entryStartBeatCache);
-    }
-
-    void updateCacheByBeatPosition (double beatPosition) const
-    {
-        bool didUpdateEntryStartBeatCache = false;
-
-        if (beatPosition < entryStartBeatCache)
-        {
-            // before our entry - go back until first entry or entry before beat
-            while (entryCache != contentReader.begin())
-            {
-                ARA::ARAQuarterPosition prevEndQuarter = entryCache->position;
-                --entryCache;
-                entryStartBeatCache -= getBeatDistanceFromQuarterPosition (entryCache, prevEndQuarter);
-                didUpdateEntryStartBeatCache = true;
-                if (entryStartBeatCache <= beatPosition)
-                    break;
-            }
-        }
-        else
-        {
-            // at or after our entry - go forward until last entry or entry before beat
-            while (true)
-            {
-                auto next = std::next (entryCache);
-                if (next == contentReader.end())
-                    break;
-
-                double nextStartBeat = entryStartBeatCache + getBeatDistanceFromQuarterPosition(entryCache, next->position);
-                if (nextStartBeat > beatPosition)
-                    break;
-
-                entryStartBeatCache = nextStartBeat;
-                didUpdateEntryStartBeatCache = true;
-                entryCache = next;
-            }
-        }
-
-        // to avoid errors adding up over time, we round the cache to an integer value after modification
-        if (didUpdateEntryStartBeatCache)
-            entryStartBeatCache = round (entryStartBeatCache);
-    }
-
-private:
-    const BarSignaturesContentReader& contentReader;
-    mutable typename BarSignaturesContentReader::const_iterator entryCache;
-    mutable double entryStartBeatCache;
-};
 
 //==============================================================================
 void RulersView::paint (juce::Graphics& g)
@@ -388,7 +84,7 @@ void RulersView::paint (juce::Graphics& g)
         return;
     }
 
-    Range<double> visibleRange = owner.getVisibleTimeRange();
+    Range<double> visibleRange = documentView.getVisibleTimeRange();
 
     using TempoContentReader = ARA::PlugIn::HostContentReader<ARA::kARAContentTypeTempoEntries>;
     using BarSignaturesContentReader = ARA::PlugIn::HostContentReader<ARA::kARAContentTypeBarSignatures>;
@@ -397,7 +93,7 @@ void RulersView::paint (juce::Graphics& g)
     const BarSignaturesContentReader barSignaturesReader (musicalContext);
     const ChordsContentReader chordsReader (musicalContext);
 
-    const TempoConverter<TempoContentReader> tempoConverter (tempoReader);
+    const ARA::TempoConverter<TempoContentReader> tempoConverter (tempoReader);
 
     // we'll draw three rulers: seconds, beats, and chords
     constexpr int lightLineWidth = 1;
@@ -417,7 +113,7 @@ void RulersView::paint (juce::Graphics& g)
         {
             const int lineWidth = (time % 60 == 0) ? heavyLineWidth : lightLineWidth;
             const int lineHeight = (time % 10 == 0) ? secondsRulerHeight : secondsRulerHeight / 2;
-            const int x = owner.getPlaybackRegionsViewsXForTime (time);
+            const int x = documentView.getPlaybackRegionsViewsXForTime (time);
             rects.addWithoutMerging (Rectangle<int> (x - lineWidth / 2, secondsRulerY + secondsRulerHeight - lineHeight, lineWidth, lineHeight));
         }
         g.drawText ("seconds", bounds, Justification::bottomRight);
@@ -428,7 +124,7 @@ void RulersView::paint (juce::Graphics& g)
     {
         RectangleList<int> rects;
 
-        const BarSignaturesConverter<BarSignaturesContentReader> barSignaturesConverter (barSignaturesReader);
+        const ARA::BarSignaturesConverter<BarSignaturesContentReader> barSignaturesConverter (barSignaturesReader);
 
         double beatStart = barSignaturesConverter.getBeatForQuarter (tempoConverter.getQuarterForTime (visibleRange.getStart()));
         double beatEnd = barSignaturesConverter.getBeatForQuarter (tempoConverter.getQuarterForTime (visibleRange.getEnd()));
@@ -436,7 +132,7 @@ void RulersView::paint (juce::Graphics& g)
         for (int beat = roundToInt (ceil (beatStart)); beat <= endBeat; ++beat)
         {
             const auto quarterPos = barSignaturesConverter.getQuarterForBeat (beat);
-            const int x = owner.getPlaybackRegionsViewsXForTime (tempoConverter.getTimeForQuarter (quarterPos));
+            const int x = documentView.getPlaybackRegionsViewsXForTime (tempoConverter.getTimeForQuarter (quarterPos));
             const auto barSignature = barSignaturesConverter.getBarSignatureForQuarter (quarterPos);
             const int lineWidth = (quarterPos == barSignature.position) ? heavyLineWidth : lightLineWidth;
             const int beatsSinceBarStart = roundToInt( barSignaturesConverter.getBeatDistanceFromBarStartForQuarter (quarterPos));
@@ -469,7 +165,7 @@ void RulersView::paint (juce::Graphics& g)
             const auto chordStartTime = tempoConverter.getTimeForQuarter (itChord->position);
             if (chordStartTime >= visibleRange.getEnd())
                 break;
-            chordRect.setLeft (owner.getPlaybackRegionsViewsXForTime (chordStartTime));
+            chordRect.setLeft (documentView.getPlaybackRegionsViewsXForTime (chordStartTime));
 
             // if we have a chord after this one, use its starting position to end our rect
             if (std::next(itChord) != chordsReader.end())
@@ -477,16 +173,13 @@ void RulersView::paint (juce::Graphics& g)
                 const auto nextChordStartTime = tempoConverter.getTimeForQuarter (std::next (itChord)->position);
                 if (nextChordStartTime < visibleRange.getStart())
                     continue;
-                chordRect.setRight (owner.getPlaybackRegionsViewsXForTime (nextChordStartTime));
+                chordRect.setRight (documentView.getPlaybackRegionsViewsXForTime (nextChordStartTime));
             }
-
-            // get the chord name
-            String chordName = ARA::getNameForChord (*itChord);
 
             // draw chord rect and name
             g.drawRect (chordRect);
             g.setFont (Font (12.0f));
-            g.drawText (chordName, chordRect, Justification::centredLeft);
+            g.drawText (convertARAString (ARA::getNameForChord (*itChord).c_str()), chordRect, Justification::centredLeft);
         }
 
         g.drawText ("chords", bounds, Justification::topRight);
@@ -508,7 +201,7 @@ void RulersView::mouseDown (const MouseEvent& event)
     // use mouse click to set the playhead position in the host (if they provide a playback controller interface)
     auto playbackController = musicalContext->getDocument()->getDocumentController()->getHostInstance()->getPlaybackController();
     if (playbackController != nullptr)
-        playbackController->requestSetPlaybackPosition (owner.getPlaybackRegionsViewsTimeForX (roundToInt (event.position.x)));
+        playbackController->requestSetPlaybackPosition (documentView.getPlaybackRegionsViewsTimeForX (roundToInt (event.position.x)));
 }
 
 void RulersView::mouseDoubleClick (const MouseEvent& /*event*/)

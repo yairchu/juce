@@ -1,6 +1,5 @@
 #pragma once
 
-#include "JuceHeader.h"
 #include "RegionSequenceView.h"
 
 //==============================================================================
@@ -10,14 +9,14 @@
     along with their output waveform, name, color, and selection state
 */
 class PlaybackRegionView    : public Component,
-                              private ChangeListener,
+                              public ChangeListener,
                               private ARAEditorView::Listener,
                               private ARADocument::Listener,
                               private ARAAudioSource::Listener,
                               private ARAPlaybackRegion::Listener
 {
 public:
-    PlaybackRegionView (ARASampleProjectAudioProcessorEditor* editor, ARAPlaybackRegion* region);
+    PlaybackRegionView (DocumentView& documentView, ARAPlaybackRegion* region);
     ~PlaybackRegionView();
 
     ARAPlaybackRegion* getPlaybackRegion() const { return playbackRegion; }
@@ -45,11 +44,14 @@ private:
     void recreatePlaybackRegionReader();
 
 private:
-    ARASampleProjectAudioProcessorEditor* editorComponent;
+    DocumentView& documentView;
     ARAPlaybackRegion* playbackRegion;
     ARAPlaybackRegionReader* playbackRegionReader = nullptr;  // careful: "weak" pointer, actual pointer is owned by our audioThumb
     bool isSelected = false;
 
+    // TODO JUCE_ARA AudioThumbnail should be moved to AudioModification?
+    // currently it is being rebuild each time but I guess it's actually
+    // persistant.
     AudioFormatManager audioFormatManger;
     AudioThumbnailCache audioThumbCache;
     AudioThumbnail audioThumb;
