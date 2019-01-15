@@ -13,7 +13,7 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
     : araExtension (extension),
       playbackRegionsViewport (*this),
       playHeadView (*this),
-      selectionView (*this),
+      timeRangeSelectionView (*this),
       trackHeadersViewport (*this),
       timeRange (-kMinBorderSeconds, kMinSecondDuration + kMinBorderSeconds),
       positionInfo (posInfo)
@@ -29,8 +29,8 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
 
     playHeadView.setAlwaysOnTop (true);
     playbackRegionsView.addAndMakeVisible (playHeadView);
-    playbackRegionsView.addAndMakeVisible (selectionView);
-    selectionView.setAlwaysOnTop (true);
+    timeRangeSelectionView.setAlwaysOnTop (true);
+    playbackRegionsView.addAndMakeVisible (timeRangeSelectionView);
 
     playbackRegionsViewport.setScrollBarsShown (true, true, false, false);
     playbackRegionsViewport.setViewedComponent (&playbackRegionsView, false);
@@ -256,7 +256,7 @@ void DocumentView::resized()
     }
 
     playHeadView.setBounds (playbackRegionsView.getBounds());
-    selectionView.setBounds (playbackRegionsView.getBounds());
+    timeRangeSelectionView.setBounds (playbackRegionsView.getBounds());
 
     // keep viewport position relative to playhead
     // TODO JUCE_ARA if playhead is not visible in new position, we should rather keep the
@@ -290,24 +290,6 @@ void DocumentView::rebuildRegionSequenceViews()
         }
     }
 
-    // TODO JUCE_ARA this code will be removed/refactored
-    // due to current design this is needed on every rebuild to avoid
-    // loss of selection. It's intended to be separated from the code above.
-    const auto selection = getARAEditorView()->getViewSelection();
-    const ARA::ARAContentTimeRange* range = selection.getTimeRange();
-    if (range != nullptr)
-    {
-        Range<double> selectionRange (range->start, range->start + range->duration);
-        for (auto regionSequenceView : regionSequenceViews)
-        {
-            if (ARA::contains (selection.getRegionSequences(), regionSequenceView->getARARegionSequence()))
-            {
-                regionSequenceView->setSelectedRange (selectionRange);
-            }
-        }
-        selectionView.repaint();
-    }
-
     regionSequenceViewsAreInvalid = false;
 
     resized();
@@ -316,7 +298,10 @@ void DocumentView::rebuildRegionSequenceViews()
 //==============================================================================
 void DocumentView::onNewSelection (const ARA::PlugIn::ViewSelection& /*currentSelection*/)
 {
-    invalidateRegionSequenceViews();
+    if (showOnlySelectedRegionSequences)
+        invalidateRegionSequenceViews();
+    else
+        timeRangeSelectionView.repaint();
 }
 
 void DocumentView::onHideRegionSequences (std::vector<ARARegionSequence*> const& /*regionSequences*/)
@@ -386,17 +371,29 @@ void DocumentView::PlayHeadView::paint (juce::Graphics &g)
     g.fillRect (playheadX, 0, 1, getHeight());
 }
 
-DocumentView::SelectionView::SelectionView (DocumentView& documentView)
-: documentView (documentView)
+//==============================================================================
+DocumentView::TimeRangeSelectionView::TimeRangeSelectionView (DocumentView& documentView)
+    : documentView (documentView)
 {}
 
-void DocumentView::SelectionView::paint (juce::Graphics& g)
+void DocumentView::TimeRangeSelectionView::paint (juce::Graphics& g)
 {
-    int trackY = 0;
-    for (auto track : documentView.regionSequenceViews)
+    const auto selection = documentView.getARAEditorView()->getViewSelection();
+    if (selection.getTimeRange() != nullptr && selection.getTimeRange()->duration > 0.0)
     {
-        track->drawRegionSequenceSelection (g, trackY, documentView.getTrackHeight());
-        trackY += documentView.getTrackHeight();
+        const int startPixel = documentView.getPlaybackRegionsViewsXForTime (selection.getTimeRange()->start);
+        const int endPixel = documentView.getPlaybackRegionsViewsXForTime (selection.getTimeRange()->start + selection.getTimeRange()->duration);
+        const int pixelDuration = endPixel - startPixel;
+        const int trackHeight = documentView.getTrackHeight();
+        int y = 0;
+        g.setColour (juce::Colours::white.withAlpha (0.7f));
+        for (const auto regionSequenceView : documentView.regionSequenceViews)
+        {
+            const auto regionSequence = regionSequenceView->getRegionSequence();
+            if (regionSequence != nullptr && ARA::contains (selection.getRegionSequences(), regionSequence))
+                g.fillRect (startPixel, y, pixelDuration, trackHeight);
+            y += trackHeight;
+        }
     }
 }
 

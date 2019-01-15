@@ -87,14 +87,3 @@ void RegionSequenceView::willDestroyRegionSequence (ARARegionSequence* sequence)
 
     documentView.invalidateRegionSequenceViews();
 }
-
-void RegionSequenceView::drawRegionSequenceSelection (juce::Graphics &g, int trackY, int trackHeight)
-{
-    if (selectedRange.getLength() > 0.0)
-    {
-        const int startPixel = documentView.getPlaybackRegionsViewsXForTime (selectedRange.getStart());
-        const int endPixel = documentView.getPlaybackRegionsViewsXForTime (selectedRange.getEnd());
-        g.setColour (juce::Colours::white.withAlpha (0.7f));
-        g.fillRect (startPixel, trackY, endPixel - startPixel, trackHeight);
-    }
-}

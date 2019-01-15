@@ -212,11 +212,11 @@ private:
         DocumentView& documentView;
     };
 
-    // simple utility class to show view selection
-    class SelectionView    : public Component
+    // simple utility class to show selected time range
+    class TimeRangeSelectionView  : public Component
     {
     public:
-        SelectionView (DocumentView& documentView);
+        TimeRangeSelectionView (DocumentView& documentView);
         void paint (Graphics&) override;
     private:
         DocumentView& documentView;
@@ -252,7 +252,7 @@ private:
     ScrollMasterViewport playbackRegionsViewport;
     Component playbackRegionsView;
     PlayHeadView playHeadView;
-    SelectionView selectionView;
+    TimeRangeSelectionView timeRangeSelectionView;
     TrackHeadersViewport trackHeadersViewport;
     Component trackHeadersView;
     Viewport rulersViewport;

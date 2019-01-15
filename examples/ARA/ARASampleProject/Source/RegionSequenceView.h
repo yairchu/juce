@@ -19,21 +19,17 @@ public:
     RegionSequenceView (DocumentView& documentView, ARARegionSequence* sequence);
     ~RegionSequenceView();
 
-    // this might be refactored to LookAndFeel::ReqionSequenceView
-    virtual void drawRegionSequenceSelection (Graphics&, int trackY, int trackHeight);
-
+    ARARegionSequence* getRegionSequence() const { return regionSequence; }     // careful: may return nullptr!
     Range<double> getTimeRange() const { return (regionSequence != nullptr) ? regionSequence->getTimeRange() : Range<double>(); }
     bool isEmpty() const { return (regionSequence == nullptr) || regionSequence->getPlaybackRegions().empty(); }
 
     void setRegionsViewBoundsByYRange (int y, int height);
-    void setSelectedRange (Range<double> newSelectedRange) { selectedRange = newSelectedRange; }
 
     // ARARegionSequence::Listener overrides
     void willRemovePlaybackRegionFromRegionSequence (ARARegionSequence* sequence, ARAPlaybackRegion* playbackRegion) override;
     void didAddPlaybackRegionToRegionSequence (ARARegionSequence* sequence, ARAPlaybackRegion* playbackRegion) override;
     void willDestroyRegionSequence (ARARegionSequence* sequence) override;
 
-    const ARARegionSequence* getARARegionSequence() const { return regionSequence; }
 private:
     void addRegionSequenceViewAndMakeVisible (ARAPlaybackRegion* playbackRegion);
     void detachFromRegionSequence();
@@ -41,7 +37,6 @@ private:
 private:
     DocumentView& documentView;
     ARARegionSequence* regionSequence;
-    Range<double> selectedRange;
 
     std::unique_ptr<TrackHeaderView> trackHeaderView;
     OwnedArray<PlaybackRegionView> playbackRegionViews;
