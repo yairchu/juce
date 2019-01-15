@@ -13,6 +13,7 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
     : araExtension (extension),
       playbackRegionsViewport (*this),
       playHeadView (*this),
+      selectionView (*this),
       trackHeadersViewport (*this),
       timeRange (-kMinBorderSeconds, kMinSecondDuration + kMinBorderSeconds),
       positionInfo (posInfo)
@@ -28,6 +29,8 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
 
     playHeadView.setAlwaysOnTop (true);
     playbackRegionsView.addAndMakeVisible (playHeadView);
+    playbackRegionsView.addAndMakeVisible (selectionView);
+    selectionView.setAlwaysOnTop (true);
 
     playbackRegionsViewport.setScrollBarsShown (true, true, false, false);
     playbackRegionsViewport.setViewedComponent (&playbackRegionsView, false);
@@ -253,6 +256,7 @@ void DocumentView::resized()
     }
 
     playHeadView.setBounds (playbackRegionsView.getBounds());
+    selectionView.setBounds (playbackRegionsView.getBounds());
 
     // keep viewport position relative to playhead
     // TODO JUCE_ARA if playhead is not visible in new position, we should rather keep the
@@ -282,8 +286,26 @@ void DocumentView::rebuildRegionSequenceViews()
         for (auto regionSequence : getARADocumentController()->getDocument()->getRegionSequences<ARARegionSequence>())
         {
             if (! ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
-                regionSequenceViews.add (createViewForRegionSequence(regionSequence));
+                regionSequenceViews.add (createViewForRegionSequence (regionSequence));
         }
+    }
+
+    // TODO JUCE_ARA this code will be removed/refactored
+    // due to current design this is needed on every rebuild to avoid
+    // loss of selection. It's intended to be separated from the code above.
+    const auto selection = getARAEditorView()->getViewSelection();
+    const ARA::ARAContentTimeRange* range = selection.getTimeRange();
+    if (range != nullptr)
+    {
+        Range<double> selectionRange (range->start, range->start + range->duration);
+        for (auto regionSequenceView : regionSequenceViews)
+        {
+            if (ARA::contains (selection.getRegionSequences(), regionSequenceView->getARARegionSequence()))
+            {
+                regionSequenceView->setSelectedRange (selectionRange);
+            }
+        }
+        selectionView.repaint();
     }
 
     regionSequenceViewsAreInvalid = false;
@@ -294,8 +316,7 @@ void DocumentView::rebuildRegionSequenceViews()
 //==============================================================================
 void DocumentView::onNewSelection (const ARA::PlugIn::ViewSelection& /*currentSelection*/)
 {
-    if (showOnlySelectedRegionSequences)
-        invalidateRegionSequenceViews();
+    invalidateRegionSequenceViews();
 }
 
 void DocumentView::onHideRegionSequences (std::vector<ARARegionSequence*> const& /*regionSequences*/)
@@ -363,6 +384,20 @@ void DocumentView::PlayHeadView::paint (juce::Graphics &g)
     const int playheadX = documentView.getPlaybackRegionsViewsXForTime (documentView.getPlayHeadPositionInfo().timeInSeconds);
     g.setColour (findColour (ScrollBar::ColourIds::thumbColourId));
     g.fillRect (playheadX, 0, 1, getHeight());
+}
+
+DocumentView::SelectionView::SelectionView (DocumentView& documentView)
+: documentView (documentView)
+{}
+
+void DocumentView::SelectionView::paint (juce::Graphics& g)
+{
+    int trackY = 0;
+    for (auto track : documentView.regionSequenceViews)
+    {
+        track->drawRegionSequenceSelection (g, trackY, documentView.getTrackHeight());
+        trackY += documentView.getTrackHeight();
+    }
 }
 
 //==============================================================================

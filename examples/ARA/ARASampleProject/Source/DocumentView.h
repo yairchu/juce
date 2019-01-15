@@ -198,11 +198,25 @@ private:
     void updatePlayHeadBounds();
 
 private:
+    // TODO JUCE_ARA eventually those should just be LookAndFeel?
+    // once RegionSeqeunce will be a view of its own ViewSelection should be
+    // refactored/migrated to it.
+
     // simple utility class to show playhead position
     class PlayHeadView    : public Component
     {
     public:
         PlayHeadView (DocumentView& documentView);
+        void paint (Graphics&) override;
+    private:
+        DocumentView& documentView;
+    };
+
+    // simple utility class to show view selection
+    class SelectionView    : public Component
+    {
+    public:
+        SelectionView (DocumentView& documentView);
         void paint (Graphics&) override;
     private:
         DocumentView& documentView;
@@ -238,6 +252,7 @@ private:
     ScrollMasterViewport playbackRegionsViewport;
     Component playbackRegionsView;
     PlayHeadView playHeadView;
+    SelectionView selectionView;
     TrackHeadersViewport trackHeadersViewport;
     Component trackHeadersView;
     Viewport rulersViewport;
