@@ -143,7 +143,7 @@ public:
     void timerCallback() override;
 
     // ARAEditorView::Listener overrides
-    void onNewSelection (const ARA::PlugIn::ViewSelection& currentSelection) override;
+    void onNewSelection (const ARA::PlugIn::ViewSelection& viewSelection) override;
     void onHideRegionSequences (std::vector<ARARegionSequence*> const& regionSequences) override;
 
     // ARADocument::Listener overrides
@@ -262,7 +262,7 @@ private:
 
     // Component View States
     bool scrollFollowsPlayHead = true;
-    bool showOnlySelectedRegionSequences = false;
+    bool showOnlySelectedRegionSequences = true;
 
     double pixelsPerSecond;
     double maxPixelsPerSecond, minPixelsPerSecond;
