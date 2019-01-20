@@ -5,136 +5,196 @@
 #include "PlaybackRegionView.h"
 #include "RulersView.h"
 
-constexpr int kRulersViewHeight = 3*20;
-constexpr int kTrackHeaderWidth = 120;
-constexpr int kStatusBarHeight = 20;
 constexpr double kMinSecondDuration = 1.0;
 constexpr double kMinBorderSeconds = 1.0;
 
 //==============================================================================
-DocumentView::DocumentView (AudioProcessor& p)
-: AudioProcessorEditor (&p),
-AudioProcessorEditorARAExtension (&p),
-playbackRegionsViewPort (*this),
-playheadView (*this),
-visibleRange (-kMinBorderSeconds, kMinSecondDuration + kMinBorderSeconds),
-positionInfoPtr (nullptr)
+DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, const AudioPlayHead::CurrentPositionInfo& posInfo)
+    : araExtension (extension),
+      playbackRegionsViewport (*this),
+      playHeadView (*this),
+      timeRangeSelectionView (*this),
+      trackHeadersViewport (*this),
+      timeRange (-kMinBorderSeconds, kMinSecondDuration + kMinBorderSeconds),
+      positionInfo (posInfo)
 {
-    playheadView.setAlwaysOnTop (true);
-    playbackRegionsView.addAndMakeVisible (playheadView);
-    
-    playbackRegionsViewPort.setScrollBarsShown (true, true, false, false);
-    playbackRegionsViewPort.setViewedComponent (&playbackRegionsView, false);
-    addAndMakeVisible (playbackRegionsViewPort);
-    
-    trackHeadersViewPort.setScrollBarsShown (false, false, false, false);
-    trackHeadersViewPort.setViewedComponent (&trackHeadersView, false);
-    addAndMakeVisible (trackHeadersViewPort);
-
-    // TODO: Zoom components should be decided later
-    //       I guess they should be customizable so we might
-    //       just provide methods so they could be called by methods
-    //       by developers own views.
-    horizontalZoomLabel.setText ("H:", dontSendNotification);
-    verticalZoomLabel.setText ("V:", dontSendNotification);
-    verticalZoomInButton.setButtonText("+");
-    verticalZoomOutButton.setButtonText("-");
-    horizontalZoomInButton.setButtonText("+");
-    horizontalZoomOutButton.setButtonText("-");
-    constexpr double zoomStepFactor = 1.5;
-    horizontalZoomInButton.onClick = [this, zoomStepFactor]
+    if (! araExtension.isARAEditorView())
     {
-        pixelsPerSecond *= zoomStepFactor;
-        resized();
-    };
-    horizontalZoomOutButton.onClick = [this, zoomStepFactor]
-    {
-        pixelsPerSecond /= zoomStepFactor;
-        resized();
-    };
-    verticalZoomInButton.onClick = [this, zoomStepFactor]
-    {
-        trackHeight *= zoomStepFactor;
-        resized();
-    };
-    verticalZoomOutButton.onClick = [this, zoomStepFactor]
-    {
-        trackHeight /= zoomStepFactor;
-        resized();
-    };
-
-    addAndMakeVisible (horizontalZoomLabel);
-    addAndMakeVisible (verticalZoomLabel);
-    addAndMakeVisible (verticalZoomInButton);
-    addAndMakeVisible (verticalZoomOutButton);
-    addAndMakeVisible (horizontalZoomInButton);
-    addAndMakeVisible (horizontalZoomOutButton);
-    
-    followPlayheadToggleButton.setButtonText ("Viewport follows playhead");
-    followPlayheadToggleButton.setToggleState (true, dontSendNotification);
-    addAndMakeVisible (followPlayheadToggleButton);
-    
-    if (isARAEditorView())
-    {
-        getARAEditorView()->addListener (this);
-        getARADocumentController()->getDocument<ARADocument>()->addListener (this);
-        
-        rulersView.reset (new RulersView (*this));
-        rulersViewPort.setScrollBarsShown (false, false, false, false);
-        rulersViewPort.setViewedComponent (rulersView.get(), false);
-        addAndMakeVisible (rulersViewPort);
+        // you shouldn't create a DocumentView if your instance can't support ARA.
+        // notify user on your AudioProcessorEditorView or provide your own capture
+        // alternative to ARA workflow.
+        jassertfalse;
+        return;
     }
+
+    playHeadView.setAlwaysOnTop (true);
+    playbackRegionsView.addAndMakeVisible (playHeadView);
+    timeRangeSelectionView.setAlwaysOnTop (true);
+    playbackRegionsView.addAndMakeVisible (timeRangeSelectionView);
+
+    playbackRegionsViewport.setScrollBarsShown (true, true, false, false);
+    playbackRegionsViewport.setViewedComponent (&playbackRegionsView, false);
+    addAndMakeVisible (playbackRegionsViewport);
+
+    trackHeadersViewport.setScrollBarsShown (false, false, false, false);
+    trackHeadersViewport.setViewedComponent (&trackHeadersView, false);
+    addAndMakeVisible (trackHeadersViewport);
+
+    rulersView.reset (new RulersView (*this));
+    rulersViewport.setScrollBarsShown (false, false, false, false);
+    rulersViewport.setViewedComponent (rulersView.get(), false);
+    addAndMakeVisible (rulersViewport);
+
+    getARAEditorView()->addListener (this);
+    getARADocumentController()->getDocument<ARADocument>()->addListener (this);
+
+    lastReportedPosition.resetToDefault();
+
     startTimerHz (60);
 }
 
 DocumentView::~DocumentView()
 {
-    if (isARAEditorView())
-    {
-        getARADocumentController()->getDocument<ARADocument>()->removeListener (this);
-        getARAEditorView()->removeListener (this);
-    }
+    if (! araExtension.isARAEditorView())
+        return;
+
+    getARADocumentController()->getDocument<ARADocument>()->removeListener (this);
+    getARAEditorView()->removeListener (this);
 }
 
 //==============================================================================
+PlaybackRegionView* DocumentView::createViewForPlaybackRegion (ARAPlaybackRegion* playbackRegion)
+{
+    return new PlaybackRegionView (*this, playbackRegion);
+}
+
+TrackHeaderView* DocumentView::createHeaderViewForRegionSequence (ARARegionSequence* regionSequence)
+{
+    return new TrackHeaderView (getARAEditorView(), regionSequence);
+}
+
+RegionSequenceView* DocumentView::createViewForRegionSequence (ARARegionSequence* regionSequence)
+{
+    return new RegionSequenceView (*this, regionSequence);
+}
+
+//==============================================================================
+Range<double> DocumentView::getVisibleTimeRange() const
+{
+    const double start = getPlaybackRegionsViewsTimeForX (playbackRegionsViewport.getViewArea().getX());
+    const double end = getPlaybackRegionsViewsTimeForX (playbackRegionsViewport.getViewArea().getRight());
+    return { start, end };
+}
+
+ARAMusicalContext* DocumentView::getCurrentMusicalContext() const
+{
+    return rulersView->getCurrentMusicalContext();
+}
+
 int DocumentView::getPlaybackRegionsViewsXForTime (double time) const
 {
-    return roundToInt ((time - visibleRange.getStart()) / visibleRange.getLength() * playbackRegionsView.getWidth());
+    return roundToInt ((time - timeRange.getStart()) / timeRange.getLength() * playbackRegionsView.getWidth());
 }
 
 double DocumentView::getPlaybackRegionsViewsTimeForX (int x) const
 {
-    return visibleRange.getStart() + ((double) x / (double) playbackRegionsView.getWidth()) * visibleRange.getLength();
+    return timeRange.getStart() + ((double) x / (double) playbackRegionsView.getWidth()) * timeRange.getLength();
+}
+
+void DocumentView::invalidateRegionSequenceViews()
+{
+    if (getARADocumentController()->isHostEditingDocument() || getParentComponent() == nullptr)
+        regionSequenceViewsAreInvalid = true;
+    else
+        rebuildRegionSequenceViews();
 }
 
 //==============================================================================
+void DocumentView::setShowOnlySelectedRegionSequences (bool newVal)
+{
+    showOnlySelectedRegionSequences = newVal;
+    invalidateRegionSequenceViews();
+}
+
+void DocumentView::setIsRulersVisible (bool shouldBeVisible)
+{
+    rulersViewport.setVisible (shouldBeVisible);
+    resized();
+}
+
+void DocumentView::setIsTrackHeadersVisible (bool shouldBeVisible)
+{
+    trackHeadersViewport.setVisible (shouldBeVisible);
+    resized();
+}
+
+void DocumentView::setTrackHeaderWidth (int newWidth)
+{
+    trackHeadersViewport.setBoundsForComponent (&trackHeadersViewport, trackHeadersViewport.getBounds().withWidth (newWidth), false, false, false, true);
+}
+
+void DocumentView::setTrackHeaderMaximumWidth (int newWidth)
+{
+    trackHeadersViewport.setIsResizable (getTrackHeaderMinimumWidth() < newWidth);
+    trackHeadersViewport.setMaximumWidth (newWidth);
+    trackHeadersViewport.checkComponentBounds (&trackHeadersViewport);
+}
+
+void DocumentView::setTrackHeaderMinimumWidth (int newWidth)
+{
+    trackHeadersViewport.setIsResizable (newWidth < getTrackHeaderMaximumWidth());
+    trackHeadersViewport.setMinimumWidth (newWidth);
+    trackHeadersViewport.checkComponentBounds (&trackHeadersViewport);
+}
+
+void DocumentView::setPixelsPerSecond (double newValue)
+{
+    if (newValue == pixelsPerSecond)
+        return;
+
+    pixelsPerSecond = newValue;
+    resized();  // this will constrain pixelsPerSecond range, also it might call again after rounding.
+
+    listeners.callExpectingUnregistration ([&] (Listener& l)
+                                           {
+                                               l.visibleTimeRangeChanged (getVisibleTimeRange(), pixelsPerSecond);
+                                           });
+}
+
+void DocumentView::setTrackHeight (int newHeight)
+{
+    if (newHeight == trackHeight)
+        return;
+
+    trackHeight = newHeight;
+    resized();
+
+    listeners.callExpectingUnregistration ([&] (Listener& l)
+                                           {
+                                               l.trackHeightChanged (trackHeight);
+                                           });
+}
+
+//==============================================================================
+void DocumentView::parentHierarchyChanged()
+{
+    // trigger lazy initial update after construction if needed
+    if (regionSequenceViewsAreInvalid && ! getARADocumentController()->isHostEditingDocument())
+        rebuildRegionSequenceViews();
+}
+
 void DocumentView::paint (Graphics& g)
 {
     g.fillAll (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
-    
-    if (! isARAEditorView())
-    {
-        g.setColour (Colours::white);
-        g.setFont (20.0f);
-        g.drawFittedText ("Non ARA Instance. Please re-open as ARA2!", getLocalBounds(), Justification::centred, 1);
-    }
-    else
-    {
-        if (regionSequenceViewsAreInvalid)
-        {
-            rebuildRegionSequenceViews();
-            regionSequenceViewsAreInvalid = false;
-        }
-    }
 }
 
 void DocumentView::resized()
 {
     // store visible playhead postion (in main view coordinates)
-    int previousPlayheadX = getPlaybackRegionsViewsXForTime (playheadTimePosition) - playbackRegionsViewPort.getViewPosition().getX();
+    int previousPlayHeadX = getPlaybackRegionsViewsXForTime (lastReportedPosition.timeInSeconds) - playbackRegionsViewport.getViewPosition().getX();
 
     // calculate maximum visible time range
-    visibleRange = { 0.0, 0.0 };
+    timeRange = { 0.0, 0.0 };
     if (! regionSequenceViews.isEmpty())
     {
         bool isFirst = true;
@@ -146,105 +206,112 @@ void DocumentView::resized()
             const auto sequenceTimeRange = v->getTimeRange();
             if (isFirst)
             {
-                visibleRange = sequenceTimeRange;
+                timeRange = sequenceTimeRange;
                 isFirst = false;
                 continue;
             }
 
-            visibleRange = visibleRange.getUnionWith (sequenceTimeRange);
+            timeRange = timeRange.getUnionWith (sequenceTimeRange);
         }
     }
 
     // ensure visible range covers kMinSecondDuration
-    if (visibleRange.getLength() < kMinSecondDuration)
+    if (timeRange.getLength() < kMinSecondDuration)
     {
-        double startAdjustment = (kMinSecondDuration - visibleRange.getLength()) / 2.0;
-        visibleRange.setStart (visibleRange.getStart() - startAdjustment);
-        visibleRange.setEnd (visibleRange.getStart() + kMinSecondDuration);
+        double startAdjustment = (kMinSecondDuration - timeRange.getLength()) / 2.0;
+        timeRange.setStart (timeRange.getStart() - startAdjustment);
+        timeRange.setEnd (timeRange.getStart() + kMinSecondDuration);
     }
 
     // apply kMinBorderSeconds offset to start and end
-    visibleRange.setStart (visibleRange.getStart() - kMinBorderSeconds);
-    visibleRange.setEnd (visibleRange.getEnd() + kMinBorderSeconds);
+    timeRange.setStart (timeRange.getStart() - kMinBorderSeconds);
+    timeRange.setEnd (timeRange.getEnd() + kMinBorderSeconds);
+
+    const int trackHeaderWidth = trackHeadersViewport.isVisible() ? trackHeadersViewport.getWidth() : 0;
+    const int rulersViewHeight = rulersViewport.isVisible() ? 3*20 : 0;
 
     // max zoom 1px : 1sample (this is a naive assumption as audio can be in different sample rate)
-    double maxPixelsPerSecond = jmax (processor.getSampleRate(), 300.0);
+    maxPixelsPerSecond = 192000.0; // TODO JUCE_ARA make configurabe from the outside, was: jmax (processor.getSampleRate(), 300.0);
 
     // min zoom covers entire view range
-    double minPixelsPerSecond = (getWidth() - kTrackHeaderWidth - rulersViewPort.getScrollBarThickness()) / visibleRange.getLength();
+    // TODO JUCE_ARA getScrollBarThickness() should only be substracted if vertical scroll bar is actually visible
+    minPixelsPerSecond = (getWidth() - trackHeaderWidth - playbackRegionsViewport.getScrollBarThickness()) / timeRange.getLength();
 
-    // enforce zoom in/out limits, update zoom buttons
-    pixelsPerSecond = jmax (minPixelsPerSecond, jmin (pixelsPerSecond, maxPixelsPerSecond));
-    horizontalZoomOutButton.setEnabled (pixelsPerSecond > minPixelsPerSecond);
-    horizontalZoomInButton.setEnabled (pixelsPerSecond < maxPixelsPerSecond);
+    // enforce zoom in/out limits
+    const double validPixelsPerSecond = jlimit (minPixelsPerSecond, maxPixelsPerSecond, getPixelsPerSecond());
+    const int playbackRegionsWidth = roundToInt (timeRange.getLength() * validPixelsPerSecond);
+    setPixelsPerSecond (playbackRegionsWidth / timeRange.getLength());       // prevent potential rounding issues
 
     // update sizes and positions of all views
-    playbackRegionsViewPort.setBounds (kTrackHeaderWidth, kRulersViewHeight, getWidth() - kTrackHeaderWidth, getHeight() - kRulersViewHeight - kStatusBarHeight);
-    playbackRegionsView.setBounds (0, 0, roundToInt (visibleRange.getLength() * pixelsPerSecond), jmax (trackHeight * regionSequenceViews.size(), playbackRegionsViewPort.getHeight() - playbackRegionsViewPort.getScrollBarThickness()));
-    pixelsPerSecond = playbackRegionsView.getWidth() / visibleRange.getLength();       // prevent potential rounding issues
+    playbackRegionsViewport.setBounds (trackHeaderWidth, rulersViewHeight, getWidth() - trackHeaderWidth, getHeight() - rulersViewHeight);
+    playbackRegionsView.setBounds (0, 0, playbackRegionsWidth, jmax (getTrackHeight() * regionSequenceViews.size(), playbackRegionsViewport.getHeight() - playbackRegionsViewport.getScrollBarThickness()));
 
-    trackHeadersViewPort.setBounds (0, kRulersViewHeight, kTrackHeaderWidth, playbackRegionsViewPort.getMaximumVisibleHeight());
-    trackHeadersView.setBounds (0, 0, kTrackHeaderWidth, playbackRegionsView.getHeight());
+    rulersViewport.setBounds (trackHeaderWidth, 0, playbackRegionsViewport.getMaximumVisibleWidth(), rulersViewHeight);
+    rulersView->setBounds (0, 0, playbackRegionsWidth, rulersViewHeight);
 
-    if (rulersView != nullptr)
-    {
-        rulersViewPort.setBounds (kTrackHeaderWidth, 0, playbackRegionsViewPort.getMaximumVisibleWidth(), kRulersViewHeight);
-        rulersView->setBounds (0, 0, playbackRegionsView.getWidth(), kRulersViewHeight);
-    }
+    trackHeadersViewport.setBounds (0, rulersViewHeight, trackHeadersViewport.getWidth(), playbackRegionsViewport.getMaximumVisibleHeight());
+    trackHeadersView.setBounds (0, 0, trackHeadersViewport.getWidth(), playbackRegionsView.getHeight());
 
     int y = 0;
+    const int trackHeight = getTrackHeight();
     for (auto v : regionSequenceViews)
     {
         v->setRegionsViewBoundsByYRange (y, trackHeight);
         y += trackHeight;
     }
 
-    playheadView.setBounds (playbackRegionsView.getBounds());
-
-    horizontalZoomInButton.setBounds (getWidth() - kStatusBarHeight, getHeight() - kStatusBarHeight, kStatusBarHeight, kStatusBarHeight);
-    horizontalZoomOutButton.setBounds (horizontalZoomInButton.getBounds().translated (-kStatusBarHeight, 0));
-    horizontalZoomLabel.setBounds (horizontalZoomOutButton.getBounds().translated (-kStatusBarHeight, 0));
-    verticalZoomInButton.setBounds (horizontalZoomLabel.getBounds().translated (-kStatusBarHeight, 0));
-    verticalZoomOutButton.setBounds (verticalZoomInButton.getBounds().translated (-kStatusBarHeight, 0));
-    verticalZoomLabel.setBounds (verticalZoomOutButton.getBounds().translated (-kStatusBarHeight, 0));
-    followPlayheadToggleButton.setBounds (0, horizontalZoomInButton.getY(), 200, kStatusBarHeight);
+    playHeadView.setBounds (playbackRegionsView.getBounds());
+    timeRangeSelectionView.setBounds (playbackRegionsView.getBounds());
 
     // keep viewport position relative to playhead
     // TODO JUCE_ARA if playhead is not visible in new position, we should rather keep the
     //               left or right border stable, depending on which side the playhead is.
-    auto relativeViewportPosition = playbackRegionsViewPort.getViewPosition();
-    relativeViewportPosition.setX (getPlaybackRegionsViewsXForTime (playheadTimePosition) - previousPlayheadX);
-    playbackRegionsViewPort.setViewPosition (relativeViewportPosition);
-    rulersViewPort.setViewPosition (relativeViewportPosition.getX(), 0);
+    auto relativeViewportPosition = playbackRegionsViewport.getViewPosition();
+    relativeViewportPosition.setX (getPlaybackRegionsViewsXForTime (lastReportedPosition.timeInSeconds) - previousPlayHeadX);
+    playbackRegionsViewport.setViewPosition (relativeViewportPosition);
+    rulersViewport.setViewPosition (relativeViewportPosition.getX(), 0);
 }
 
 void DocumentView::rebuildRegionSequenceViews()
 {
+    // TODO JUCE_ARA always deleting the region sequence views and in turn their playback regions
+    //               with their audio thumbs isn't particularly effective. we should optimized this
+    //               and preserve all views that can still be used. We could also try to build some
+    //               sort of LRU cache for the audio thumbs if that is easier...
+
     regionSequenceViews.clear();
 
-    for (auto regionSequence : getARADocumentController()->getDocument()->getRegionSequences<ARARegionSequence>())
+    if (showOnlySelectedRegionSequences)
     {
-        if (!showOnlySelectedRegionSequence && ! ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
+        for (auto selectedSequence : getARAEditorView()->getViewSelection().getEffectiveRegionSequences<ARARegionSequence>())
+            regionSequenceViews.add (createViewForRegionSequence (selectedSequence));
+    }
+    else    // show all RegionSequences of Document...
+    {
+        for (auto regionSequence : getARADocumentController()->getDocument()->getRegionSequences<ARARegionSequence>())
         {
-            regionSequenceViews.add (getViewForRegionSequence(regionSequence));
-        }
-        else
-        {
-            auto selectedSequences = getARAEditorView()->getViewSelection().getRegionSequences();
-            if (ARA::contains (selectedSequences, regionSequence))
-            {
-                regionSequenceViews.add (getViewForRegionSequence(regionSequence));
-            }
+            if (! ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
+                regionSequenceViews.add (createViewForRegionSequence (regionSequence));
         }
     }
-    
+
+    regionSequenceViewsAreInvalid = false;
+
     resized();
 }
 
 //==============================================================================
+void DocumentView::onNewSelection (const ARA::PlugIn::ViewSelection& /*currentSelection*/)
+{
+    if (showOnlySelectedRegionSequences)
+        invalidateRegionSequenceViews();
+    else
+        timeRangeSelectionView.repaint();
+}
+
 void DocumentView::onHideRegionSequences (std::vector<ARARegionSequence*> const& /*regionSequences*/)
 {
-    rebuildRegionSequenceViews();
+    invalidateRegionSequenceViews();
 }
 
 void DocumentView::didEndEditing (ARADocument* document)
@@ -252,90 +319,119 @@ void DocumentView::didEndEditing (ARADocument* document)
     jassert (document == getARADocumentController()->getDocument());
     
     if (regionSequenceViewsAreInvalid)
-    {
         rebuildRegionSequenceViews();
-        regionSequenceViewsAreInvalid = false;
-    }
 }
 
 void DocumentView::didAddRegionSequenceToDocument (ARADocument* document, ARARegionSequence* regionSequence)
 {
     jassert (document == getARADocumentController()->getDocument());
+
     invalidateRegionSequenceViews();
 }
 
 void DocumentView::didReorderRegionSequencesInDocument (ARADocument* document)
 {
     jassert (document == getARADocumentController()->getDocument());
+
     invalidateRegionSequenceViews();
-}
-
-PlaybackRegionView* DocumentView::getViewForPlaybackRegion (ARAPlaybackRegion* playbackRegion)
-{
-    return new PlaybackRegionView (*this, playbackRegion);
-}
-
-TrackHeaderView* DocumentView::getHeaderViewForRegionSequence (ARARegionSequence* regionSequence)
-{
-    return new TrackHeaderView (getARAEditorView(), regionSequence);
-}
-
-RegionSequenceView* DocumentView::getViewForRegionSequence (ARARegionSequence* regionSequence)
-{
-    return new RegionSequenceView (*this, regionSequence);
-}
-
-Range<double> DocumentView::getVisibleTimeRange() const
-{
-    double start = getPlaybackRegionsViewsTimeForX (playbackRegionsViewPort.getViewArea().getX());
-    double end = getPlaybackRegionsViewsTimeForX (playbackRegionsViewPort.getViewArea().getRight());
-    return Range<double> (start, end);
 }
 
 void DocumentView::timerCallback()
 {
-    if (positionInfoPtr == nullptr)
-        return;
-        
-    if (playheadTimePosition != positionInfoPtr->timeInSeconds)
+    if (lastReportedPosition.timeInSeconds != positionInfo.timeInSeconds)
     {
-        playheadTimePosition = positionInfoPtr->timeInSeconds;
+        lastReportedPosition = positionInfo;
 
-        if (followPlayheadToggleButton.getToggleState())
+        if (scrollFollowsPlayHead)
         {
-            Range<double> visibleRange = getVisibleTimeRange();
-            if (playheadTimePosition < visibleRange.getStart() || playheadTimePosition > visibleRange.getEnd())
-                playbackRegionsViewPort.setViewPosition (playbackRegionsViewPort.getViewPosition().withX (getPlaybackRegionsViewsXForTime (playheadTimePosition)));
+            const auto visibleRange = getVisibleTimeRange();
+            if (lastReportedPosition.timeInSeconds < visibleRange.getStart() || lastReportedPosition.timeInSeconds > visibleRange.getEnd())
+                playbackRegionsViewport.setViewPosition (playbackRegionsViewport.getViewPosition().withX (getPlaybackRegionsViewsXForTime (lastReportedPosition.timeInSeconds)));
         };
 
-        playheadView.repaint();
+        playHeadView.repaint();
     }
 }
 
-void DocumentView::setCurrentPositionInfo (const AudioPlayHead::CurrentPositionInfo* curPosInfoPtr)
+//==============================================================================
+void DocumentView::addListener (Listener* const listener)
 {
-    positionInfoPtr = curPosInfoPtr;
+    listeners.add (listener);
+}
+
+void DocumentView::removeListener (Listener* const listener)
+{
+    listeners.remove (listener);
 }
 
 //==============================================================================
-DocumentView::PlayheadView::PlayheadView (DocumentView& documentView)
-: documentView (documentView)
+DocumentView::PlayHeadView::PlayHeadView (DocumentView& documentView)
+    : documentView (documentView)
 {}
 
-void DocumentView::PlayheadView::paint (juce::Graphics &g)
+void DocumentView::PlayHeadView::paint (juce::Graphics &g)
 {
-    static constexpr int kPlayheadWidth = 1;
-    const int playheadX = documentView.getPlaybackRegionsViewsXForTime (documentView.getPlayheadTimePosition());
+    const int playheadX = documentView.getPlaybackRegionsViewsXForTime (documentView.getPlayHeadPositionInfo().timeInSeconds);
     g.setColour (findColour (ScrollBar::ColourIds::thumbColourId));
-    g.fillRect (playheadX - kPlayheadWidth / 2, 0, kPlayheadWidth, getHeight());
+    g.fillRect (playheadX, 0, 1, getHeight());
+}
+
+//==============================================================================
+DocumentView::TimeRangeSelectionView::TimeRangeSelectionView (DocumentView& documentView)
+    : documentView (documentView)
+{}
+
+void DocumentView::TimeRangeSelectionView::paint (juce::Graphics& g)
+{
+    const auto selection = documentView.getARAEditorView()->getViewSelection();
+    if (selection.getTimeRange() != nullptr && selection.getTimeRange()->duration > 0.0)
+    {
+        const int startPixel = documentView.getPlaybackRegionsViewsXForTime (selection.getTimeRange()->start);
+        const int endPixel = documentView.getPlaybackRegionsViewsXForTime (selection.getTimeRange()->start + selection.getTimeRange()->duration);
+        const int pixelDuration = endPixel - startPixel;
+        const int trackHeight = documentView.getTrackHeight();
+        int y = 0;
+        g.setColour (juce::Colours::white.withAlpha (0.7f));
+        for (const auto regionSequenceView : documentView.regionSequenceViews)
+        {
+            const auto regionSequence = regionSequenceView->getRegionSequence();
+            if (regionSequence != nullptr && ARA::contains (selection.getRegionSequences(), regionSequence))
+                g.fillRect (startPixel, y, pixelDuration, trackHeight);
+            y += trackHeight;
+        }
+    }
+}
+
+//==============================================================================
+DocumentView::TrackHeadersViewport::TrackHeadersViewport (DocumentView &documentView)
+    : documentView (documentView),
+      resizeBorder (this, this, ResizableEdgeComponent::Edge::rightEdge)
+{
+    setSize (120, getHeight());
+    setMinimumWidth (60);
+    setMaximumWidth (240);
+    addAndMakeVisible (resizeBorder);
+}
+
+void DocumentView::TrackHeadersViewport::setIsResizable (bool isResizable)
+{
+    resizeBorder.setVisible (isResizable);
+}
+
+void DocumentView::TrackHeadersViewport::resized()
+{
+    resizeBorder.setBounds (getWidth() - 1, 0, 1, getHeight());
+
+    if (isShowing())
+        documentView.resized();
 }
 
 //==============================================================================
 // see https://forum.juce.com/t/viewport-scrollbarmoved-mousewheelmoved/20226
-void DocumentView::ScrollMasterViewPort::visibleAreaChanged (const Rectangle<int>& newVisibleArea)
+void DocumentView::ScrollMasterViewport::visibleAreaChanged (const Rectangle<int>& newVisibleArea)
 {
     Viewport::visibleAreaChanged (newVisibleArea);
     
-    documentView.getRulersViewPort().setViewPosition (newVisibleArea.getX(), 0);
-    documentView.getTrackHeadersViewPort().setViewPosition (0, newVisibleArea.getY());
+    documentView.getRulersViewport().setViewPosition (newVisibleArea.getX(), 0);
+    documentView.getTrackHeadersViewport().setViewPosition (0, newVisibleArea.getY());
 }
