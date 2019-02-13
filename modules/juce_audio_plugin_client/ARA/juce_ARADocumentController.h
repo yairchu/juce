@@ -5,6 +5,7 @@
 namespace juce
 {
 
+class ARAAudioSourceReader;
 class ARAPlaybackRegionReader;
 class ARARegionSequenceReader;
 
@@ -15,18 +16,62 @@ public:
 
     //==============================================================================
     // create readers for the various model objects
-    AudioFormatReader* createAudioSourceReader (ARAAudioSource* audioSource);
-    ARAPlaybackRegionReader* createPlaybackRegionReader (std::vector<ARAPlaybackRegion*> playbackRegions, bool nonRealtime);
-    ARARegionSequenceReader* createRegionSequenceReader (ARARegionSequence* regionSequence, bool nonRealtime);
+
+    /** Create an ARAAudioSourceReader instance to read \p audioSource */
+    ARAAudioSourceReader* createAudioSourceReader (ARAAudioSource* audioSource);
+
+    /** Create an ARAPlaybackRegionReader instance to read all \p playbackRegions
+
+        See ARAPlaybackRegionReader::ARAPlaybackRegionReader for more information.
+    */
+    ARAPlaybackRegionReader* createPlaybackRegionReader (std::vector<ARAPlaybackRegion*> const& playbackRegions, bool nonRealtime,
+                                                         double playbackSampleRate = 0.0, int channelCount = 0, bool use64BitSamples = false);
+
+    /** Create an ARARegionSequenceReader instance to read all of \p regionSequence's playback regions
+
+        See ARARegionSequenceReader::ARARegionSequenceReader for more information.
+    */
+    ARARegionSequenceReader* createRegionSequenceReader (ARARegionSequence* regionSequence, bool nonRealtime,
+                                                         double playbackSampleRate = 0.0, int channelCount = 0, bool use64BitSamples = false);
 
     //==============================================================================
     // notify the host and any potential internal reader about content changes
-    // must be called by the plug-in model management code on the main thread
-    // Listeners will be notified without begin/endEditing() if this occurs outside of a host edit.
     // Note that while the ARA API allows for specifying update ranges, this feature is not yet
     // in our current plug-in implementation (many hosts do not evaluate it anyways)
+
+    /** notify the host and any listeners of \p audioSource about updates to \audioSource's content.
+        @param audioSource The ARAAudioSource with changed content
+        @param notifyAllAudioModificationsAndPlaybackRegions Whether or not to notify \p audioSource's underlying ARA audio modifications and playback regions. 
+        @param scopeFlags The scope of the changed content
+    
+        This must be called by the plug-in model management code on the message thread whenever changing relevant parts of the internal model graph.
+        A notification to the host will be enqueued, and send out the next time it polls this document controller for model updates.
+        Listeners of \p audioSource however will be notified immediately, even if the call is made outside of a host edit cycle.
+        Accordingly, listeners must be either robust regarding this, or the calling code must set up the appropriate internal states.
+    */
     void notifyAudioSourceContentChanged (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags, bool notifyAllAudioModificationsAndPlaybackRegions = false);
+
+    /** notify the host and any listeners of \p audioModification about updates to \audioModification's content.
+        @param audioModification The ARAAudioModification with changed content
+        @param notifyAllPlaybackRegions Whether or not to notify \p audioModification's underlying ARA playback regions.
+        @param scopeFlags The scope of the changed content
+
+        This must be called by the plug-in model management code on the message thread whenever changing relevant parts of the internal model graph.
+        A notification to the host will be enqueued, and send out the next time it polls this document controller for model updates.
+        Listeners of \p audioSource however will be notified immediately, even if the call is made outside of a host edit cycle.
+        Accordingly, listeners must be either robust regarding this, or the calling code must set up the appropriate internal states.
+    */
     void notifyAudioModificationContentChanged (ARAAudioModification* audioModification, ARAContentUpdateScopes scopeFlags, bool notifyAllPlaybackRegions = false);
+
+    /** notify the host and any listeners of \p playbackRegion about updates to \playbackRegion's content.
+        @param playbackRegion The ARAPlaybackRegion whose content is changing
+        @param scopeFlags The scope of the changed content
+
+        This must be called by the plug-in model management code on the message thread whenever changing relevant parts of the internal model graph.
+        A notification to the host will be enqueued, and send out the next time it polls this document controller for model updates.
+        Listeners of \p audioSource however will be notified immediately, even if the call is made outside of a host edit cycle.
+        Accordingly, listeners must be either robust regarding this, or the calling code must set up the appropriate internal states.
+    */
     void notifyPlaybackRegionContentChanged (ARAPlaybackRegion* playbackRegion, ARAContentUpdateScopes scopeFlags);
 
     //==============================================================================
@@ -117,17 +162,13 @@ protected:
     OVERRIDE_TO_NOTIFY_1 (willDestroyAudioSource, AudioSource*, audioSource);
 
     // AudioModification callbacks
-    ARA::PlugIn::AudioModification* doCreateAudioModification (ARA::PlugIn::AudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef) noexcept override;
+    ARA::PlugIn::AudioModification* doCreateAudioModification (ARA::PlugIn::AudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef, ARA::PlugIn::AudioModification* optionalModificationToClone) noexcept override;
     OVERRIDE_TO_NOTIFY_3 (willUpdateAudioModificationProperties, AudioModification*, audioModification, ARAAudioModification::PropertiesPtr, newProperties);
     OVERRIDE_TO_NOTIFY_1 (didUpdateAudioModificationProperties, AudioModification*, audioModification);
     OVERRIDE_TO_NOTIFY_2 (didAddPlaybackRegionToAudioModification, AudioModification*, audioModification, PlaybackRegion*, playbackRegion);
     OVERRIDE_TO_NOTIFY_2 (willRemovePlaybackRegionFromAudioModification, AudioModification*, audioModification, PlaybackRegion*, playbackRegion);
     OVERRIDE_TO_NOTIFY_3 (doDeactivateAudioModificationForUndoHistory, AudioModification*, audioModification, bool, deactivate);
     OVERRIDE_TO_NOTIFY_1 (willDestroyAudioModification, AudioModification*, audioModification);
-
-    // TODO JUCE_ARA
-    // Do we need to override this? The default ARPlug implementation is sufficient...
-    //ARA::PlugIn::AudioModification* doCloneAudioModification (ARA::PlugIn::AudioModification* src, ARA::ARAAudioModificationHostRef hostRef) noexcept override;
 
     // PlaybackRegion callbacks
     ARA::PlugIn::PlaybackRegion* doCreatePlaybackRegion (ARA::PlugIn::AudioModification* modification, ARA::ARAPlaybackRegionHostRef hostRef) noexcept override;

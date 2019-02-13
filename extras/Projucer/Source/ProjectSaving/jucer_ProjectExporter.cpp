@@ -257,6 +257,9 @@ ProjectExporter::ProjectExporter (Project& p, const ValueTree& state)
       smallIconValue          (settings, Ids::smallIcon,           getUndoManager()),
       extraPPDefsValue        (settings, Ids::extraDefs,           getUndoManager())
 {
+    projectCompilerFlagSchemesValue = project.getProjectValue (Ids::compilerFlagSchemes);
+    projectCompilerFlagSchemesValue.addListener (this);
+    updateCompilerFlagValues();
 }
 
 ProjectExporter::~ProjectExporter()
@@ -283,10 +286,18 @@ RelativePath ProjectExporter::rebaseFromProjectFolderToBuildTarget (const Relati
     return path.rebased (project.getProjectFolder(), getTargetFolder(), RelativePath::buildTargetFolder);
 }
 
-bool ProjectExporter::shouldFileBeCompiledByDefault (const RelativePath& file) const
+bool ProjectExporter::shouldFileBeCompiledByDefault (const File& file) const
 {
     return file.hasFileExtension (cOrCppFileExtensions)
         || file.hasFileExtension (asmFileExtensions);
+}
+
+void ProjectExporter::updateCompilerFlagValues()
+{
+    compilerFlagSchemesMap.clear();
+
+    for (auto& scheme : project.getCompilerFlagSchemes())
+        compilerFlagSchemesMap.set (scheme, { settings, scheme, getUndoManager() });
 }
 
 //==============================================================================
@@ -327,7 +338,7 @@ void ProjectExporter::createPropertyEditors (PropertyListBuilder& props)
                                                       getTargetOSForExporter() == TargetOS::getThisOS(), "*", project.getProjectFolder()),
                        "If you're building an RTAS plug-in, this must be the folder containing the RTAS SDK. This can be an absolute path, or a path relative to the Projucer project file.");
         }
-        if (project.shouldEnableARA())
+        if (project.shouldEnableARA() || project.isARAPluginHost())
         {
             props.add (new FilePathPropertyComponent (araPathValueWrapper.wrappedValue, "ARA SDK Folder", true, getTargetOSForExporter() == TargetOS::getThisOS()),
                        "If you're building an ARA enabled plug-in, this must be the folder containing the ARA SDK. This can be an absolute path, or a path relative to the Projucer project file.");
@@ -340,6 +351,10 @@ void ProjectExporter::createPropertyEditors (PropertyListBuilder& props)
         props.add (new TextPropertyComponent (extraCompilerFlagsValue, "Extra Compiler Flags", 8192, true),
                    "Extra command-line flags to be passed to the compiler. This string can contain references to preprocessor definitions in the "
                    "form ${NAME_OF_DEFINITION}, which will be replaced with their values.");
+
+        for (HashMap<String, ValueWithDefault>::Iterator i (compilerFlagSchemesMap); i.next();)
+            props.add (new TextPropertyComponent (compilerFlagSchemesMap.getReference (i.getKey()), "Compiler Flags for " + i.getKey().quoted(), 8192, false),
+                       "The exporter-specific compiler flags that will be added to files using this scheme.");
 
         props.add (new TextPropertyComponent (extraLinkerFlagsValue, "Extra Linker Flags", 8192, true),
                    "Extra command-line flags to be passed to the linker. You might want to use this for adding additional libraries. "
@@ -391,6 +406,8 @@ void ProjectExporter::addSettingsForProjectType (const ProjectType& type)
 {
     addVSTPathsIfPluginOrHost();
 
+    addARAPathsIfPluginOrHost();
+
     if (type.isAudioPlugin())
         addCommonAudioPluginSettings();
 
@@ -407,13 +424,16 @@ void ProjectExporter::addVSTPathsIfPluginOrHost()
     }
 }
 
+void ProjectExporter::addARAPathsIfPluginOrHost()
+{
+    if (project.shouldEnableARA() || project.isARAPluginHost())
+        addARAFoldersToPath();
+}
+
 void ProjectExporter::addCommonAudioPluginSettings()
 {
     if (shouldBuildTargetType (ProjectType::Target::AAXPlugIn))
         addAAXFoldersToPath();
-
-    if (project.shouldEnableARA())
-        addARAFoldersToPath();
 
     // Note: RTAS paths are platform-dependent, impl -> addPlatformSpecificSettingsForProjectType
  }

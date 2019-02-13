@@ -20,12 +20,26 @@ const ARA::ARAFactory* ARA::PlugIn::DocumentController::getARAFactory() noexcept
                                                         // DocumentController factory function
                                                         ARACreateDocumentControllerWithDocumentInstance,
                                                         // Document archive IDs
-                                                        // TODO JUCE_ARA add a way to update compatible archive IDs and count if needed!
-                                                        JucePlugin_ARADocumentArchiveID, 0U, nullptr,
+                                                        JucePlugin_ARADocumentArchiveID,
+                                                        // Legacy document archive IDs - will be updated below
+                                                        0U, nullptr,
                                                         // Analyzeable content types - will be updated below
                                                         0U, nullptr,
                                                         // Playback transformation flags - will be updated below
                                                         0);
+
+        // Parse any legacy document archive IDs
+        String legacyDocumentArchiveIDString = JucePlugin_ARACompatibleArchiveIDs;
+        if (legacyDocumentArchiveIDString.isNotEmpty())
+        {
+            static StringArray legacyDocumentArchiveIDStrings = StringArray::fromLines (legacyDocumentArchiveIDString);
+            static std::vector<ARAPersistentID> legacyDocumentArchiveIDs;
+            for (auto& legacyID : legacyDocumentArchiveIDStrings)
+                legacyDocumentArchiveIDs.push_back (legacyID.toRawUTF8());
+
+            factory->compatibleDocumentArchiveIDs = legacyDocumentArchiveIDs.data();
+            factory->compatibleDocumentArchiveIDsCount = legacyDocumentArchiveIDs.size();
+        }
 
         // Update analyzeable content types
         static std::vector<ARAContentType> contentTypes;
@@ -33,7 +47,6 @@ const ARA::ARAFactory* ARA::PlugIn::DocumentController::getARAFactory() noexcept
             kARAContentTypeNotes,
             kARAContentTypeTempoEntries,
             kARAContentTypeBarSignatures,
-            kARAContentTypeSignatures,
             kARAContentTypeStaticTuning,
             kARAContentTypeDynamicTuningOffsets,
             kARAContentTypeKeySignatures,
@@ -62,9 +75,6 @@ const ARA::ARAFactory* ARA::PlugIn::DocumentController::getARAFactory() noexcept
             if (JucePlugin_ARATransformationFlags & (1 << i))
                 factory->supportedPlaybackTransformationFlags |= araPlaybackTransformations[i];
         }
-
-        // TODO JUCE_ARA
-        // Any other factory fields? Algorithm selection?
     }
 
     return factory;
@@ -80,19 +90,21 @@ namespace juce
 
 //==============================================================================
 
-AudioFormatReader* ARADocumentController::createAudioSourceReader (ARAAudioSource* audioSource)
+ARAAudioSourceReader* ARADocumentController::createAudioSourceReader (ARAAudioSource* audioSource)
 {
     return new ARAAudioSourceReader (audioSource);
 }
 
-ARAPlaybackRegionReader* ARADocumentController::createPlaybackRegionReader (std::vector<ARAPlaybackRegion*> playbackRegions, bool nonRealtime)
+ARAPlaybackRegionReader* ARADocumentController::createPlaybackRegionReader (std::vector<ARAPlaybackRegion*> const& playbackRegions, bool nonRealtime,
+                                                                            double playbackSampleRate /*= 0.0*/, int channelCount /*= 0*/, bool use64BitSamples /*= false*/)
 {
-    return new ARAPlaybackRegionReader (static_cast<ARAPlaybackRenderer*> (doCreatePlaybackRenderer()), playbackRegions, nonRealtime);
+    return new ARAPlaybackRegionReader (static_cast<ARAPlaybackRenderer*> (doCreatePlaybackRenderer()), playbackRegions, nonRealtime, playbackSampleRate, channelCount, use64BitSamples);
 }
 
-ARARegionSequenceReader* ARADocumentController::createRegionSequenceReader (ARARegionSequence* regionSequence, bool nonRealtime)
+ARARegionSequenceReader* ARADocumentController::createRegionSequenceReader (ARARegionSequence* regionSequence, bool nonRealtime,
+                                                                            double playbackSampleRate /*= 0.0*/, int channelCount /*= 0*/, bool use64BitSamples /*= false*/)
 {
-    return new ARARegionSequenceReader (static_cast<ARAPlaybackRenderer*> (doCreatePlaybackRenderer()), regionSequence, nonRealtime);
+    return new ARARegionSequenceReader (static_cast<ARAPlaybackRenderer*> (doCreatePlaybackRenderer()), regionSequence, nonRealtime, playbackSampleRate, channelCount, use64BitSamples);
 }
 
 //==============================================================================
@@ -190,9 +202,9 @@ ARA::PlugIn::AudioSource* ARADocumentController::doCreateAudioSource (ARA::PlugI
 
 //==============================================================================
 
-ARA::PlugIn::AudioModification* ARADocumentController::doCreateAudioModification (ARA::PlugIn::AudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef) noexcept
+ARA::PlugIn::AudioModification* ARADocumentController::doCreateAudioModification (ARA::PlugIn::AudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef, ARA::PlugIn::AudioModification* optionalModificationToClone) noexcept
 {
-    return new ARAAudioModification (static_cast<ARAAudioSource*> (audioSource), hostRef);
+    return new ARAAudioModification (static_cast<ARAAudioSource*> (audioSource), hostRef, static_cast<ARAAudioModification*> (optionalModificationToClone));
 }
 
 //==============================================================================
