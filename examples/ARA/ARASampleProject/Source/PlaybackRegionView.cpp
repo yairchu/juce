@@ -14,6 +14,7 @@ PlaybackRegionView::PlaybackRegionView (DocumentView& documentView, ARAPlaybackR
     onNewSelection (documentView.getARAEditorView()->getViewSelection());
 
     playbackRegion->getRegionSequence()->getDocument<ARADocument>()->addListener (this);
+    playbackRegion->getAudioModification<ARAAudioModification>()->addListener (this);
     playbackRegion->getAudioModification()->getAudioSource<ARAAudioSource>()->addListener (this);
     playbackRegion->addListener (this);
 
@@ -25,6 +26,7 @@ PlaybackRegionView::~PlaybackRegionView()
     documentView.getARAEditorView()->removeListener (this);
 
     playbackRegion->removeListener (this);
+    playbackRegion->getAudioModification<ARAAudioModification>()->removeListener (this);
     playbackRegion->getAudioModification()->getAudioSource<ARAAudioSource>()->removeListener (this);
     playbackRegion->getRegionSequence()->getDocument<ARADocument>()->removeListener (this);
 
@@ -117,6 +119,20 @@ void PlaybackRegionView::didEnableAudioSourceSamplesAccess (ARAAudioSource* audi
     repaint();
 }
 
+void PlaybackRegionView::willUpdateAudioSourceProperties (ARAAudioSource* audioSource, ARAAudioSource::PropertiesPtr newProperties)
+{
+    jassert (audioSource == playbackRegion->getAudioModification()->getAudioSource());
+    if (playbackRegion->getName() == nullptr && playbackRegion->getAudioModification()->getName() == nullptr && newProperties->name != audioSource->getName())
+        repaint();
+}
+
+void PlaybackRegionView::willUpdateAudioModificationProperties (ARAAudioModification* audioModification, ARAAudioModification::PropertiesPtr newProperties)
+{
+    jassert (audioModification == playbackRegion->getAudioModification());
+    if (playbackRegion->getName() == nullptr && newProperties->name != audioModification->getName())
+        repaint();
+}
+
 void PlaybackRegionView::willUpdatePlaybackRegionProperties (ARAPlaybackRegion* region, ARAPlaybackRegion::PropertiesPtr newProperties)
 {
     jassert (playbackRegion == region);
@@ -149,7 +165,7 @@ void PlaybackRegionView::recreatePlaybackRegionReader()
     audioThumbCache.clear();
 
     // create a non-realtime playback region reader for our audio thumb
-    playbackRegionReader = documentView.getARADocumentController()->createPlaybackRegionReader({playbackRegion}, true);
+    playbackRegionReader = documentView.getARADocumentController()->createPlaybackRegionReader ({playbackRegion}, true);
     // see juce_AudioThumbnail.cpp line 122 - AudioThumbnail does not deal with zero length sources.
     if (playbackRegionReader->lengthInSamples <= 0)
     {

@@ -104,6 +104,7 @@ void Project::updateTitleDependencies()
     pluginAAXIdentifierValue. setDefault (getDefaultAAXIdentifierString());
     pluginARAFactoryIDValue.  setDefault (getDefaultARAFactoryIDString());
     pluginARAArchiveIDValue.  setDefault (getDefaultARADocumentArchiveID());
+    pluginARACompatibleArchiveIDsValue. setDefault (getDefaultARACompatibleArchiveIDs());
 }
 
 String Project::getDocumentTitle()
@@ -227,13 +228,13 @@ void Project::initialiseProjectValues()
         reportAppUsageValue.setDefault (true);
     }
 
-    cppStandardValue.referTo                   (projectRoot, Ids::cppLanguageStandard, getUndoManager(), "14");
+    cppStandardValue.referTo       (projectRoot, Ids::cppLanguageStandard, getUndoManager(), "14");
 
-    headerSearchPathsValue.referTo             (projectRoot, Ids::headerPath, getUndoManager());
-    preprocessorDefsValue.referTo              (projectRoot, Ids::defines,    getUndoManager());
-    userNotesValue.referTo                     (projectRoot, Ids::userNotes,  getUndoManager());
+    headerSearchPathsValue.referTo (projectRoot, Ids::headerPath, getUndoManager());
+    preprocessorDefsValue.referTo  (projectRoot, Ids::defines,    getUndoManager());
+    userNotesValue.referTo         (projectRoot, Ids::userNotes,  getUndoManager());
 
-    maxBinaryFileSizeValue.referTo             (projectRoot, Ids::maxBinaryFileSize,         getUndoManager(), 10240 * 1024);
+    maxBinaryFileSizeValue.referTo (projectRoot, Ids::maxBinaryFileSize,         getUndoManager(), 10240 * 1024);
 
     // this is here for backwards compatibility with old projects using the incorrect id
     if (projectRoot.hasProperty ("includeBinaryInAppConfig"))
@@ -241,7 +242,9 @@ void Project::initialiseProjectValues()
     else
         includeBinaryDataInJuceHeaderValue.referTo (projectRoot, Ids::includeBinaryInJuceHeader, getUndoManager(), true);
 
-    binaryDataNamespaceValue.referTo           (projectRoot, Ids::binaryDataNamespace,       getUndoManager(), "BinaryData");
+    binaryDataNamespaceValue.referTo (projectRoot, Ids::binaryDataNamespace, getUndoManager(), "BinaryData");
+
+    compilerFlagSchemesValue.referTo (projectRoot, Ids::compilerFlagSchemes, getUndoManager(), Array<var>(), ",");
 }
 
 void Project::initialiseAudioPluginValues()
@@ -262,15 +265,20 @@ void Project::initialiseAudioPluginValues()
     pluginAUExportPrefixValue.referTo        (projectRoot, Ids::pluginAUExportPrefix,       getUndoManager(),
                                               CodeHelpers::makeValidIdentifier (getProjectNameString(), false, true, false) + "AU");
 
-    pluginAUMainTypeValue.referTo            (projectRoot, Ids::pluginAUMainType,           getUndoManager(),  getDefaultAUMainTypes(), ",");
-    pluginAUSandboxSafeValue.referTo         (projectRoot, Ids::pluginAUIsSandboxSafe,      getUndoManager(),  false);
-    pluginVSTCategoryValue.referTo           (projectRoot, Ids::pluginVSTCategory,          getUndoManager(),  getDefaultVSTCategories(), ",");
-    pluginVST3CategoryValue.referTo          (projectRoot, Ids::pluginVST3Category,         getUndoManager(),  getDefaultVST3Categories(), ",");
-    pluginRTASCategoryValue.referTo          (projectRoot, Ids::pluginRTASCategory,         getUndoManager(),  getDefaultRTASCategories(), ",");
-    pluginAAXCategoryValue.referTo           (projectRoot, Ids::pluginAAXCategory,          getUndoManager(),  getDefaultAAXCategories(), ",");
-    pluginEnableARA.referTo                  (projectRoot, Ids::pluginARAContentType,       getUndoManager(), getDefaultARAContentTypes(), ",");
-    pluginARAContentTypeValue.referTo        (projectRoot, Ids::pluginARAContentType,       getUndoManager (), getDefaultARAContentTypes (), ",");
-    pluginARATransformFlagsValue.referTo     (projectRoot, Ids::pluginARATransformFlags,    getUndoManager (), getDefaultARAContentTypes (), ",");
+    pluginAUMainTypeValue.referTo            (projectRoot, Ids::pluginAUMainType,           getUndoManager(), getDefaultAUMainTypes(),    ",");
+    pluginAUSandboxSafeValue.referTo         (projectRoot, Ids::pluginAUIsSandboxSafe,      getUndoManager(), false);
+    pluginVSTCategoryValue.referTo           (projectRoot, Ids::pluginVSTCategory,          getUndoManager(), getDefaultVSTCategories(),  ",");
+    pluginVST3CategoryValue.referTo          (projectRoot, Ids::pluginVST3Category,         getUndoManager(), getDefaultVST3Categories(), ",");
+    pluginRTASCategoryValue.referTo          (projectRoot, Ids::pluginRTASCategory,         getUndoManager(), getDefaultRTASCategories(), ",");
+    pluginAAXCategoryValue.referTo           (projectRoot, Ids::pluginAAXCategory,          getUndoManager(), getDefaultAAXCategories(),  ",");
+
+    pluginEnableARA.referTo                  (projectRoot, Ids::enableARA,                  getUndoManager(),  shouldEnableARA(), ",");
+    pluginARAAnalyzableContentValue.referTo  (projectRoot, Ids::pluginARAAnalyzableContent, getUndoManager (), getDefaultARAContentTypes(), ",");
+    pluginARATransformFlagsValue.referTo     (projectRoot, Ids::pluginARATransformFlags,    getUndoManager (), getDefaultARATransformationFlags(), ",");
+    pluginARACompatibleArchiveIDsValue.referTo (projectRoot, Ids::araCompatibleArchiveIDs,    getUndoManager(), getDefaultARACompatibleArchiveIDs());
+
+    pluginVSTNumMidiInputsValue.referTo      (projectRoot, Ids::pluginVSTNumMidiInputs,     getUndoManager(), 16);
+    pluginVSTNumMidiOutputsValue.referTo     (projectRoot, Ids::pluginVSTNumMidiOutputs,    getUndoManager(), 16);
 }
 
 void Project::updateOldStyleConfigList()
@@ -438,12 +446,12 @@ void Project::updatePluginCategories()
     }
 
     {
-        auto araContentTypes = projectRoot.getProperty (Ids::pluginARAContentType, {}).toString();
+        auto araAnalyzableContent = projectRoot.getProperty (Ids::pluginARAAnalyzableContent, {}).toString();
 
-        if (getAllARAContentTypeVars().contains (araContentTypes))
-            pluginARAContentTypeValue = araContentTypes;
-        else if (getAllARAContentTypeStrings().contains (araContentTypes))
-            pluginARAContentTypeValue = Array<var> (getAllARAContentTypeVars()[getAllARAContentTypeStrings().indexOf (araContentTypes)]);
+        if (getAllARAContentTypeVars().contains (araAnalyzableContent))
+            pluginARAAnalyzableContentValue = araAnalyzableContent;
+        else if (getAllARAContentTypeStrings().contains (araAnalyzableContent))
+            pluginARAAnalyzableContentValue = Array<var> (getAllARAContentTypeVars()[getAllARAContentTypeStrings().indexOf (araAnalyzableContent)]);
     }
 
     {
@@ -768,7 +776,7 @@ void Project::valueTreePropertyChanged (ValueTree& tree, const Identifier& prope
             pluginRTASCategoryValue.setDefault      (getDefaultRTASCategories());
             pluginAAXCategoryValue.setDefault       (getDefaultAAXCategories());
             pluginEnableARA.setDefault              (getDefaultEnableARA());
-            pluginARAContentTypeValue.setDefault    (getDefaultARAContentTypes());
+            pluginARAAnalyzableContentValue.setDefault    (getDefaultARAContentTypes());
             pluginARATransformFlagsValue.setDefault (getDefaultARATransformationFlags());
 
             if (shouldWriteLegacyPluginCharacteristicsSettings)
@@ -1120,6 +1128,25 @@ void Project::createAudioPluginPropertyEditors (PropertyListBuilder& props)
                "the Music folder. Your plug-in must be able to deal with this. Newer versions of GarageBand require this to be enabled.");
 
     {
+        Array<var> varChoices;
+        StringArray stringChoices;
+
+        for (int i = 1; i <= 16; ++i)
+        {
+            varChoices.add (i);
+            stringChoices.add (String (i));
+        }
+
+        props.add (new ChoicePropertyComponentWithEnablement (pluginVSTNumMidiInputsValue, pluginCharacteristicsValue, Ids::pluginWantsMidiIn,
+                                                              "Plugin VST Num MIDI Inputs",  stringChoices, varChoices),
+                   "For VST and VST3 plug-ins that accept MIDI, this allows you to configure the number of inputs.");
+
+        props.add (new ChoicePropertyComponentWithEnablement (pluginVSTNumMidiOutputsValue, pluginCharacteristicsValue, Ids::pluginProducesMidiOut,
+                                                              "Plugin VST Num MIDI Outputs", stringChoices, varChoices),
+                   "For VST and VST3 plug-ins that produce MIDI, this allows you to configure the number of outputs.");
+    }
+
+    {
         Array<var> vst3CategoryVars;
 
         for (auto s : getAllVST3CategoryStrings())
@@ -1146,16 +1173,21 @@ void Project::createAudioPluginPropertyEditors (PropertyListBuilder& props)
 
    if (shouldEnableARA())
    {
-        props.add (new MultiChoicePropertyComponent (pluginARAContentTypeValue, "Plugin ARA Content Types", getAllARAContentTypeStrings(), getAllARAContentTypeVars()),
-                 "ARA Content Types.");
+        props.add (new MultiChoicePropertyComponent (pluginARAAnalyzableContentValue, "Plugin ARA Analyzeable Content Types", getAllARAContentTypeStrings(), getAllARAContentTypeVars()),
+                 "ARA Analyzeable Content Types.");
 
         props.add (new MultiChoicePropertyComponent (pluginARATransformFlagsValue, "Plugin ARA Transformation Flags", getAllARATransformationFlagStrings(), getAllARATransformationFlagVars()),
                    "ARA Transformation Flags.");
 
         props.add (new TextPropertyComponent (pluginARAFactoryIDValue, "Plugin ARA Factory ID", 256, false),
                    "ARA Factory ID.");
+
         props.add (new TextPropertyComponent (pluginARAArchiveIDValue, "Plugin ARA Document Archive ID", 256, false),
                    "ARA Document Archive ID.");
+
+        props.add (new TextPropertyComponent (pluginARACompatibleArchiveIDsValue, "Plugin ARA Compatible Document Archive IDs", 1024, true),
+            "List of compatible ARA Document Archive IDs - one per line");
+
     }
 }
 
@@ -1318,6 +1350,19 @@ Value Project::Item::getShouldInhibitWarningsValue()        { return state.getPr
 bool Project::Item::shouldInhibitWarnings() const           { return state [Ids::noWarnings]; }
 
 bool Project::Item::isModuleCode() const                    { return belongsToModule; }
+
+Value Project::Item::getCompilerFlagSchemeValue()           { return state.getPropertyAsValue (Ids::compilerFlagScheme, getUndoManager()); }
+String Project::Item::getCompilerFlagSchemeString() const   { return state [Ids::compilerFlagScheme]; }
+
+void Project::Item::setCompilerFlagScheme (const String& scheme)
+{
+    state.getPropertyAsValue (Ids::compilerFlagScheme, getUndoManager()).setValue (scheme);
+}
+
+void Project::Item::clearCurrentCompilerFlagScheme()
+{
+    state.removeProperty (Ids::compilerFlagScheme, getUndoManager());
+}
 
 String Project::Item::getFilePath() const
 {
@@ -1688,6 +1733,55 @@ bool Project::isConfigFlagEnabled (const String& name, bool defaultIsEnabled) co
 }
 
 //==============================================================================
+StringArray Project::getCompilerFlagSchemes() const
+{
+    if (compilerFlagSchemesValue.isUsingDefault())
+        return {};
+
+    StringArray schemes;
+    auto schemesVar = compilerFlagSchemesValue.get();
+
+    if (auto* arr = schemesVar.getArray())
+        schemes.addArray (arr->begin(), arr->end());
+
+    return schemes;
+}
+
+void Project::addCompilerFlagScheme (const String& schemeToAdd)
+{
+    auto schemesVar = compilerFlagSchemesValue.get();
+
+    if (auto* arr = schemesVar.getArray())
+    {
+        arr->addIfNotAlreadyThere (schemeToAdd);
+        compilerFlagSchemesValue.setValue ({ *arr }, getUndoManager());
+    }
+}
+
+void Project::removeCompilerFlagScheme (const String& schemeToRemove)
+{
+    auto schemesVar = compilerFlagSchemesValue.get();
+
+    if (auto* arr = schemesVar.getArray())
+    {
+        for (int i = 0; i < arr->size(); ++i)
+        {
+            if (arr->getUnchecked (i).toString() == schemeToRemove)
+            {
+                arr->remove (i);
+
+                if (arr->isEmpty())
+                    compilerFlagSchemesValue.resetToDefault();
+                else
+                    compilerFlagSchemesValue.setValue ({ *arr }, getUndoManager());
+
+                return;
+            }
+        }
+    }
+}
+
+//==============================================================================
 static String getCompanyNameOrDefault (StringRef str)
 {
     if (str.isEmpty())
@@ -1715,6 +1809,11 @@ String Project::getDefaultARAFactoryIDString() const
 String Project::getDefaultARADocumentArchiveID() const
 { 
     return "com.yourcompany." + CodeHelpers::makeValidIdentifier (getProjectNameString(), false, true, false) + ".aradocumentarchive." + getVersionString(); 
+}
+
+String Project::getDefaultARACompatibleArchiveIDs() const
+{
+    return String();
 }
 
 String Project::getAUMainTypeString() const noexcept
@@ -1843,7 +1942,7 @@ int Project::getARAContentTypes() const noexcept
 {
     int res = 0;
 
-    auto v = pluginARAContentTypeValue.get();
+    auto v = pluginARAAnalyzableContentValue.get();
 
     if (auto* arr = v.getArray())
     {
@@ -1883,6 +1982,11 @@ bool Project::isVSTPluginHost()
 bool Project::isVST3PluginHost()
 {
     return getEnabledModules().isModuleEnabled ("juce_audio_processors") && isConfigFlagEnabled ("JUCE_PLUGINHOST_VST3");
+}
+
+bool Project::isARAPluginHost()
+{
+    return isVST3PluginHost() && isConfigFlagEnabled ("JUCE_PLUGINHOST_ARA");
 }
 
 //==============================================================================
@@ -2012,7 +2116,6 @@ StringArray Project::getAllARAContentTypeStrings() noexcept
         "Notes",
         "Tempo Entries",
         "Bar Signatures",
-        "Signatures",
         "Static Tuning",
         "Dynamic Tuning Offsets",
         "Key Signatures",
@@ -2026,11 +2129,10 @@ Array<var> Project::getAllARAContentTypeVars() noexcept
         /*kARAContentTypeNotes =*/                1 << 0,
         /*kARAContentTypeTempoEntries =*/         1 << 1,
         /*kARAContentTypeBarSignatures =*/        1 << 2,
-        /*kARAContentTypeSignatures =*/           1 << 3,
-        /*kARAContentTypeStaticTuning =*/         1 << 4,
-        /*kARAContentTypeDynamicTuningOffsets =*/ 1 << 5,
-        /*kARAContentTypeKeySignatures =*/        1 << 6,
-        /*kARAContentTypeSheetChords =*/          1 << 7,
+        /*kARAContentTypeStaticTuning =*/         1 << 3,
+        /*kARAContentTypeDynamicTuningOffsets =*/ 1 << 4,
+        /*kARAContentTypeKeySignatures =*/        1 << 5,
+        /*kARAContentTypeSheetChords =*/          1 << 6,
     };
     return araContentVars;
 }

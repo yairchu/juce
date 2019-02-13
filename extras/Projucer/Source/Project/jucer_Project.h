@@ -111,6 +111,7 @@ public:
     String getDefaultPluginManufacturerString() const;
     String getDefaultARAFactoryIDString() const;
     String getDefaultARADocumentArchiveID() const;
+    String getDefaultARACompatibleArchiveIDs() const;
 
     String getCompanyNameString() const                  { return companyNameValue.get(); }
     String getCompanyCopyrightString() const             { return companyCopyrightValue.get(); }
@@ -131,6 +132,10 @@ public:
 
     String getCppStandardString() const                  { return cppStandardValue.get(); }
 
+    StringArray getCompilerFlagSchemes() const;
+    void addCompilerFlagScheme (const String&);
+    void removeCompilerFlagScheme (const String&);
+
     //==============================================================================
     String getPluginNameString() const                { return pluginNameValue.get(); }
     String getPluginDescriptionString() const         { return pluginDescriptionValue.get();}
@@ -142,7 +147,11 @@ public:
     String getARAFactoryIDString () const { return pluginARAFactoryIDValue.get (); }
     String getARADocumentArchiveIDString () const { return pluginARAArchiveIDValue.get (); }
     String getPluginAUExportPrefixString() const      { return pluginAUExportPrefixValue.get(); }
+
     String getPluginAUMainTypeString() const          { return pluginAUMainTypeValue.get(); }
+    String getARACompatibleArchiveIDStrings () const        { return pluginARACompatibleArchiveIDsValue.get (); }
+    String getVSTNumMIDIInputsString() const          { return pluginVSTNumMidiInputsValue.get(); }
+    String getVSTNumMIDIOutputsString() const         { return pluginVSTNumMidiOutputsValue.get(); }
 
     //==============================================================================
     static bool checkMultiChoiceVar (const ValueWithDefault& valueToCheck, Identifier idToCheck) noexcept
@@ -235,6 +244,7 @@ public:
     bool isAUPluginHost();
     bool isVSTPluginHost();
     bool isVST3PluginHost();
+    bool isARAPluginHost();
 
     //==============================================================================
     bool shouldBuildTargetType (ProjectType::Target::Type targetType) const noexcept;
@@ -296,6 +306,12 @@ public:
         bool shouldInhibitWarnings() const;
 
         bool isModuleCode() const;
+
+        Value getCompilerFlagSchemeValue();
+        String getCompilerFlagSchemeString() const;
+
+        void setCompilerFlagScheme (const String&);
+        void clearCurrentCompilerFlagScheme();
 
         //==============================================================================
         bool canContain (const Item& child) const;
@@ -430,12 +446,14 @@ private:
 
     ValueWithDefault projectNameValue, projectUIDValue, projectLineFeedValue, projectTypeValue, versionValue, bundleIdentifierValue, companyNameValue,
                      companyCopyrightValue, companyWebsiteValue, companyEmailValue, displaySplashScreenValue, reportAppUsageValue, splashScreenColourValue, cppStandardValue,
-                     headerSearchPathsValue, preprocessorDefsValue, userNotesValue, maxBinaryFileSizeValue, includeBinaryDataInJuceHeaderValue, binaryDataNamespaceValue;
+                     headerSearchPathsValue, preprocessorDefsValue, userNotesValue, maxBinaryFileSizeValue, includeBinaryDataInJuceHeaderValue, binaryDataNamespaceValue,
+                     compilerFlagSchemesValue;
 
     ValueWithDefault pluginFormatsValue, pluginNameValue, pluginDescriptionValue, pluginManufacturerValue, pluginManufacturerCodeValue,
                      pluginCodeValue, pluginChannelConfigsValue, pluginCharacteristicsValue, pluginAUExportPrefixValue, pluginAAXIdentifierValue,
                      pluginAUMainTypeValue, pluginAUSandboxSafeValue, pluginRTASCategoryValue, pluginVSTCategoryValue, pluginVST3CategoryValue, pluginAAXCategoryValue,
-                     pluginEnableARA, pluginARAContentTypeValue, pluginARAFactoryIDValue, pluginARAArchiveIDValue, pluginARATransformFlagsValue;
+                     pluginEnableARA, pluginARAAnalyzableContentValue, pluginARAFactoryIDValue, pluginARAArchiveIDValue, pluginARACompatibleArchiveIDsValue, pluginARATransformFlagsValue,
+                     pluginVSTNumMidiInputsValue, pluginVSTNumMidiOutputsValue;
 
     //==============================================================================
     std::unique_ptr<CompileEngineSettings> compileEngineSettings;

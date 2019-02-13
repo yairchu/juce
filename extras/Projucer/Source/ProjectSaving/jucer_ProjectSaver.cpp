@@ -128,6 +128,9 @@ void ProjectSaver::writePluginCharacteristicsFile()
     flags.set ("JucePlugin_ARATransformationFlags",      String (project.getARATransformationFlags()));
     flags.set ("JucePlugin_ARAFactoryID",                toStringLiteral(project.getARAFactoryIDString()));
     flags.set ("JucePlugin_ARADocumentArchiveID",        toStringLiteral(project.getARADocumentArchiveIDString()));
+    flags.set ("JucePlugin_ARACompatibleArchiveIDs",     toStringLiteral(project.getARACompatibleArchiveIDStrings()));
+    flags.set ("JucePlugin_VSTNumMidiInputs",            project.getVSTNumMIDIInputsString());
+    flags.set ("JucePlugin_VSTNumMidiOutputs",           project.getVSTNumMIDIOutputsString());
 
     {
         String plugInChannelConfig = project.getPluginChannelConfigsString();

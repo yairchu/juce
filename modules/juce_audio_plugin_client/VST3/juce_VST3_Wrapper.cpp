@@ -984,8 +984,6 @@ private:
                     w = roundToInt (w / editorScaleFactor);
                     h = roundToInt (h / editorScaleFactor);
 
-                    bool needToResizeHostWindow = false;
-
                     if (getHostType().type == PluginHostType::SteinbergCubase10)
                     {
                         auto integerScaleFactor = (int) std::round (editorScaleFactor);
@@ -996,8 +994,6 @@ private:
                         {
                             w /= integerScaleFactor;
                             h /= integerScaleFactor;
-
-                            needToResizeHostWindow = true;
                         }
                     }
                    #endif
@@ -1013,7 +1009,7 @@ private:
                         peer->updateBounds();
 
                    #if JUCE_WINDOWS && JUCE_WIN_PER_MONITOR_DPI_AWARE
-                    if (needToResizeHostWindow)
+                    if (getHostType().type == PluginHostType::SteinbergCubase10)
                         component->resizeHostWindow();
                    #endif
                 }
@@ -2184,7 +2180,13 @@ public:
             {
                 info.mediaType = Vst::kEvent;
                 info.direction = dir;
+
+               #ifdef JucePlugin_VSTNumMidiInputs
+                info.channelCount = JucePlugin_VSTNumMidiInputs;
+               #else
                 info.channelCount = 16;
+               #endif
+
                 toString128 (info.name, TRANS("MIDI Input"));
                 info.busType = Vst::kMain;
                 return kResultTrue;
@@ -2196,7 +2198,13 @@ public:
             {
                 info.mediaType = Vst::kEvent;
                 info.direction = dir;
+
+               #ifdef JucePlugin_VSTNumMidiOutputs
+                info.channelCount = JucePlugin_VSTNumMidiOutputs;
+               #else
                 info.channelCount = 16;
+               #endif
+
                 toString128 (info.name, TRANS("MIDI Output"));
                 info.busType = Vst::kMain;
                 return kResultTrue;
