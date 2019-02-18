@@ -11,13 +11,15 @@ ARAHostArchiveInputStream::ARAHostArchiveInputStream (ARA::PlugIn::HostArchiveRe
 int ARAHostArchiveInputStream::read (void* destBuffer, int maxBytesToRead)
 {
     const int bytesToRead = std::min (maxBytesToRead, (int) (size - position));
-    return
+    const int result =
         archiveReader->readBytesFromArchive (
             position,
             bytesToRead,
             (ARA::ARAByte*) destBuffer)
         ? bytesToRead
         : 0;
+    position += result;
+    return result;
 }
 
 bool ARAHostArchiveInputStream::setPosition (int64 newPosition)
