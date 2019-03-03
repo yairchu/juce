@@ -129,12 +129,13 @@ static bool readChannels (AudioFormatReader& reader, int** chans, AudioBuffer<fl
         chans[j] = reinterpret_cast<int*> (buffer->getWritePointer (j, startSample));
 
     chans[numTargetChannels] = nullptr;
-    const bool result = reader.read (chans, numTargetChannels, readerStartSample, numSamples, true);
+
+    bool success = reader.read (chans, numTargetChannels, readerStartSample, numSamples, true);
 
     if (convertToFloat)
         convertFixedToFloat (chans, numTargetChannels, numSamples);
 
-    return result;
+    return success;
 }
 
 bool AudioFormatReader::read (AudioBuffer<float>* buffer,
@@ -187,13 +188,13 @@ bool AudioFormatReader::read (AudioBuffer<float>* buffer,
         {
             int* chans[65];
             success = readChannels (*this, chans, buffer, startSample, numSamples,
-                                    readerStartSample, numTargetChannels, ! usesFloatingPointData);
+                          readerStartSample, numTargetChannels, ! usesFloatingPointData);
         }
         else
         {
             HeapBlock<int*> chans (numTargetChannels + 1);
             success = readChannels (*this, chans, buffer, startSample, numSamples,
-                                    readerStartSample, numTargetChannels, ! usesFloatingPointData);
+                          readerStartSample, numTargetChannels, ! usesFloatingPointData);
         }
     }
 

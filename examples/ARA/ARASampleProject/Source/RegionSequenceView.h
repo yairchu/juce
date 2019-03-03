@@ -11,9 +11,8 @@ class PlaybackRegionView;
     RegionSequenceView
     JUCE component used to display all ARA playback regions in a region sequences
 */
-// TODO JUCE_ARA this is no longer a view, but rather some container/controller for all views
-//               associated with a given region sequence - must rename accordingly.
-class RegionSequenceView  : private ARARegionSequence::Listener
+class RegionSequenceView  : public juce::Component,
+                            private ARARegionSequence::Listener
 {
 public:
     RegionSequenceView (DocumentView& documentView, ARARegionSequence* sequence);
@@ -23,13 +22,17 @@ public:
     Range<double> getTimeRange() const { return (regionSequence != nullptr) ? regionSequence->getTimeRange() : Range<double>(); }
     bool isEmpty() const { return (regionSequence == nullptr) || regionSequence->getPlaybackRegions().empty(); }
 
-    void setRegionsViewBoundsByYRange (int y, int height);
+    /* Updates current RegionSequence regions to new visible range */
+    void updateRegionsBounds (Range<double> newVisibleRange);
 
     // ARARegionSequence::Listener overrides
     void willRemovePlaybackRegionFromRegionSequence (ARARegionSequence* sequence, ARAPlaybackRegion* playbackRegion) override;
     void didAddPlaybackRegionToRegionSequence (ARARegionSequence* sequence, ARAPlaybackRegion* playbackRegion) override;
     void willDestroyRegionSequence (ARARegionSequence* sequence) override;
     void willUpdateRegionSequenceProperties (ARARegionSequence* regionSequence, ARARegionSequence::PropertiesPtr newProperties) override;
+
+    // juce::Component
+    void resized() override;
 
 private:
     void addRegionSequenceViewAndMakeVisible (ARAPlaybackRegion* playbackRegion);

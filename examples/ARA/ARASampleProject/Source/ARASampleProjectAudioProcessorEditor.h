@@ -21,7 +21,7 @@ public:
     void resized() override;
 
     // DocumentView::Listener overrides
-    void visibleTimeRangeChanged (Range<double> newVisibleTimeRange, double pixelsPerSecond) override;
+    void visibleTimeRangeChanged (Range<double> newVisibleTimeRange, double zoomFactor) override;
     void trackHeightChanged (int newTrackHeight) override;
 
     // juce::Timer
