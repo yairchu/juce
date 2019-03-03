@@ -94,6 +94,9 @@ void ARAAudioSourceReader::willDestroyAudioSource (ARAAudioSource* audioSource)
 bool ARAAudioSourceReader::readSamples (int** destSamples, int numDestChannels, int startOffsetInDestBuffer,
                                         int64 startSampleInFile, int numSamples)
 {
+    if (numSamples <= 0)
+        return true;
+
     int destSize = (bitsPerSample / 8) * numSamples;
     int bufferOffset = (bitsPerSample / 8) * startOffsetInDestBuffer;
 
@@ -372,6 +375,9 @@ bool ARARegionSequenceSourceReader::readSamples (
     int** destSamples, int numDestChannels, int startOffsetInDestBuffer,
     int64 startSampleInFile, int numSamples)
 {
+    if (numSamples <= 0)
+        return true;
+
     int destSize = (bitsPerSample / 8) * numSamples;
     int bufferOffset = (bitsPerSample / 8) * startOffsetInDestBuffer;
 
