@@ -174,7 +174,7 @@ void DocumentView::paint (Graphics& g)
 
 void DocumentView::resized()
 {
-    viewport.setBounds(getBounds());
+    viewport.setBounds (getLocalBounds());
     const int rulersViewHeight = 3 * 20;
     const int trackHeaderWidth = trackHeadersView.isVisible() ? trackHeadersView.getWidth() : 0;
     rulersView.setBounds (trackHeaderWidth, 0, viewport.getWidth(), rulersViewHeight);
