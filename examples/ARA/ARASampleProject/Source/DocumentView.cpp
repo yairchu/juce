@@ -9,6 +9,7 @@
 
 constexpr double kMinSecondDuration = 1.0;
 constexpr double kMinBorderSeconds = 1.0;
+constexpr int    kMinRegionSizeInPixels = 2;
 
 //==============================================================================
 DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, const AudioPlayHead::CurrentPositionInfo& posInfo)
@@ -305,7 +306,7 @@ void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double
         auto visibleRegionArea = newVisibleRange.getIntersectionWith (regionTimeRange);
         const auto start = mapper.getPixelForPosition (visibleRegionArea.getStart());
         const auto end   = mapper.getPixelForPosition (visibleRegionArea.getEnd());
-        regionView->setBounds (start, 0, end - start, regionView->getParentHeight());
+        regionView->setBounds (start, 0, jmax (kMinRegionSizeInPixels, end - start), regionView->getParentHeight());
     }
 }
 
