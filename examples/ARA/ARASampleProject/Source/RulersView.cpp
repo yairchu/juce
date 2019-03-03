@@ -1,78 +1,22 @@
 #include "RulersView.h"
 
 #include "ARA_Library/Utilities/ARAPitchInterpretation.h"
-#include "ARA_Library/Utilities/ARATimelineConversion.h"
 
 //==============================================================================
-RulersView::RulersView (DocumentView& documentView)
-    : documentView (documentView),
-      document (nullptr),
-      musicalContext (nullptr)
+RulersView::RulersView (TimelineViewport& timeline, AudioPlayHead::CurrentPositionInfo* hostPosition)
+    : timeline (timeline),
+      timeMapper (static_cast<const ARASecondsPixelMapper&>(timeline.getPixelMapper())),
+      optionalHostPosition (hostPosition)
 {
-    document = documentView.getARADocumentController()->getDocument<ARADocument>();
-    document->addListener (this);
-    findMusicalContext();
     lastPaintedPosition.resetToDefault();
     startTimerHz (10);
 }
 
-RulersView::~RulersView()
-{
-    detachFromMusicalContext();
-    detachFromDocument();
-}
-
-void RulersView::detachFromDocument()
-{
-    if (document == nullptr)
-        return;
-
-    document->removeListener (this);
-
-    document = nullptr;
-}
-
-void RulersView::detachFromMusicalContext()
-{
-    if (musicalContext == nullptr)
-        return;
-
-    musicalContext->removeListener (this);
-
-    musicalContext = nullptr;
-}
-
-void RulersView::findMusicalContext()
-{
-    // evaluate selection
-    ARAMusicalContext* newMusicalContext = nullptr;
-    auto viewSelection = documentView.getARAEditorView()->getViewSelection();
-    if (! viewSelection.getRegionSequences().empty())
-        newMusicalContext = viewSelection.getRegionSequences().front()->getMusicalContext<ARAMusicalContext>();
-    else if (! viewSelection.getPlaybackRegions().empty())
-        newMusicalContext = viewSelection.getPlaybackRegions().front()->getRegionSequence()->getMusicalContext<ARAMusicalContext>();
-
-    // if no context used yet and selection does not yield a new one, use the first musical context in the docment
-    if (musicalContext == nullptr && newMusicalContext == nullptr && ! document->getMusicalContexts().empty())
-        newMusicalContext = document->getMusicalContexts<ARAMusicalContext>().front();
-
-    if (newMusicalContext != nullptr && newMusicalContext != musicalContext)
-    {
-        detachFromMusicalContext();
-
-        musicalContext = newMusicalContext;
-        musicalContext->addListener (this);
-
-        repaint();
-    }
-}
-
 void RulersView::timerCallback()
 {
-    auto positionInfo = documentView.getPlayHeadPositionInfo();
-    if (lastPaintedPosition.ppqLoopStart != positionInfo.ppqLoopStart ||
-        lastPaintedPosition.ppqLoopEnd != positionInfo.ppqLoopEnd ||
-        lastPaintedPosition.isLooping  != positionInfo.isLooping)
+    if (optionalHostPosition != nullptr && (lastPaintedPosition.ppqLoopStart != optionalHostPosition->ppqLoopStart ||
+        lastPaintedPosition.ppqLoopEnd != optionalHostPosition->ppqLoopEnd ||
+        lastPaintedPosition.isLooping  != optionalHostPosition->isLooping))
     {
         repaint();
     }
@@ -85,16 +29,14 @@ void RulersView::paint (juce::Graphics& g)
 
     g.setColour (Colours::lightslategrey);
 
-    if (musicalContext == nullptr)
+    if (timeMapper.getCurrentMusicalContext() == nullptr)
     {
         g.setFont (Font (12.0f));
         g.drawText ("No musical context found in ARA document!", bounds, Justification::centred);
         return;
     }
 
-    const auto visibleRange = documentView.getVisibleTimeRange();
-    const ARA::PlugIn::HostContentReader<ARA::kARAContentTypeTempoEntries> tempoReader (musicalContext);
-    const ARA::TempoConverter<decltype (tempoReader)> tempoConverter (tempoReader);
+    const auto visibleRange = timeline.getVisibleRange();
 
     // we'll draw three rulers: seconds, beats, and chords
     constexpr int lightLineWidth = 1;
@@ -115,45 +57,42 @@ void RulersView::paint (juce::Graphics& g)
         {
             const int lineWidth = (time % 60 == 0) ? heavyLineWidth : lightLineWidth;
             const int lineHeight = (time % 10 == 0) ? secondsRulerHeight : secondsRulerHeight / 2;
-            const int x = documentView.getPlaybackRegionsViewsXForTime (time);
+            const int x = timeMapper.getPixelForPosition (time);
             rects.addWithoutMerging (Rectangle<int> (x - lineWidth / 2, secondsRulerY + secondsRulerHeight - lineHeight, lineWidth, lineHeight));
         }
         g.fillRectList (rects);
     }
+    g.setColour (juce::Colours::white);
     g.drawText ("seconds", bounds.withTrimmedRight (2), Justification::bottomRight);
 
     // beat ruler: evaluates tempo and bar signatures to draw a line for each beat
-    if (tempoReader)
+    if (timeMapper.canTempoMap())
     {
-        const ARA::PlugIn::HostContentReader<ARA::kARAContentTypeBarSignatures> barSignaturesReader (musicalContext);
-        const ARA::BarSignaturesConverter<decltype (barSignaturesReader)> barSignaturesConverter (barSignaturesReader);
-        if (barSignaturesReader)
+        RectangleList<int> rects;
+        const double beatStart = timeMapper.getBeatForQuarter (timeMapper.getQuarterForTime (visibleRange.getStart()));
+        const double beatEnd = timeMapper.getBeatForQuarter (timeMapper.getQuarterForTime (visibleRange.getEnd()));
+        const int endBeat = roundToInt (floor (beatEnd));
+        for (int beat = roundToInt (ceil (beatStart)); beat <= endBeat; ++beat)
         {
-            RectangleList<int> rects;
-            const double beatStart = barSignaturesConverter.getBeatForQuarter (tempoConverter.getQuarterForTime (visibleRange.getStart()));
-            const double beatEnd = barSignaturesConverter.getBeatForQuarter (tempoConverter.getQuarterForTime (visibleRange.getEnd()));
-            const int endBeat = roundToInt (floor (beatEnd));
-            for (int beat = roundToInt (ceil (beatStart)); beat <= endBeat; ++beat)
-            {
-                const auto quarterPos = barSignaturesConverter.getQuarterForBeat (beat);
-                const int x = documentView.getPlaybackRegionsViewsXForTime (tempoConverter.getTimeForQuarter (quarterPos));
-                const auto barSignature = barSignaturesConverter.getBarSignatureForQuarter (quarterPos);
-                const int lineWidth = (quarterPos == barSignature.position) ? heavyLineWidth : lightLineWidth;
-                const int beatsSinceBarStart = roundToInt( barSignaturesConverter.getBeatDistanceFromBarStartForQuarter (quarterPos));
-                const int lineHeight = (beatsSinceBarStart == 0) ? beatsRulerHeight : beatsRulerHeight / 2;
-                rects.addWithoutMerging (Rectangle<int> (x - lineWidth / 2, beatsRulerY + beatsRulerHeight - lineHeight, lineWidth, lineHeight));
-            }
-            g.fillRectList (rects);
+            const auto quarterPos = timeMapper.getQuarterForBeat (beat);
+            const int x = timeMapper.getPixelForQuarter(quarterPos);
+            const auto barSignature = timeMapper.getBarSignatureForQuarter (quarterPos);
+            const int lineWidth = (quarterPos == barSignature.position) ? heavyLineWidth : lightLineWidth;
+            const int beatsSinceBarStart = roundToInt( timeMapper.getBeatDistanceFromBarStartForQuarter (quarterPos));
+            const int lineHeight = (beatsSinceBarStart == 0) ? beatsRulerHeight : beatsRulerHeight / 2;
+
+            rects.addWithoutMerging (Rectangle<int> (x - lineWidth / 2, beatsRulerY + beatsRulerHeight - lineHeight, lineWidth, lineHeight));
         }
+        g.fillRectList (rects);
     }
     g.drawText ("beats", bounds.withTrimmedRight (2).withTrimmedBottom (secondsRulerHeight), Justification::bottomRight);
 
     // chord ruler: one rect per chord, skipping empty "no chords"
-    if (tempoReader)
+    if (timeMapper.canTempoMap())
     {
         RectangleList<int> rects;
         const ARA::ChordInterpreter interpreter;
-        const ARA::PlugIn::HostContentReader<ARA::kARAContentTypeSheetChords> chordsReader (musicalContext);
+        const ARA::PlugIn::HostContentReader<ARA::kARAContentTypeSheetChords> chordsReader (timeMapper.getCurrentMusicalContext());
         for (auto itChord = chordsReader.begin(); itChord != chordsReader.end(); ++itChord)
         {
             if (interpreter.isNoChord (*itChord))
@@ -161,21 +100,21 @@ void RulersView::paint (juce::Graphics& g)
 
             Rectangle<int> chordRect = bounds;
             chordRect.setVerticalRange (Range<int> (chordRulerY, chordRulerY + chordRulerHeight));
-            
+
             // find the starting position of the chord in pixels
             const auto chordStartTime = (itChord == chordsReader.begin()) ?
-                                            documentView.getTimeRange().getStart() : tempoConverter.getTimeForQuarter (itChord->position);
+                                            timeline.getTimelineRange().getStart() : timeMapper.getTimeForQuarter (itChord->position);
             if (chordStartTime >= visibleRange.getEnd())
                 break;
-            chordRect.setLeft (documentView.getPlaybackRegionsViewsXForTime (chordStartTime));
+            chordRect.setLeft (timeMapper.getPixelForPosition (chordStartTime));
 
             // if we have a chord after this one, use its starting position to end our rect
             if (std::next(itChord) != chordsReader.end())
             {
-                const auto nextChordStartTime = tempoConverter.getTimeForQuarter (std::next (itChord)->position);
+                const auto nextChordStartTime = timeMapper.getTimeForQuarter (std::next (itChord)->position);
                 if (nextChordStartTime < visibleRange.getStart())
                     continue;
-                chordRect.setRight (documentView.getPlaybackRegionsViewsXForTime (nextChordStartTime));
+                chordRect.setRight (timeMapper.getPixelForPosition (nextChordStartTime));
             }
 
             // draw chord rect and name
@@ -186,12 +125,13 @@ void RulersView::paint (juce::Graphics& g)
     g.drawText ("chords", bounds.withTrimmedRight (2).withTrimmedBottom (beatsRulerHeight + secondsRulerHeight), Justification::bottomRight);
 
     // locators
+    if (optionalHostPosition != nullptr)
     {
-        lastPaintedPosition = documentView.getPlayHeadPositionInfo();
-        const auto startInSeconds = tempoConverter.getTimeForQuarter (lastPaintedPosition.ppqLoopStart);
-        const auto endInSeconds = tempoConverter.getTimeForQuarter (lastPaintedPosition.ppqLoopEnd);
-        const int startX = documentView.getPlaybackRegionsViewsXForTime (startInSeconds);
-        const int endX = documentView.getPlaybackRegionsViewsXForTime (endInSeconds);
+        lastPaintedPosition = *optionalHostPosition;
+        const auto startInSeconds = timeMapper.getTimeForQuarter (lastPaintedPosition.ppqLoopStart);
+        const auto endInSeconds = timeMapper.getTimeForQuarter (lastPaintedPosition.ppqLoopEnd);
+        const int startX = timeMapper.getPixelForPosition (startInSeconds);
+        const int endX = timeMapper.getPixelForPosition (endInSeconds);
         g.setColour (lastPaintedPosition.isLooping ? Colours::skyblue.withAlpha (0.3f) : Colours::white.withAlpha (0.3f));
         g.fillRect (startX, bounds.getY(), endX - startX, bounds.getHeight());
     }
@@ -210,57 +150,21 @@ void RulersView::paint (juce::Graphics& g)
 void RulersView::mouseDown (const MouseEvent& event)
 {
     // use mouse click to set the playhead position in the host (if they provide a playback controller interface)
-    auto playbackController = musicalContext->getDocument()->getDocumentController()->getHostInstance()->getPlaybackController();
-    if (playbackController != nullptr)
-        playbackController->requestSetPlaybackPosition (documentView.getPlaybackRegionsViewsTimeForX (roundToInt (event.position.x)));
+    if (auto* musicalCtx = timeMapper.getCurrentMusicalContext())
+    {
+        auto playbackController = musicalCtx->getDocument()->getDocumentController()->getHostInstance()->getPlaybackController();
+        if (playbackController != nullptr)
+            playbackController->requestSetPlaybackPosition (timeMapper.getPositionForPixel( roundToInt (event.position.x)));
+    }
 }
 
 void RulersView::mouseDoubleClick (const MouseEvent& /*event*/)
 {
     // use mouse double click to start host playback (if they provide a playback controller interface)
-    auto playbackController = musicalContext->getDocument()->getDocumentController()->getHostInstance()->getPlaybackController();
-    if (playbackController != nullptr)
-        playbackController->requestStartPlayback();
-}
-
-//==============================================================================
-
-void RulersView::onNewSelection (const ARA::PlugIn::ViewSelection& /*viewSelection*/)
-{
-    findMusicalContext();
-}
-
-void RulersView::didEndEditing (ARADocument* /*doc*/)
-{
-    if (musicalContext == nullptr)
-        findMusicalContext();
-}
-
-void RulersView::willRemoveMusicalContextFromDocument (ARADocument* doc, ARAMusicalContext* context)
-{
-    jassert (document == doc);
-
-    if (musicalContext == context)
-        detachFromMusicalContext();     // will restore in didEndEditing()
-}
-
-void RulersView::didReorderMusicalContextsInDocument (ARADocument* doc)
-{
-    jassert (document == doc);
-
-    if (musicalContext != document->getMusicalContexts().front())
-        detachFromMusicalContext();     // will restore in didEndEditing()
-}
- void RulersView::willDestroyDocument (ARADocument* doc)
-{
-    jassert (document == doc);
-
-    detachFromDocument();
-}
-
-void RulersView::doUpdateMusicalContextContent (ARAMusicalContext* context, ARAContentUpdateScopes /*scopeFlags*/)
-{
-    jassert (musicalContext == context);
-
-    repaint();
+    if (auto* musicalCtx = timeMapper.getCurrentMusicalContext())
+    {
+        auto playbackController = musicalCtx->getDocument()->getDocumentController()->getHostInstance()->getPlaybackController();
+        if (playbackController != nullptr)
+            playbackController->requestStartPlayback();
+    }
 }

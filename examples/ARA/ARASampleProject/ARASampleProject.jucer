@@ -10,6 +10,18 @@
   <MAINGROUP id="aCHzDP" name="ARASampleProject">
     <GROUP id="{38BAE513-FAF5-0AD7-A598-7A51E0C50CB5}" name="Source">
       <GROUP id="{CDA2CA2E-5333-DEA8-40AE-535794378ABD}" name="Views">
+        <FILE id="Y2B0P2" name="ARASecondsPixelMapper.cpp" compile="1" resource="0"
+              file="Source/ARASecondsPixelMapper.cpp"/>
+        <FILE id="T7AkXl" name="ARASecondsPixelMapper.h" compile="0" resource="0"
+              file="Source/ARASecondsPixelMapper.h"/>
+        <GROUP id="{9C0A3136-BD4E-69FE-80D6-D020A2A4EA23}" name="TimelineViewport">
+          <FILE id="dY055h" name="TimelinePixelMapper.h" compile="0" resource="0"
+                file="Source/TimelineViewport/TimelinePixelMapper.h"/>
+          <FILE id="hPNTHG" name="TimelineViewport.cpp" compile="1" resource="0"
+                file="Source/TimelineViewport/TimelineViewport.cpp"/>
+          <FILE id="LfmNX3" name="TimelineViewport.h" compile="0" resource="0"
+                file="Source/TimelineViewport/TimelineViewport.h"/>
+        </GROUP>
         <FILE id="zyUNuy" name="DocumentView.cpp" compile="1" resource="0"
               file="Source/DocumentView.cpp"/>
         <FILE id="v4hOwL" name="DocumentView.h" compile="0" resource="0" file="Source/DocumentView.h"/>

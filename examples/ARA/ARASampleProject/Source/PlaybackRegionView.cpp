@@ -55,9 +55,10 @@ void PlaybackRegionView::paint (Graphics& g)
         auto clipBounds = g.getClipBounds();
         if (clipBounds.getWidth() > 0)
         {
+            const auto& mapper = documentView.getTimeMapper();
             const auto convertedBounds = clipBounds + getBoundsInParent().getPosition();
-            const double startTime = documentView.getPlaybackRegionsViewsTimeForX (convertedBounds.getX());
-            const double endTime = documentView.getPlaybackRegionsViewsTimeForX (convertedBounds.getRight());
+            const double startTime = mapper.getPositionForPixel (convertedBounds.getX());
+            const double endTime = mapper.getPositionForPixel (convertedBounds.getRight());
 
             const auto regionTimeRange = getTimeRange();
 
@@ -107,8 +108,7 @@ void PlaybackRegionView::didEndEditing (ARADocument* document)
     if ((playbackRegionReader ==  nullptr) || ! playbackRegionReader->isValid())
     {
         recreatePlaybackRegionReader();
-        documentView.resized();
-        repaint();
+        documentView.setRegionBounds (this, documentView.getVisibleTimeRange());
     }
 }
 
@@ -140,7 +140,7 @@ void PlaybackRegionView::willUpdatePlaybackRegionProperties (ARAPlaybackRegion* 
     if ((playbackRegion->getName() != newProperties->name) ||
         (playbackRegion->getColor() != newProperties->color))
     {
-        repaint();
+        documentView.setRegionBounds (this, documentView.getVisibleTimeRange());
     }
 }
 
@@ -154,8 +154,7 @@ void PlaybackRegionView::didUpdatePlaybackRegionContent (ARAPlaybackRegion* regi
     if (scopeFlags.affectSamples() &&
         ! playbackRegion->getAudioModification()->getAudioSource()->getDocument()->getDocumentController()->isHostEditingDocument())
     {
-        documentView.resized();
-        repaint();
+        documentView.setRegionBounds (this, documentView.getVisibleTimeRange());
     }
 }
 

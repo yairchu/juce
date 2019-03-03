@@ -2,7 +2,9 @@
 
 #include "JuceHeader.h"
 
-class RulersView;
+#include "TimelineViewport/TimelineViewport.h"
+#include "RulersView.h"
+
 class TrackHeaderView;
 class RegionSequenceView;
 class PlaybackRegionView;
@@ -75,32 +77,12 @@ public:
     template<typename DocumentController_t = ARADocumentController>
     DocumentController_t* getARADocumentController() const noexcept { return araExtension.getARADocumentController<DocumentController_t>(); }
 
-    // total time range
-    Range<double> getTimeRange() const { return timeRange; }
-
-    // currently visible time range
-    Range<double> getVisibleTimeRange() const;
-// TODO JUCE_ARA if we want to make this into a reusable view, then zooming should use this primitive:
-//  void setVisibleTimeRange (double start, double end);
-//  It would limit the new visibile range to getTimeRange(), trying to keep requested duration unchanged.
-//  Another method zoomBy(float factor) can be added on top of this, which deals with keeping the relative
-//  playhead positon unchanged if it is visible while zooming, otherwise keeps current view centered.
-//  This will be easy to do since it is all in linear time now.
-
-    // may return nullptr
-    ARAMusicalContext* getCurrentMusicalContext() const;
-
-    // convert between time and x coordinate
-    int getPlaybackRegionsViewsXForTime (double time) const;
-    double getPlaybackRegionsViewsTimeForX (int x) const;
+    const ARASecondsPixelMapper& getTimeMapper() { return timeMapper; }
 
     // flag that our view needs to be rebuilt
     void invalidateRegionSequenceViews();
 
-    Component& getPlaybackRegionsView() { return playbackRegionsView; }
     Component& getTrackHeadersView() { return trackHeadersView; }
-    Viewport& getTrackHeadersViewport() { return trackHeadersViewport; }
-    Viewport& getRulersViewport() { return rulersViewport; }
 
     AudioFormatManager& getAudioFormatManger() { return audioFormatManger; }
 
@@ -110,15 +92,12 @@ public:
     void setShowOnlySelectedRegionSequences (bool newVal);
     bool isShowingOnlySelectedRegionSequences() { return showOnlySelectedRegionSequences; }
 
-    void setIsRulersVisible (bool shouldBeVisible);
-    bool isRulersVisible() const { return rulersViewport.isVisible(); }
-
     void setIsTrackHeadersVisible (bool shouldBeVisible);
-    bool isTrackHeadersVisible() const { return trackHeadersViewport.isVisible(); }
+    bool isTrackHeadersVisible() const { return trackHeadersView.isVisible(); }
 
-    int getTrackHeaderWidth() const { return trackHeadersViewport.getWidth(); }
-    int getTrackHeaderMaximumWidth () { return trackHeadersViewport.getMaximumWidth(); }
-    int getTrackHeaderMinimumWidth () { return trackHeadersViewport.getMinimumWidth(); }
+    int getTrackHeaderWidth() const { return trackHeadersView.getWidth(); }
+    int getTrackHeaderMaximumWidth () { return trackHeadersView.getMaximumWidth(); }
+    int getTrackHeaderMinimumWidth () { return trackHeadersView.getMinimumWidth(); }
     void setTrackHeaderWidth (int newWidth);
     void setTrackHeaderMaximumWidth (int newWidth);
     void setTrackHeaderMinimumWidth (int newWidth);
@@ -126,13 +105,19 @@ public:
     void setScrollFollowsPlayHead (bool followPlayHead) { scrollFollowsPlayHead = followPlayHead; }
     bool isScrollFollowingPlayHead() const { return scrollFollowsPlayHead; }
 
-    void setPixelsPerSecond (double newValue);
-    double getPixelsPerSecond() const { return pixelsPerSecond; }
-    bool isMaximumPixelsPerSecond() const { return pixelsPerSecond > minPixelsPerSecond; }
-    bool isMinimumPixelsPerSecond() const { return pixelsPerSecond < maxPixelsPerSecond; }
+    void setVisibleTimeRange (Range<double> newRange) { viewport.setVisibleRange (newRange); };
+    void zoomBy (double newValue);
 
     void setTrackHeight (int newHeight);
     int getTrackHeight() const { return trackHeight; }
+
+    /** Returns borders of "static" components within the viewport */
+    BorderSize<int> getViewportBorders() { return viewport.getViewedComponentBorders(); };
+
+    Range<double> getVisibleTimeRange() { return viewport.getVisibleRange(); }
+
+    /** Get ScrollBar components owned by the viewport, this allows further customization */
+    juce::ScrollBar& getScrollBar (bool isVertical) { return viewport.getScrollBar (isVertical); }
 
     //==============================================================================
     void parentHierarchyChanged() override;
@@ -150,6 +135,9 @@ public:
     void didEndEditing (ARADocument* document) override;
     void didAddRegionSequenceToDocument (ARADocument* document, ARARegionSequence* regionSequence) override;
     void didReorderRegionSequencesInDocument (ARADocument* document) override;
+
+    // update region to range (if needed)
+    void setRegionBounds (PlaybackRegionView*, Range<double>);
 
     //==============================================================================
     /**
@@ -170,9 +158,9 @@ public:
             This happens when being scrolled or zoomed/scaled on the horizontal axis.
 
          @param newVisibleTimeRange       the new range of the document that's currently visible.
-         @param pixelsPerSecond           current pixels per second.
+         @param zoomFactor                current ratio between pixels and timeline baseunit.
          */
-        virtual void visibleTimeRangeChanged (Range<double> newVisibleTimeRange, double pixelsPerSecond) = 0;
+        virtual void visibleTimeRangeChanged (Range<double> newVisibleTimeRange, double zoomFactor) = 0;
 
         /** Called when a trackHeight is changed.
 
@@ -222,22 +210,12 @@ private:
         DocumentView& documentView;
     };
 
-    // simple utility class to partially sync scroll postions of our view ports
-    class ScrollMasterViewport    : public Viewport
-    {
-    public:
-        ScrollMasterViewport (DocumentView& documentView) : documentView (documentView) {};
-        void visibleAreaChanged (const Rectangle<int>& newVisibleArea) override;
-    private:
-        DocumentView& documentView;
-    };
-
     // resizable container of TrackHeaderViews
-    class TrackHeadersViewport    : public Viewport,
-                                    public ComponentBoundsConstrainer
+    class TrackHeadersView    : public Component,
+                                public ComponentBoundsConstrainer
     {
     public:
-        TrackHeadersViewport (DocumentView& documentView);
+        TrackHeadersView (DocumentView& documentView);
         void setIsResizable (bool isResizable);
         void resized() override;
     private:
@@ -247,30 +225,23 @@ private:
 
     const AudioProcessorEditorARAExtension& araExtension;
 
+    TrackHeadersView trackHeadersView;
+    TimelineViewport viewport;
+    const ARASecondsPixelMapper& timeMapper;
+    RulersView rulersView;
+
     OwnedArray<RegionSequenceView> regionSequenceViews;
 
-    ScrollMasterViewport playbackRegionsViewport;
-    Component playbackRegionsView;
     PlayHeadView playHeadView;
     TimeRangeSelectionView timeRangeSelectionView;
-    TrackHeadersViewport trackHeadersViewport;
-    Component trackHeadersView;
-    Viewport rulersViewport;
-    std::unique_ptr<RulersView> rulersView;
-
     AudioFormatManager audioFormatManger;
 
     // Component View States
     bool scrollFollowsPlayHead = true;
     bool showOnlySelectedRegionSequences = true;
 
-    double pixelsPerSecond;
-    double maxPixelsPerSecond, minPixelsPerSecond;
-
     int trackHeight = 80;
-
     bool regionSequenceViewsAreInvalid = true;
-    Range<double> timeRange;
 
     juce::AudioPlayHead::CurrentPositionInfo lastReportedPosition;
     const juce::AudioPlayHead::CurrentPositionInfo& positionInfo;

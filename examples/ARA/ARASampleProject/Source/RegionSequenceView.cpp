@@ -12,7 +12,6 @@ RegionSequenceView::RegionSequenceView (DocumentView& documentView, ARARegionSeq
     regionSequence->addListener (this);
 
     documentView.getTrackHeadersView().addAndMakeVisible (*trackHeaderView);
-
     for (auto playbackRegion : regionSequence->getPlaybackRegions<ARAPlaybackRegion>())
         addRegionSequenceViewAndMakeVisible (playbackRegion);
 }
@@ -26,7 +25,8 @@ void RegionSequenceView::addRegionSequenceViewAndMakeVisible (ARAPlaybackRegion*
 {
     auto view = documentView.createViewForPlaybackRegion (playbackRegion);
     playbackRegionViews.add (view);
-    documentView.getPlaybackRegionsView().addAndMakeVisible (view);
+    addChildComponent (view);
+    documentView.setRegionBounds (view, documentView.getVisibleTimeRange());
 }
 
 void RegionSequenceView::detachFromRegionSequence()
@@ -40,16 +40,23 @@ void RegionSequenceView::detachFromRegionSequence()
 }
 
 //==============================================================================
-void RegionSequenceView::setRegionsViewBoundsByYRange (int y, int height)
+void RegionSequenceView::updateRegionsBounds (Range<double> newVisibleRange)
 {
-    trackHeaderView->setBounds (0, y, trackHeaderView->getParentWidth(), height);
-
     for (auto regionView : playbackRegionViews)
     {
-        const auto regionTimeRange = regionView->getTimeRange();
-        const int startX = documentView.getPlaybackRegionsViewsXForTime (regionTimeRange.getStart());
-        const int endX = documentView.getPlaybackRegionsViewsXForTime (regionTimeRange.getEnd());
-        regionView->setBounds (startX, y, endX - startX, height);
+        documentView.setRegionBounds (regionView, newVisibleRange);
+    }
+}
+
+void RegionSequenceView::resized()
+{
+    // updates TrackHeader height, width is handled by the TrackHeaderView
+    trackHeaderView->setBounds (0, getBoundsInParent().getY(), trackHeaderView->getParentWidth(), getHeight());
+    // updates all visible PlaybackRegions to new position.
+    for (auto region : playbackRegionViews)
+    {
+        if (region->isVisible())
+            region->setBounds (region->getBounds().withHeight(getHeight()));
     }
 }
 
@@ -62,6 +69,7 @@ void RegionSequenceView::willRemovePlaybackRegionFromRegionSequence (ARARegionSe
     {
         if (playbackRegionViews[i]->getPlaybackRegion() == playbackRegion)
         {
+            removeChildComponent (playbackRegionViews[i]);
             playbackRegionViews.remove (i);
             break;
         }

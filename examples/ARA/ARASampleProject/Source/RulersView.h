@@ -2,7 +2,8 @@
 
 #include "JuceHeader.h"
 
-#include "DocumentView.h"
+#include "TimelineViewport/TimelineViewport.h"
+#include "ARASecondsPixelMapper.h"
 
 //==============================================================================
 /**
@@ -10,31 +11,12 @@
     JUCE component used to display rulers for song time (in seconds and musical beats) and chords
 */
 class RulersView  : public Component,
-                    private ARAEditorView::Listener,
-                    private ARADocument::Listener,
-                    private ARAMusicalContext::Listener,
                     private juce::Timer
 {
 public:
-    RulersView (DocumentView& documentView);
-    ~RulersView();
-
-    // may return nullptr
-    ARAMusicalContext* getCurrentMusicalContext() const { return musicalContext; }
+    RulersView (TimelineViewport& timeline, AudioPlayHead::CurrentPositionInfo* optionalHostPosition = nullptr);
 
     void paint (Graphics&) override;
-
-    // ARAEditorView::Listener overrides
-    void onNewSelection (const ARA::PlugIn::ViewSelection& viewSelection) override;
-
-    // ARADocument::Listener overrides
-    void didEndEditing (ARADocument* document) override;
-    void willRemoveMusicalContextFromDocument (ARADocument* document, ARAMusicalContext* musicalContext) override;
-    void didReorderMusicalContextsInDocument (ARADocument* document) override;
-    void willDestroyDocument (ARADocument* document) override;
-
-    // ARAMusicalContext::Listener overrides
-    void doUpdateMusicalContextContent (ARAMusicalContext* context, ARAContentUpdateScopes scopeFlags) override;
 
     // MouseListener overrides
     void mouseDown (const MouseEvent& event) override;
@@ -44,15 +26,11 @@ public:
     void timerCallback() override;
 
 private:
-    void detachFromDocument();
-    void detachFromMusicalContext();
-    void findMusicalContext();
-
-private:
-    DocumentView& documentView;
+    TimelineViewport& timeline;
+    const ARASecondsPixelMapper& timeMapper;
     ARADocument* document;
-    ARAMusicalContext* musicalContext;
     AudioPlayHead::CurrentPositionInfo lastPaintedPosition;
+    AudioPlayHead::CurrentPositionInfo* optionalHostPosition;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RulersView)
 };
