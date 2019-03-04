@@ -9,6 +9,7 @@
 
 constexpr double kMinSecondDuration = 1.0;
 constexpr double kMinBorderSeconds = 1.0;
+constexpr int    kMinRegionSizeInPixels = 2;
 
 //==============================================================================
 DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, const AudioPlayHead::CurrentPositionInfo& posInfo)
@@ -31,6 +32,7 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
     }
 
     viewport.setViewedComponent (new Component());
+    createRulers();
     viewport.addAndMakeVisible (rulersView);
     viewport.addAndMakeVisible (playHeadView);
     playHeadView.setAlwaysOnTop (true);
@@ -82,6 +84,12 @@ TrackHeaderView* DocumentView::createHeaderViewForRegionSequence (ARARegionSeque
 RegionSequenceView* DocumentView::createViewForRegionSequence (ARARegionSequence* regionSequence)
 {
     return new RegionSequenceView (*this, regionSequence);
+}
+
+void DocumentView::createRulers()
+{
+    setRulersHeight (3 * 20);
+    rulersView.addDefaultRulers();
 }
 
 //==============================================================================
@@ -159,6 +167,11 @@ void DocumentView::setTrackHeight (int newHeight)
                                            });
 }
 
+void DocumentView::setRulersHeight (int rulersHeight)
+{
+    DocumentView::rulersHeight = rulersHeight;
+}
+
 //==============================================================================
 void DocumentView::parentHierarchyChanged()
 {
@@ -175,9 +188,8 @@ void DocumentView::paint (Graphics& g)
 void DocumentView::resized()
 {
     viewport.setBounds (getLocalBounds());
-    const int rulersViewHeight = 3 * 20;
     const int trackHeaderWidth = trackHeadersView.isVisible() ? trackHeadersView.getWidth() : 0;
-    rulersView.setBounds (trackHeaderWidth, 0, viewport.getWidth(), rulersViewHeight);
+    rulersView.setBounds (0, 0, viewport.getWidth(), rulersHeight);
     const int minTrackHeight = (viewport.getHeightExcludingBorders() / (regionSequenceViews.isEmpty() ? 1 : regionSequenceViews.size()));
     if (showOnlySelectedRegionSequences)
         setTrackHeight (minTrackHeight);
@@ -191,10 +203,10 @@ void DocumentView::resized()
         v->setBounds (trackHeaderWidth, y, getWidth(), trackHeight);
         y += trackHeight;
     }
-    viewport.setViewedComponentBorders (BorderSize<int>(rulersViewHeight, trackHeaderWidth, 0, 0));
+    viewport.setViewedComponentBorders (BorderSize<int>(rulersHeight, trackHeaderWidth, 0, 0));
     viewport.getViewedComponent()->setBounds (0, 0, getWidth(), y);
     trackHeadersView.setBounds (0, 0, getTrackHeaderWidth(), viewport.getViewedComponent()->getHeight());
-    playHeadView.setBounds (trackHeaderWidth, rulersViewHeight, viewport.getWidthExcludingBorders(), viewport.getHeightExcludingBorders());
+    playHeadView.setBounds (trackHeaderWidth, rulersHeight, viewport.getWidthExcludingBorders(), viewport.getHeightExcludingBorders());
     // apply needed borders
     auto timeRangeBounds = viewport.getViewedComponent()->getBounds();
     timeRangeBounds.setTop (0);
@@ -305,7 +317,7 @@ void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double
         auto visibleRegionArea = newVisibleRange.getIntersectionWith (regionTimeRange);
         const auto start = mapper.getPixelForPosition (visibleRegionArea.getStart());
         const auto end   = mapper.getPixelForPosition (visibleRegionArea.getEnd());
-        regionView->setBounds (start, 0, end - start, regionView->getParentHeight());
+        regionView->setBounds (start, 0, jmax (kMinRegionSizeInPixels, end - start), regionView->getParentHeight());
     }
 }
 

@@ -70,6 +70,11 @@ public:
      */
     virtual TrackHeaderView* createHeaderViewForRegionSequence (ARARegionSequence*);
 
+    /*
+     Creates a rulers to be shown on rulersView.
+     This allows setting custom rulers as required.
+     */
+    virtual void createRulers();
 
     template<typename EditorView_t = ARAEditorView>
     EditorView_t* getARAEditorView() const noexcept { return araExtension.getARAEditorView<EditorView_t>(); }
@@ -110,6 +115,9 @@ public:
 
     void setTrackHeight (int newHeight);
     int getTrackHeight() const { return trackHeight; }
+
+    void setRulersHeight (int rulersHeight);
+    int getRulersHeight() const { return rulersHeight; }
 
     /** Returns borders of "static" components within the viewport */
     BorderSize<int> getViewportBorders() { return viewport.getViewedComponentBorders(); };
@@ -241,6 +249,7 @@ private:
     bool showOnlySelectedRegionSequences = true;
 
     int trackHeight = 80;
+    int rulersHeight = 20;
     bool regionSequenceViewsAreInvalid = true;
 
     juce::AudioPlayHead::CurrentPositionInfo lastReportedPosition;
