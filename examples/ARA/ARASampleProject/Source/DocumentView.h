@@ -100,6 +100,11 @@ public:
     void setIsTrackHeadersVisible (bool shouldBeVisible);
     bool isTrackHeadersVisible() const { return trackHeadersView.isVisible(); }
 
+    /* Sets if DocumentView should show ARAEditor ViewSelection */
+    void setIsViewSelectionVisible (bool isVisible) { timeRangeSelectionView.setVisible (isVisible); }
+    /* @return true if DocumentView is showing ARAEditor ViewSelection */
+    bool getIsViewSelectionVisible() { return timeRangeSelectionView.isVisible(); }
+
     int getTrackHeaderWidth() const { return trackHeadersView.getWidth(); }
     int getTrackHeaderMaximumWidth () { return trackHeadersView.getMaximumWidth(); }
     int getTrackHeaderMinimumWidth () { return trackHeadersView.getMinimumWidth(); }
