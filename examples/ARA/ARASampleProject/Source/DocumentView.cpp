@@ -393,7 +393,10 @@ void DocumentView::removeListener (Listener* const listener)
 //==============================================================================
 DocumentView::PlayHeadView::PlayHeadView (DocumentView& documentView)
     : documentView (documentView)
-{}
+{
+    setInterceptsMouseClicks (false, true);
+    setWantsKeyboardFocus (false);
+}
 
 void DocumentView::PlayHeadView::paint (juce::Graphics &g)
 {
@@ -410,7 +413,10 @@ void DocumentView::PlayHeadView::paint (juce::Graphics &g)
 //==============================================================================
 DocumentView::TimeRangeSelectionView::TimeRangeSelectionView (DocumentView& documentView)
     : documentView (documentView)
-{}
+{
+    setInterceptsMouseClicks (false, true);
+    setWantsKeyboardFocus (false);
+}
 
 void DocumentView::TimeRangeSelectionView::paint (juce::Graphics& g)
 {
