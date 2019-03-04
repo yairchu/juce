@@ -118,6 +118,7 @@ public:
 
     void setRulersHeight (int rulersHeight);
     int getRulersHeight() const { return rulersHeight; }
+    RulersView& getRulersView() { return rulersView; }
 
     /** Returns borders of "static" components within the viewport */
     BorderSize<int> getViewportBorders() { return viewport.getViewedComponentBorders(); };
