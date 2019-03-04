@@ -88,6 +88,7 @@ RegionSequenceView* DocumentView::createViewForRegionSequence (ARARegionSequence
 
 void DocumentView::createRulers()
 {
+    setRulersHeight (3 * 20);
     rulersView.addDefaultRulers();
 }
 
@@ -166,6 +167,11 @@ void DocumentView::setTrackHeight (int newHeight)
                                            });
 }
 
+void DocumentView::setRulersHeight (int rulersHeight)
+{
+    DocumentView::rulersHeight = rulersHeight;
+}
+
 //==============================================================================
 void DocumentView::parentHierarchyChanged()
 {
@@ -182,9 +188,8 @@ void DocumentView::paint (Graphics& g)
 void DocumentView::resized()
 {
     viewport.setBounds (getLocalBounds());
-    const int rulersViewHeight = 3 * 20;
     const int trackHeaderWidth = trackHeadersView.isVisible() ? trackHeadersView.getWidth() : 0;
-    rulersView.setBounds (0, 0, viewport.getWidth(), rulersViewHeight);
+    rulersView.setBounds (0, 0, viewport.getWidth(), rulersHeight);
     const int minTrackHeight = (viewport.getHeightExcludingBorders() / (regionSequenceViews.isEmpty() ? 1 : regionSequenceViews.size()));
     if (showOnlySelectedRegionSequences)
         setTrackHeight (minTrackHeight);
@@ -198,10 +203,10 @@ void DocumentView::resized()
         v->setBounds (trackHeaderWidth, y, getWidth(), trackHeight);
         y += trackHeight;
     }
-    viewport.setViewedComponentBorders (BorderSize<int>(rulersViewHeight, trackHeaderWidth, 0, 0));
+    viewport.setViewedComponentBorders (BorderSize<int>(rulersHeight, trackHeaderWidth, 0, 0));
     viewport.getViewedComponent()->setBounds (0, 0, getWidth(), y);
     trackHeadersView.setBounds (0, 0, getTrackHeaderWidth(), viewport.getViewedComponent()->getHeight());
-    playHeadView.setBounds (trackHeaderWidth, rulersViewHeight, viewport.getWidthExcludingBorders(), viewport.getHeightExcludingBorders());
+    playHeadView.setBounds (trackHeaderWidth, rulersHeight, viewport.getWidthExcludingBorders(), viewport.getHeightExcludingBorders());
     // apply needed borders
     auto timeRangeBounds = viewport.getViewedComponent()->getBounds();
     timeRangeBounds.setTop (0);
