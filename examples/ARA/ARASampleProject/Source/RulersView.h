@@ -16,7 +16,15 @@ class RulersView  : public Component,
 public:
     RulersView (TimelineViewport& timeline, AudioPlayHead::CurrentPositionInfo* optionalHostPosition = nullptr);
 
+    void addRulerComponent (Component* rulerToOwn);
+
+    void addDefaultRulers();
+
     void paint (Graphics&) override;
+    void resized() override;
+
+    void setIsLocatorsVisible (bool isVisible) { shouldShowLocators = isVisible; }
+    bool isLocatorsVisible() { return shouldShowLocators; }
 
     // MouseListener overrides
     void mouseDown (const MouseEvent& event) override;
@@ -25,12 +33,55 @@ public:
     // juce::Timer overrides
     void timerCallback() override;
 
+    // ARA Default Rulers
+    class ARASelectionRuler : public Component
+    {
+    public:
+        ARASelectionRuler (const RulersView& rulersView);
+        void paint (Graphics&);
+    private:
+        const RulersView& rulersView;
+    };
+
+    class ARASecondsRuler : public Component
+    {
+    public:
+        ARASecondsRuler (const RulersView& rulersView);
+        void paint (Graphics&) override;
+    private:
+        const RulersView& rulersView;
+    };
+
+    class ARABeatsRuler : public Component
+    {
+    public:
+        ARABeatsRuler (const RulersView& rulersView);
+        void paint (Graphics&);
+    private:
+        const RulersView& rulersView;
+    };
+
+    class ARAChordsRuler : public Component
+    {
+    public:
+        ARAChordsRuler (const RulersView& rulersView);
+        void paint (Graphics&);
+    private:
+        const RulersView& rulersView;
+    };
+
+    /* Returns the width of the header area.
+     */
+    int getRulerHeaderWidth() const { return timeline.getViewedComponentBorders().getLeft(); }
+
 private:
     TimelineViewport& timeline;
     const ARASecondsPixelMapper& timeMapper;
     ARADocument* document;
     AudioPlayHead::CurrentPositionInfo lastPaintedPosition;
     AudioPlayHead::CurrentPositionInfo* optionalHostPosition;
+    bool shouldShowLocators;
+    OwnedArray<Component> rulers;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RulersView)
 };

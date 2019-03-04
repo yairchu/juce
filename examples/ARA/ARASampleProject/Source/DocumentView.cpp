@@ -32,6 +32,7 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
     }
 
     viewport.setViewedComponent (new Component());
+    createRulers();
     viewport.addAndMakeVisible (rulersView);
     viewport.addAndMakeVisible (playHeadView);
     playHeadView.setAlwaysOnTop (true);
@@ -83,6 +84,11 @@ TrackHeaderView* DocumentView::createHeaderViewForRegionSequence (ARARegionSeque
 RegionSequenceView* DocumentView::createViewForRegionSequence (ARARegionSequence* regionSequence)
 {
     return new RegionSequenceView (*this, regionSequence);
+}
+
+void DocumentView::createRulers()
+{
+    rulersView.addDefaultRulers();
 }
 
 //==============================================================================
@@ -178,7 +184,7 @@ void DocumentView::resized()
     viewport.setBounds (getLocalBounds());
     const int rulersViewHeight = 3 * 20;
     const int trackHeaderWidth = trackHeadersView.isVisible() ? trackHeadersView.getWidth() : 0;
-    rulersView.setBounds (trackHeaderWidth, 0, viewport.getWidth(), rulersViewHeight);
+    rulersView.setBounds (0, 0, viewport.getWidth(), rulersViewHeight);
     const int minTrackHeight = (viewport.getHeightExcludingBorders() / (regionSequenceViews.isEmpty() ? 1 : regionSequenceViews.size()));
     if (showOnlySelectedRegionSequences)
         setTrackHeight (minTrackHeight);
