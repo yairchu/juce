@@ -19,6 +19,7 @@ public:
     void addRulerComponent (Component* rulerToOwn);
 
     void addDefaultRulers();
+    int getNumOfRulers() { return rulers.size(); }
 
     void paint (Graphics&) override;
     void resized() override;

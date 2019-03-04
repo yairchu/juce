@@ -32,7 +32,6 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
     }
 
     viewport.setViewedComponent (new Component());
-    createRulers();
     viewport.addAndMakeVisible (rulersView);
     viewport.addAndMakeVisible (playHeadView);
     playHeadView.setAlwaysOnTop (true);
@@ -175,6 +174,12 @@ void DocumentView::setRulersHeight (int rulersHeight)
 //==============================================================================
 void DocumentView::parentHierarchyChanged()
 {
+    if (rulersView.getNumOfRulers() == 0)
+    {
+        // virtual function should be called after constructor
+        // and parentHierarchyChanged can happen more than once!
+        createRulers();
+    }
     // trigger lazy initial update after construction if needed
     if (regionSequenceViewsAreInvalid && ! getARADocumentController()->isHostEditingDocument())
         rebuildRegionSequenceViews();

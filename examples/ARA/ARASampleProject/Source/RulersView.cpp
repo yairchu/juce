@@ -12,7 +12,6 @@ RulersView::RulersView (TimelineViewport& timeline, AudioPlayHead::CurrentPositi
       optionalHostPosition (hostPosition),
       shouldShowLocators (true)
 {
-
     lastPaintedPosition.resetToDefault();
     startTimerHz (10);
 }
@@ -61,19 +60,29 @@ void RulersView::resized()
 
 //==============================================================================
 
+// TODO JUCE_ARA current rulers do not intercept or interact with UI
+// so they're all set to NOT intercept mouse or keyboard.
+// the position on mouse option might need to be refactored and
+// be an optional setting to allow custom implementation.
+
 void RulersView::mouseDown (const MouseEvent& event)
 {
+    const auto pos = event.position.x;
+    if (pos < getRulerHeaderWidth())
+        return;
     // use mouse click to set the playhead position in the host (if they provide a playback controller interface)
     if (auto* musicalCtx = timeMapper.getCurrentMusicalContext())
     {
         auto playbackController = musicalCtx->getDocument()->getDocumentController()->getHostInstance()->getPlaybackController();
         if (playbackController != nullptr)
-            playbackController->requestSetPlaybackPosition (timeMapper.getPositionForPixel( roundToInt (event.position.x)));
+            playbackController->requestSetPlaybackPosition (timeMapper.getPositionForPixel (roundToInt (jmax (0.0f ,pos - getRulerHeaderWidth()))));
     }
 }
 
-void RulersView::mouseDoubleClick (const MouseEvent& /*event*/)
+void RulersView::mouseDoubleClick (const MouseEvent& event)
 {
+    if (event.position.x < getRulerHeaderWidth())
+        return;
     // use mouse double click to start host playback (if they provide a playback controller interface)
     if (auto* musicalCtx = timeMapper.getCurrentMusicalContext())
     {
@@ -98,7 +107,11 @@ void RulersView::addDefaultRulers()
 
 //==============================================================================
 // seconds ruler: one tick for each second
-RulersView::ARASecondsRuler::ARASecondsRuler (const RulersView &owner) : rulersView (owner) {}
+RulersView::ARASecondsRuler::ARASecondsRuler (const RulersView &owner) : rulersView (owner)
+{
+    setWantsKeyboardFocus (false);
+    setInterceptsMouseClicks (false, false);
+}
 
 void RulersView::ARASecondsRuler::paint (juce::Graphics& g)
 {
@@ -130,7 +143,11 @@ void RulersView::ARASecondsRuler::paint (juce::Graphics& g)
 }
 
 // beat ruler: evaluates tempo and bar signatures to draw a line for each beat
-RulersView::ARABeatsRuler::ARABeatsRuler (const RulersView &owner) : rulersView (owner) {}
+RulersView::ARABeatsRuler::ARABeatsRuler (const RulersView &owner) : rulersView (owner)
+{
+    setWantsKeyboardFocus (false);
+    setInterceptsMouseClicks (false, false);
+}
 
 void RulersView::ARABeatsRuler::paint (juce::Graphics& g)
 {
@@ -174,7 +191,11 @@ void RulersView::ARABeatsRuler::paint (juce::Graphics& g)
 }
 
 // chord ruler: one rect per chord, skipping empty "no chords"
-RulersView::ARAChordsRuler::ARAChordsRuler (const RulersView &owner) : rulersView (owner) {}
+RulersView::ARAChordsRuler::ARAChordsRuler (const RulersView &owner) : rulersView (owner)
+{
+    setWantsKeyboardFocus (false);
+    setInterceptsMouseClicks (false, false);
+}
 
 void RulersView::ARAChordsRuler::paint (juce::Graphics& g)
 {
