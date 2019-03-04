@@ -12,7 +12,6 @@ RulersView::RulersView (TimelineViewport& timeline, AudioPlayHead::CurrentPositi
       optionalHostPosition (hostPosition),
       shouldShowLocators (true)
 {
-
     lastPaintedPosition.resetToDefault();
     startTimerHz (10);
 }
