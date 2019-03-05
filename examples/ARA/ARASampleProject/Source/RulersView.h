@@ -16,6 +16,11 @@ class RulersView  : public Component,
 public:
     RulersView (TimelineViewport& timeline, AudioPlayHead::CurrentPositionInfo* optionalHostPosition = nullptr);
 
+    enum ColourIds
+    {
+        rulersBackground = 0x10A8A01
+    };
+
     void addRulerComponent (Component* rulerToOwn);
 
     void addDefaultRulers();

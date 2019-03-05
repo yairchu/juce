@@ -31,6 +31,7 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
         return;
     }
 
+    viewport.setShouldClipBorders (false);
     viewport.setViewedComponent (new Component());
     viewport.addAndMakeVisible (rulersView);
     viewport.addAndMakeVisible (playHeadView);
@@ -87,6 +88,7 @@ RegionSequenceView* DocumentView::createViewForRegionSequence (ARARegionSequence
 
 void DocumentView::createRulers()
 {
+    rulersView.setColour (RulersView::ColourIds::rulersBackground, getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
     setRulersHeight (3 * 20);
     rulersView.addDefaultRulers();
 }
