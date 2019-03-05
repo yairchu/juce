@@ -66,16 +66,13 @@ void PlaybackRegionViewImpl::paint (Graphics& g)
         if (clipBounds.getWidth() > 0)
         {
             const auto& mapper = documentView.getTimeMapper();
-            const auto convertedBounds = clipBounds + getBoundsInParent().getPosition();
-            const double startTime = mapper.getPositionForPixel (convertedBounds.getX());
-            const double endTime = mapper.getPositionForPixel (convertedBounds.getRight());
-
             const auto regionTimeRange = getTimeRange();
+            const auto visibleRange = mapper.getRangeForPixels (getX(), getRight());
 
             auto drawBounds = getBounds() - getPosition();
             drawBounds.setHorizontalRange (clipBounds.getHorizontalRange());
             g.setColour (regionColour.contrasting (0.7f));
-            audioThumb.drawChannels (g, drawBounds, startTime - regionTimeRange.getStart(), endTime - regionTimeRange.getStart(), 1.0f);
+            audioThumb.drawChannels (g, drawBounds, visibleRange.getStart() - regionTimeRange.getStart(), visibleRange.getEnd() - regionTimeRange.getStart(), 1.0f);
         }
     }
     else
