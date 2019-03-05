@@ -15,7 +15,7 @@ ARASecondsPixelMapper::ARASecondsPixelMapper (const juce::AudioProcessorEditorAR
   araExtension (extension),
   musicalContext (nullptr)
 {
-    document = extension.getARADocumentController()->getDocument<ARADocument>();
+    document = extension.getARAEditorView()->getDocumentController()->getDocument<ARADocument>();
     document->addListener (this);
     findMusicalContext();
 }
