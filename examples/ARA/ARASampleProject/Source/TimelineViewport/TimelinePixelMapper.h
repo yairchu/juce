@@ -101,11 +101,18 @@ public:
     /* Returns if pixel is within the timeline range.
      * isInclusiveEnd - if end is conisdered within bounds.
      */
-    bool isPixelPositionWithinBounds (int pixelPosition, bool isInclusiveEnd = true)
+    bool isPixelPositionWithinBounds (int pixelPosition, bool isInclusiveEnd = true) const
     {
         const auto pos = getPositionForPixel (pixelPosition);
         return timelineRange.contains (pos) || (isInclusiveEnd && round(pos) == timelineRange.getEnd());
     }
+
+    /* Utility function to get range on timeline from pixels. */
+    Range<double> getRangeForPixels (int startX, int endX) const
+    {
+        return { getPositionForPixel (startX), getPositionForPixel (endX) };
+    }
+
 protected:
     Range<double> timelineRange;
 private:
