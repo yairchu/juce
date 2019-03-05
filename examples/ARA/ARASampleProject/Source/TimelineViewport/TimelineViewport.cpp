@@ -157,6 +157,7 @@ void TimelineViewport::invalidateViewport()
             contentComp->setTopLeftPosition (newPos);  // (this will re-entrantly call invalidateViewport again)
             return;
         }
+        repaint();
     }
 }
 
