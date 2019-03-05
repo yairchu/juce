@@ -72,7 +72,7 @@ DocumentView::~DocumentView()
 //==============================================================================
 PlaybackRegionView* DocumentView::createViewForPlaybackRegion (ARAPlaybackRegion* playbackRegion)
 {
-    return new PlaybackRegionView (*this, playbackRegion);
+    return new PlaybackRegionViewImpl (*this, playbackRegion);
 }
 
 TrackHeaderView* DocumentView::createHeaderViewForRegionSequence (ARARegionSequence* regionSequence)

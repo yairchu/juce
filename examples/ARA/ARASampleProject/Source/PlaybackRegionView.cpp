@@ -1,9 +1,19 @@
 #include "PlaybackRegionView.h"
 #include "DocumentView.h"
 
-//==============================================================================
 PlaybackRegionView::PlaybackRegionView (DocumentView& documentView, ARAPlaybackRegion* region)
-    : documentView (documentView),
+    : playbackRegion (region)
+{}
+
+PlaybackRegionView::~PlaybackRegionView()
+{
+    playbackRegion = nullptr;
+}
+
+//==============================================================================
+PlaybackRegionViewImpl::PlaybackRegionViewImpl (DocumentView& documentView, ARAPlaybackRegion* region)
+    : PlaybackRegionView (documentView, region),
+      documentView (documentView),
       playbackRegion (region),
       audioThumbCache (1),
       audioThumb (128, documentView.getAudioFormatManger(), audioThumbCache)
@@ -21,7 +31,7 @@ PlaybackRegionView::PlaybackRegionView (DocumentView& documentView, ARAPlaybackR
     recreatePlaybackRegionReader();
 }
 
-PlaybackRegionView::~PlaybackRegionView()
+PlaybackRegionViewImpl::~PlaybackRegionViewImpl()
 {
     documentView.getARAEditorView()->removeListener (this);
 
@@ -35,7 +45,7 @@ PlaybackRegionView::~PlaybackRegionView()
 }
 
 //==============================================================================
-void PlaybackRegionView::paint (Graphics& g)
+void PlaybackRegionViewImpl::paint (Graphics& g)
 {
     Colour regionColour;
     const auto& colour = playbackRegion->getEffectiveColor();
@@ -84,13 +94,13 @@ void PlaybackRegionView::paint (Graphics& g)
 }
 
 //==============================================================================
-void PlaybackRegionView::changeListenerCallback (ChangeBroadcaster* /*broadcaster*/)
+void PlaybackRegionViewImpl::changeListenerCallback (ChangeBroadcaster* /*broadcaster*/)
 {
     // our thumb nail has changed
     repaint();
 }
 
-void PlaybackRegionView::onNewSelection (const ARA::PlugIn::ViewSelection& viewSelection)
+void PlaybackRegionViewImpl::onNewSelection (const ARA::PlugIn::ViewSelection& viewSelection)
 {
     bool selected = ARA::contains (viewSelection.getPlaybackRegions(), playbackRegion);
     if (selected != isSelected)
@@ -100,7 +110,7 @@ void PlaybackRegionView::onNewSelection (const ARA::PlugIn::ViewSelection& viewS
     }
 }
 
-void PlaybackRegionView::didEndEditing (ARADocument* document)
+void PlaybackRegionViewImpl::didEndEditing (ARADocument* document)
 {
     jassert (document == playbackRegion->getRegionSequence()->getDocument());
 
@@ -112,28 +122,28 @@ void PlaybackRegionView::didEndEditing (ARADocument* document)
     }
 }
 
-void PlaybackRegionView::didEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool /*enable*/)
+void PlaybackRegionViewImpl::didEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool /*enable*/)
 {
     jassert (audioSource == playbackRegion->getAudioModification()->getAudioSource());
 
     repaint();
 }
 
-void PlaybackRegionView::willUpdateAudioSourceProperties (ARAAudioSource* audioSource, ARAAudioSource::PropertiesPtr newProperties)
+void PlaybackRegionViewImpl::willUpdateAudioSourceProperties (ARAAudioSource* audioSource, ARAAudioSource::PropertiesPtr newProperties)
 {
     jassert (audioSource == playbackRegion->getAudioModification()->getAudioSource());
     if (playbackRegion->getName() == nullptr && playbackRegion->getAudioModification()->getName() == nullptr && newProperties->name != audioSource->getName())
         repaint();
 }
 
-void PlaybackRegionView::willUpdateAudioModificationProperties (ARAAudioModification* audioModification, ARAAudioModification::PropertiesPtr newProperties)
+void PlaybackRegionViewImpl::willUpdateAudioModificationProperties (ARAAudioModification* audioModification, ARAAudioModification::PropertiesPtr newProperties)
 {
     jassert (audioModification == playbackRegion->getAudioModification());
     if (playbackRegion->getName() == nullptr && newProperties->name != audioModification->getName())
         repaint();
 }
 
-void PlaybackRegionView::willUpdatePlaybackRegionProperties (ARAPlaybackRegion* region, ARAPlaybackRegion::PropertiesPtr newProperties)
+void PlaybackRegionViewImpl::willUpdatePlaybackRegionProperties (ARAPlaybackRegion* region, ARAPlaybackRegion::PropertiesPtr newProperties)
 {
     jassert (playbackRegion == region);
 
@@ -144,7 +154,7 @@ void PlaybackRegionView::willUpdatePlaybackRegionProperties (ARAPlaybackRegion* 
     }
 }
 
-void PlaybackRegionView::didUpdatePlaybackRegionContent (ARAPlaybackRegion* region, ARAContentUpdateScopes scopeFlags)
+void PlaybackRegionViewImpl::didUpdatePlaybackRegionContent (ARAPlaybackRegion* region, ARAContentUpdateScopes scopeFlags)
 {
     jassert (playbackRegion == region);
 
@@ -159,7 +169,7 @@ void PlaybackRegionView::didUpdatePlaybackRegionContent (ARAPlaybackRegion* regi
 }
 
 //==============================================================================
-void PlaybackRegionView::recreatePlaybackRegionReader()
+void PlaybackRegionViewImpl::recreatePlaybackRegionReader()
 {
     audioThumbCache.clear();
 
