@@ -47,10 +47,7 @@ PlaybackRegionViewImpl::~PlaybackRegionViewImpl()
 //==============================================================================
 void PlaybackRegionViewImpl::paint (Graphics& g)
 {
-    Colour regionColour;
-    const auto& colour = playbackRegion->getEffectiveColor();
-    if (colour != nullptr)
-        regionColour = Colour::fromFloatRGBA (colour->r, colour->g, colour->b, 1.0f);
+    Colour regionColour = convertARAColour (playbackRegion->getEffectiveColor());
 
     auto rect = getLocalBounds();
     g.setColour (isSelected ? Colours::yellow : Colours::black);

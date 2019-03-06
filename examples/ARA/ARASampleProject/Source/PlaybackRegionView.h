@@ -15,6 +15,7 @@ public:
 
     ARAPlaybackRegion* getPlaybackRegion() const { return playbackRegion; }
     Range<double> getTimeRange() const { return playbackRegion->getTimeRange(); }
+
 private:
     ARAPlaybackRegion* playbackRegion;
 };

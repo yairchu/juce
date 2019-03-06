@@ -34,9 +34,7 @@ void TrackHeaderView::paint (juce::Graphics& g)
     if (regionSequence == nullptr)
         return;
 
-    Colour trackColour;
-    if (const auto& colour = regionSequence->getColor())
-        trackColour = Colour::fromFloatRGBA (colour->r, colour->g, colour->b, 1.0f);
+    Colour trackColour = convertARAColour (regionSequence->getColor());
 
     auto rect = getLocalBounds();
     g.setColour (isSelected ? Colours::yellow : Colours::black);
