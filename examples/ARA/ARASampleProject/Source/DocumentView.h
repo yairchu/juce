@@ -153,6 +153,11 @@ public:
     // update region to range (if needed)
     void setRegionBounds (PlaybackRegionView*, Range<double>);
 
+    // simplify anchoring sub-components to views.
+    // caveats - it assumes units are linear.
+    // @return true if anchored and visible, false if out of bounds.
+    bool anchorChildForTimeRange (const Range<double> entireRangeOfParent, const Range<double> visibleRangeOfParent, Component& componentToBound, const float absoluteWidth, bool anchorToEnd = false) { return viewport.anchorChildForTimeRange(entireRangeOfParent, visibleRangeOfParent, componentToBound, absoluteWidth, anchorToEnd); }
+
     //==============================================================================
     /**
      A class for receiving events from a DocumentView.

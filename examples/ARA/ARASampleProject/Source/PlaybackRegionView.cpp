@@ -12,7 +12,7 @@ PlaybackRegionView::~PlaybackRegionView()
 
 Range<double> PlaybackRegionView::getVisibleTimeRange() const
 {
-    if (getWidth() == 0 || ! isVisible())
+    if (getLocalBounds().getWidth() == 0 || ! isVisible())
         return {0.0, 0.0};
 
     auto range = getTimeRange();
@@ -41,6 +41,8 @@ PlaybackRegionViewImpl::PlaybackRegionViewImpl (DocumentView& documentView, ARAP
     playbackRegion->addListener (this);
 
     recreatePlaybackRegionReader();
+    addAndMakeVisible (regionName);
+    updateRegionName();
 }
 
 PlaybackRegionViewImpl::~PlaybackRegionViewImpl()
@@ -90,13 +92,13 @@ void PlaybackRegionViewImpl::paint (Graphics& g)
         g.setFont (Font (12.0f));
         g.drawText ("Access Disabled", getBounds(), Justification::centred);
     }
+}
 
-    if (const auto& name = playbackRegion->getEffectiveName())
-    {
-        g.setColour (regionColour.contrasting (1.0f));
-        g.setFont (Font (12.0f));
-        g.drawText (convertARAString (name), rect, Justification::topLeft);
-    }
+void PlaybackRegionViewImpl::resized()
+{
+    regionName.setBounds (0, 0, 1, regionName.getFont().getHeight());
+    const int minTextWidth = 40.0;
+    documentView.anchorChildForTimeRange (getTimeRange(), getVisibleTimeRange(), regionName,  regionName.getFont().getStringWidthFloat (regionName.getText()) + minTextWidth);
 }
 
 //==============================================================================
@@ -139,14 +141,18 @@ void PlaybackRegionViewImpl::willUpdateAudioSourceProperties (ARAAudioSource* au
 {
     jassert (audioSource == playbackRegion->getAudioModification()->getAudioSource());
     if (playbackRegion->getName() == nullptr && playbackRegion->getAudioModification()->getName() == nullptr && newProperties->name != audioSource->getName())
-        repaint();
+    {
+        updateRegionName();
+    }
 }
 
 void PlaybackRegionViewImpl::willUpdateAudioModificationProperties (ARAAudioModification* audioModification, ARAAudioModification::PropertiesPtr newProperties)
 {
     jassert (audioModification == playbackRegion->getAudioModification());
     if (playbackRegion->getName() == nullptr && newProperties->name != audioModification->getName())
-        repaint();
+    {
+        updateRegionName();
+    }
 }
 
 void PlaybackRegionViewImpl::willUpdatePlaybackRegionProperties (ARAPlaybackRegion* region, ARAPlaybackRegion::PropertiesPtr newProperties)
@@ -156,6 +162,7 @@ void PlaybackRegionViewImpl::willUpdatePlaybackRegionProperties (ARAPlaybackRegi
     if ((playbackRegion->getName() != newProperties->name) ||
         (playbackRegion->getColor() != newProperties->color))
     {
+        updateRegionName();
         documentView.setRegionBounds (this, documentView.getVisibleTimeRange());
     }
 }
@@ -192,4 +199,14 @@ void PlaybackRegionViewImpl::recreatePlaybackRegionReader()
     {
         audioThumb.setReader (playbackRegionReader, reinterpret_cast<intptr_t> (playbackRegion));   // TODO JUCE_ARA better hash?
     }
+}
+
+void PlaybackRegionViewImpl::updateRegionName()
+{
+    Colour regionColour = convertARAColour (playbackRegion->getEffectiveColor());
+    regionName.setFont (Font (12.0f));
+    regionName.setMinimumHorizontalScale (1.0);
+    regionName.setJustificationType (Justification::topLeft);
+    regionName.setText (convertARAString(playbackRegion->getEffectiveName()), sendNotification);
+    regionName.setColour (Label::ColourIds::textColourId, regionColour.contrasting (1.0f));
 }

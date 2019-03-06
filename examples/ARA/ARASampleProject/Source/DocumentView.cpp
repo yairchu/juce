@@ -325,6 +325,7 @@ void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double
         const auto start = mapper.getPixelForPosition (visibleRegionArea.getStart());
         const auto end   = mapper.getPixelForPosition (visibleRegionArea.getEnd());
         regionView->setBounds (start, 0, jmax (kMinRegionSizeInPixels, end - start), regionView->getParentHeight());
+        regionView->resized();
     }
 }
 

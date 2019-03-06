@@ -44,6 +44,7 @@ public:
     ~PlaybackRegionViewImpl() override;
 
     void paint (Graphics&) override;
+    void resized() override;
 
     // ChangeListener overrides
     void changeListenerCallback (ChangeBroadcaster*) override;
@@ -63,8 +64,8 @@ public:
     // ARAPlaybackRegion::Listener overrides
     void willUpdatePlaybackRegionProperties (ARAPlaybackRegion* playbackRegion, ARAPlaybackRegion::PropertiesPtr newProperties) override;
     void didUpdatePlaybackRegionContent (ARAPlaybackRegion* playbackRegion, ARAContentUpdateScopes scopeFlags) override;
-
 private:
+    void updateRegionName();
     void recreatePlaybackRegionReader();
 
 private:
@@ -72,6 +73,7 @@ private:
     ARAPlaybackRegion* playbackRegion;
     ARAPlaybackRegionReader* playbackRegionReader = nullptr;  // careful: "weak" pointer, actual pointer is owned by our audioThumb
     bool isSelected = false;
+    Label regionName;
 
     AudioThumbnailCache audioThumbCache;
     AudioThumbnail audioThumb;
