@@ -2,13 +2,25 @@
 #include "DocumentView.h"
 
 PlaybackRegionView::PlaybackRegionView (DocumentView& documentView, ARAPlaybackRegion* region)
-    : playbackRegion (region)
+    : playbackRegion (region), documentView (documentView)
 {}
 
 PlaybackRegionView::~PlaybackRegionView()
 {
     playbackRegion = nullptr;
 }
+
+Range<double> PlaybackRegionView::getVisibleTimeRange() const
+{
+    if (getWidth() == 0 || ! isVisible())
+        return {0.0, 0.0};
+
+    auto range = getTimeRange();
+    return { jmax (range.getStart(), documentView.getTimeMapper().getPositionForPixel (getBoundsInParent().getX())),
+             jmin (range.getEnd(), documentView.getTimeMapper().getPositionForPixel (getBoundsInParent().getRight()))
+           };
+}
+
 
 //==============================================================================
 PlaybackRegionViewImpl::PlaybackRegionViewImpl (DocumentView& documentView, ARAPlaybackRegion* region)

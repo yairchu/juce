@@ -14,10 +14,16 @@ public:
     virtual ~PlaybackRegionView();
 
     ARAPlaybackRegion* getPlaybackRegion() const { return playbackRegion; }
+    /* Returns this region time range on timeline */
     Range<double> getTimeRange() const { return playbackRegion->getTimeRange(); }
+    /* Returns the visible region area on timeline.
+       If regions bounds are invalid or it's invisible it'll return {0,0}
+     */
+    Range<double> getVisibleTimeRange() const;
 
 private:
     ARAPlaybackRegion* playbackRegion;
+    DocumentView& documentView;
 };
 
 /**
