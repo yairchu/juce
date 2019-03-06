@@ -12,6 +12,7 @@ RulersView::RulersView (TimelineViewport& timeline, AudioPlayHead::CurrentPositi
       optionalHostPosition (hostPosition),
       shouldShowLocators (true)
 {
+    setColour (rulersBackground, Colours::transparentBlack);
     lastPaintedPosition.resetToDefault();
     startTimerHz (10);
 }
@@ -29,6 +30,7 @@ void RulersView::timerCallback()
 //==============================================================================
 void RulersView::paint (juce::Graphics& g)
 {
+    g.fillAll (findColour (rulersBackground));
     // locators
     if (isLocatorsVisible() && optionalHostPosition != nullptr)
     {

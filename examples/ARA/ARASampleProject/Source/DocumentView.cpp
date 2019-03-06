@@ -31,6 +31,7 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
         return;
     }
 
+    viewport.setShouldClipBorders (false);
     viewport.setViewedComponent (new Component());
     viewport.addAndMakeVisible (rulersView);
     viewport.addAndMakeVisible (playHeadView);
@@ -87,6 +88,7 @@ RegionSequenceView* DocumentView::createViewForRegionSequence (ARARegionSequence
 
 void DocumentView::createRulers()
 {
+    rulersView.setColour (RulersView::ColourIds::rulersBackground, getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
     setRulersHeight (3 * 20);
     rulersView.addDefaultRulers();
 }
@@ -323,6 +325,7 @@ void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double
         const auto start = mapper.getPixelForPosition (visibleRegionArea.getStart());
         const auto end   = mapper.getPixelForPosition (visibleRegionArea.getEnd());
         regionView->setBounds (start, 0, jmax (kMinRegionSizeInPixels, end - start), regionView->getParentHeight());
+        regionView->resized();
     }
 }
 

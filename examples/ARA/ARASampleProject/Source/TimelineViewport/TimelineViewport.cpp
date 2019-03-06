@@ -157,6 +157,7 @@ void TimelineViewport::invalidateViewport()
             contentComp->setTopLeftPosition (newPos);  // (this will re-entrantly call invalidateViewport again)
             return;
         }
+        repaint();
     }
 }
 
@@ -224,4 +225,47 @@ void TimelineViewport::setShouldClipBorders (bool shouldClip)
     {
         viewportClip.setVisible (false);
     }
+}
+
+bool TimelineViewport::anchorChildForTimeRange (const Range<double> entireRangeOfParent, const Range<double> visibleRangeOfParent, Component& componentToBound, const float absoluteWidth, bool anchorToEnd)
+{
+    jassert (entireRangeOfParent.contains (visibleRangeOfParent));
+
+    // this method anchor child to a parent!
+    jassert (componentToBound.getParentComponent() != nullptr);
+    const auto parentBounds = componentToBound.getParentComponent()->getLocalBounds();
+
+    const auto relativeWidth = absoluteWidth / pixelMapper->getZoomFactor();
+    const auto componentRelativeRange = anchorToEnd ? entireRangeOfParent.withStart (entireRangeOfParent.getEnd() - relativeWidth) : entireRangeOfParent.withLength (relativeWidth);
+    const auto visibleChildRange = visibleRangeOfParent.getIntersectionWith (componentRelativeRange);
+
+    if (visibleChildRange.isEmpty())
+    {
+        componentToBound.setVisible (false);
+        return false;
+    }
+
+    const auto bounds = componentToBound.getLocalBounds();
+    const int start = pixelMapper->getPixelForPosition (visibleChildRange.getStart());
+    const int end = pixelMapper->getPixelForPosition (visibleChildRange.getEnd());
+    if (anchorToEnd) // to right
+    {
+        const int visibleRange = end - start;
+        // handles round-off errors
+        if (visibleRange == 0)
+        {
+            componentToBound.setVisible (false);
+            return false;
+        }
+        jassert (visibleRange > 0);
+        componentToBound.setBounds (parentBounds.getWidth() - visibleRange, bounds.getY(), visibleRange, bounds.getHeight());
+    }
+    else // positionToStart - to left
+    {
+        const int x = static_cast<int> (jmax (0.0f, absoluteWidth - end));
+        componentToBound.setBounds (-x, bounds.getY(), roundToInt (absoluteWidth), bounds.getHeight());
+    }
+
+    componentToBound.setVisible (true);
+    return true;
 }
