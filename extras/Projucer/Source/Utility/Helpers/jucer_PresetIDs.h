@@ -359,6 +359,7 @@ namespace Ids
     DECLARE_ID (projectLineFeed);
     DECLARE_ID (compilerFlagSchemes);
     DECLARE_ID (compilerFlagScheme);
+    DECLARE_ID (dontQueryForUpdate);
 
     const Identifier ID ("id");
     const Identifier ID_uppercase ("ID");
