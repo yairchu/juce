@@ -90,25 +90,6 @@ namespace juce
 
 //==============================================================================
 
-ARAAudioSourceReader* ARADocumentController::createAudioSourceReader (ARAAudioSource* audioSource)
-{
-    return new ARAAudioSourceReader (audioSource);
-}
-
-ARAPlaybackRegionReader* ARADocumentController::createPlaybackRegionReader (std::vector<ARAPlaybackRegion*> const& playbackRegions, bool nonRealtime,
-                                                                            double playbackSampleRate /*= 0.0*/, int channelCount /*= 0*/, bool use64BitSamples /*= false*/)
-{
-    return new ARAPlaybackRegionReader (static_cast<ARAPlaybackRenderer*> (doCreatePlaybackRenderer()), playbackRegions, nonRealtime, playbackSampleRate, channelCount, use64BitSamples);
-}
-
-ARARegionSequenceReader* ARADocumentController::createRegionSequenceReader (ARARegionSequence* regionSequence, bool nonRealtime,
-                                                                            double playbackSampleRate /*= 0.0*/, int channelCount /*= 0*/, bool use64BitSamples /*= false*/)
-{
-    return new ARARegionSequenceReader (static_cast<ARAPlaybackRenderer*> (doCreatePlaybackRenderer()), regionSequence, nonRealtime, playbackSampleRate, channelCount, use64BitSamples);
-}
-
-//==============================================================================
-
 void ARADocumentController::notifyAudioSourceContentChanged (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags, bool notifyAllAudioModificationsAndPlaybackRegions)
 {
     audioSourceUpdates[audioSource] += scopeFlags;
@@ -181,12 +162,12 @@ void ARADocumentController::doNotifyModelUpdates() noexcept
 
 //==============================================================================
 
-bool ARADocumentController::restoreObjectsFromStream (InputStream& input, ARA::PlugIn::RestoreObjectsFilter* filter) noexcept
+bool ARADocumentController::doRestoreObjectsFromStream (InputStream& /*input*/, ARA::PlugIn::RestoreObjectsFilter* /*filter*/) noexcept
 {
     return true;
 }
 
-bool ARADocumentController::storeObjectsToStream (OutputStream& output, ARA::PlugIn::StoreObjectsFilter* filter) noexcept
+bool ARADocumentController::doStoreObjectsToStream (OutputStream& /*output*/, ARA::PlugIn::StoreObjectsFilter* /*filter*/) noexcept
 {
     return true;
 }
@@ -194,13 +175,13 @@ bool ARADocumentController::storeObjectsToStream (OutputStream& output, ARA::Plu
 bool ARADocumentController::doRestoreObjectsFromArchive (ARA::PlugIn::HostArchiveReader* archiveReader, ARA::PlugIn::RestoreObjectsFilter* filter) noexcept
 {
     ARAHostArchiveInputStream input (archiveReader);
-    return restoreObjectsFromStream (input, filter);
+    return doRestoreObjectsFromStream (input, filter);
 }
 
 bool ARADocumentController::doStoreObjectsToArchive (ARA::PlugIn::HostArchiveWriter* archiveWriter, ARA::PlugIn::StoreObjectsFilter* filter) noexcept
 {
     ARAHostArchiveOutputStream output (archiveWriter);
-    return storeObjectsToStream (output, filter);
+    return doStoreObjectsToStream(output, filter);
 }
 
 //==============================================================================
