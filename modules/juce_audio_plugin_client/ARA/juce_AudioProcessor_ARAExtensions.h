@@ -23,9 +23,24 @@ class AudioProcessorARAExtension
 {
 public:
     AudioProcessorARAExtension() = default;
+    virtual ~AudioProcessorARAExtension() {}
+
+    /** Additional configuration for the AudioProcessor if used for internal rendering (waveform display). */
+    void setAlwaysNonRealtime (bool isAlwaysNonRealtime) noexcept   { alwaysNonRealtime = isAlwaysNonRealtime; };
+    bool isAlwaysNonRealtime() const noexcept                       { return alwaysNonRealtime; }
+
+    /** Query whether last call to processBlock() was successful.
+        TODO JUCE_ARA processBlock() should rather return a bool
+    */
+    virtual bool didProcessBlockSucceed() = 0;
 
     /** Called by the ARA Companion SDK code to bind the plugin instance to an ARA document. */
     const ARA::ARAPlugInExtensionInstance* bindToARA (ARA::ARADocumentControllerRef documentControllerRef, ARA::ARAPlugInInstanceRoleFlags knownRoles, ARA::ARAPlugInInstanceRoleFlags assignedRoles);
+
+    /** Optional hook for derived classes to perform any additional ARA-specific initialization
+        of the AudioProcessor, or of the instance role objects (such as providing them with a
+        pointer to the AudioProcessor if needed). */
+    virtual void didBindToARA() {}
 
     /** Returns true if this plugin instance is bound to an ARA document. */
     bool isBoundToARA() const noexcept { return araPlugInExtension != nullptr; }
@@ -53,6 +68,7 @@ public:
 
 private:
     std::unique_ptr<const ARA::PlugIn::PlugInExtension> araPlugInExtension;
+    bool alwaysNonRealtime = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioProcessorARAExtension)
 };
