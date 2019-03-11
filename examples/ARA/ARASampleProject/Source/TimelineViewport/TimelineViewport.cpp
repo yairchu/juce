@@ -16,6 +16,8 @@ TimelineViewport::TimelineViewport (TimelinePixelMapperBase* pixelMapperToOwn, j
     , viewportBorders (0,0,0,0)
     , hScrollBar (hScrollBarToOwn)
     , vScrollBar (vScrollBarToOwn)
+    , allowScrollH (true)
+    , allowScrollV (true)
 {
     viewportClip.setWantsKeyboardFocus (false);
     viewportClip.setInterceptsMouseClicks (false, false);
@@ -58,6 +60,70 @@ void TimelineViewport::scrollBarMoved (juce::ScrollBar *scrollBarThatHasMoved, d
         pixelMapper->setStartPixelPosition (newRangeStart);
     }
     invalidateViewport();
+}
+
+static int rescaleMouseWheelDistance (float distance, int singleStepSize) noexcept
+{
+    if (distance == 0.0f)
+        return 0;
+    
+    distance *= 14.0f * singleStepSize;
+    
+    return roundToInt (distance < 0 ? jmin (distance, -1.0f)
+                       : jmax (distance,  1.0f));
+}
+
+void TimelineViewport::mouseWheelMove (const MouseEvent& e, const MouseWheelDetails& wheel)
+{
+    if (! useMouseWheelMoveIfNeeded (e, wheel))
+        Component::mouseWheelMove (e, wheel);
+}
+
+bool TimelineViewport::useMouseWheelMoveIfNeeded (const MouseEvent& e, const MouseWheelDetails& wheel)
+{
+    bool didUpdate = false;
+    if (contentComp != nullptr && ! (e.mods.isAltDown() || e.mods.isCtrlDown() || e.mods.isCommandDown()))
+    {
+        if (allowScrollH || allowScrollV)
+        {
+            const auto deltaX = rescaleMouseWheelDistance (wheel.deltaX, singleStepX);
+            const auto deltaY = rescaleMouseWheelDistance (wheel.deltaY, singleStepY);
+            const auto factor = pixelMapper->getZoomFactor();
+
+            auto newTimePos = pixelMapper->getStartPixelPosition();
+            const auto posY = getScrollBar (true).getCurrentRangeStart();
+            auto newPosY = posY;
+
+            if (deltaX != 0 && deltaY != 0 && allowScrollH && allowScrollV)
+            {
+                newTimePos -= deltaX / factor;
+                newPosY -= deltaY;
+            }
+            else if (allowScrollH && (deltaX != 0 || e.mods.isShiftDown() || ! allowScrollV))
+            {
+                newTimePos -= deltaX != 0 ? deltaX / factor : deltaY / factor;
+                newTimePos = getTimelineRange().clipValue (newTimePos);
+            }
+            else if (allowScrollV && deltaY != 0)
+            {
+                newPosY -= deltaY;
+            }
+
+            if (posY != newPosY)
+            {
+                getScrollBar (true).setCurrentRangeStart (newPosY, dontSendNotification);
+                invalidateViewport();
+                didUpdate = true;
+            }
+
+            if (! getVisibleRange().contains (getTimelineRange()) && newTimePos != pixelMapper->getStartPixelPosition())
+            {
+                getScrollBar (false).setCurrentRangeStart (newTimePos);
+                didUpdate = true;
+            }
+        }
+    }
+    return didUpdate;
 }
 
 juce::ScrollBar& TimelineViewport::getScrollBar (bool isVertical)
@@ -204,7 +270,7 @@ void TimelineViewport::setVisibleRange (Range<double> newVisibleRange)
 }
 
 
-void TimelineViewport::ViewportClip::paint(juce::Graphics& g)
+void TimelineViewport::ViewportClip::paint (juce::Graphics& g)
 {
     // avoid transparency.
     g.setColour (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
@@ -268,4 +334,10 @@ bool TimelineViewport::anchorChildForTimeRange (const Range<double> entireRangeO
 
     componentToBound.setVisible (true);
     return true;
+}
+
+void TimelineViewport::setIsScrollWheelAllowed (const bool isHorizontalAllowed, const bool isVerticalAllowed)
+{
+    allowScrollV = isVerticalAllowed;
+    allowScrollH = isHorizontalAllowed;
 }

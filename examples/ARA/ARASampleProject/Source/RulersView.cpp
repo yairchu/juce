@@ -52,7 +52,7 @@ void RulersView::resized()
         totalVisibleRulers += ruler->isVisible() ? 1 : 0;
     }
 
-    const int rulerHeight = getLocalBounds().getHeight() / totalVisibleRulers;
+    const int rulerHeight = totalVisibleRulers == 0 ? 0 : getLocalBounds().getHeight() / totalVisibleRulers;
     for (auto ruler : rulers)
     {
         ruler->setBounds (0, y, getLocalBounds().getWidth(), rulerHeight);
