@@ -77,6 +77,12 @@ public:
     // juce::ScrollBar::Listener
     void scrollBarMoved (ScrollBar *scrollBarThatHasMoved, double newRangeStart) override;
 
+    // based on juce::Viewport
+    void mouseWheelMove (const MouseEvent&, const MouseWheelDetails&) override;
+    bool useMouseWheelMoveIfNeeded (const MouseEvent&, const MouseWheelDetails&);
+
+    void setIsScrollWheelAllowed (bool isHorizontalAllowed, bool isVerticalAllowed);
+
     void setZoomFactor (double newFactor);
     double getZoomFactor();
 
@@ -133,4 +139,6 @@ private:
     // range of components currently visible
     Range<double> componentsRange;
     bool shouldClipBorders;
+    int singleStepX = 16, singleStepY = 16;
+    bool allowScrollH, allowScrollV;
 };
