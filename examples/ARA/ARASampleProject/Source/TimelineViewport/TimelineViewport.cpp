@@ -311,7 +311,7 @@ bool TimelineViewport::anchorChildForTimeRange (const Range<double> entireRangeO
         return false;
     }
 
-    const auto bounds = componentToBound.getLocalBounds();
+    const auto bounds = componentToBound.getBounds();
     const int start = pixelMapper->getPixelForPosition (visibleChildRange.getStart());
     const int end = pixelMapper->getPixelForPosition (visibleChildRange.getEnd());
     if (anchorToEnd) // to right
