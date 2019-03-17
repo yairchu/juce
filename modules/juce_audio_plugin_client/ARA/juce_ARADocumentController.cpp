@@ -174,14 +174,14 @@ bool ARADocumentController::doStoreObjectsToStream (OutputStream& /*output*/, AR
 
 bool ARADocumentController::doRestoreObjectsFromArchive (ARA::PlugIn::HostArchiveReader* archiveReader, ARA::PlugIn::RestoreObjectsFilter* filter) noexcept
 {
-    ARAHostArchiveInputStream input (archiveReader);
-    return doRestoreObjectsFromStream (input, filter);
+    ArchiveReader reader (archiveReader);
+    return doRestoreObjectsFromStream (reader, filter);
 }
 
 bool ARADocumentController::doStoreObjectsToArchive (ARA::PlugIn::HostArchiveWriter* archiveWriter, ARA::PlugIn::StoreObjectsFilter* filter) noexcept
 {
-    ARAHostArchiveOutputStream output (archiveWriter);
-    return doStoreObjectsToStream(output, filter);
+    ArchiveWriter writer (archiveWriter);
+    return doStoreObjectsToStream(writer, filter);
 }
 
 //==============================================================================
@@ -219,6 +219,43 @@ ARA::PlugIn::PlaybackRegion* ARADocumentController::doCreatePlaybackRegion (ARA:
     return new ARAPlaybackRegion (static_cast<ARAAudioModification*>(modification), hostRef);
 }
 
+void ARADocumentController::willUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion, ARAPlaybackRegion::PropertiesPtr newProperties) noexcept 
+{
+    // if any playback region changes would affect the sample content, prepare to
+    // post a sample content update to any of our playback region listeners
+    jassert(! _currentPropertyUpdateAffectsContent);
+    _currentPropertyUpdateAffectsContent =
+        ((playbackRegion->getStartInAudioModificationTime () != newProperties->startInModificationTime) ||
+        (playbackRegion->getDurationInAudioModificationTime () != newProperties->durationInModificationTime) ||
+        (playbackRegion->getStartInPlaybackTime () != newProperties->startInPlaybackTime) ||
+        (playbackRegion->getDurationInPlaybackTime () != newProperties->durationInPlaybackTime)||
+        (playbackRegion->isTimestretchEnabled() != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationTimestretch) != 0)) ||
+        (playbackRegion->isTimeStretchReflectingTempo() != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationTimestretchReflectingTempo) != 0)) ||
+        (playbackRegion->hasContentBasedFadeAtHead() != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationContentBasedFadeAtHead) != 0)) ||
+        (playbackRegion->hasContentBasedFadeAtTail() != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationContentBasedFadeAtTail) != 0)));
+
+    auto araPlaybackRegion = static_cast<ARAPlaybackRegion*> (playbackRegion);
+    araPlaybackRegion->notifyListeners ([araPlaybackRegion, newProperties](ARAPlaybackRegion::Listener& l) { l.willUpdatePlaybackRegionProperties (araPlaybackRegion, newProperties); });
+}
+
+void ARADocumentController::didUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept 
+{
+    auto araPlaybackRegion = static_cast<ARAPlaybackRegion*> (playbackRegion);
+    araPlaybackRegion->notifyListeners ([araPlaybackRegion](ARAPlaybackRegion::Listener& l) { l.didUpdatePlaybackRegionProperties (araPlaybackRegion); });
+
+    // post a content update if the updated properties affect the playback region sample content
+    if (_currentPropertyUpdateAffectsContent)
+    {
+        _currentPropertyUpdateAffectsContent = false;
+        auto scopes = ARAContentUpdateScopes::samplesAreAffected();
+        if (JucePlugin_ARAContentTypes & 1)
+            scopes += ARAContentUpdateScopes::notesAreAffected();
+        // other content such as tempo or key signatures are not exported at playback region level
+        // because this would simply mirror the musical context content.
+        notifyPlaybackRegionContentChanged (araPlaybackRegion, scopes);
+    }
+}
+
 void ARADocumentController::doGetPlaybackRegionHeadAndTailTime (ARA::PlugIn::PlaybackRegion* playbackRegion, ARA::ARATimeDuration* headTime, ARA::ARATimeDuration* tailTime) noexcept
 {
     auto araPlaybackRegion = static_cast<ARAPlaybackRegion*> (playbackRegion);
@@ -241,6 +278,57 @@ ARA::PlugIn::EditorRenderer* ARADocumentController::doCreateEditorRenderer() noe
 ARA::PlugIn::EditorView* ARADocumentController::doCreateEditorView() noexcept
 {
     return new ARAEditorView (this);
+}
+
+//==============================================================================
+
+ARADocumentController::ArchiveReader::ArchiveReader (ARA::PlugIn::HostArchiveReader* reader)
+: archiveReader (reader), 
+  position (0), 
+  size (reader->getArchiveSize())
+{}
+
+int ARADocumentController::ArchiveReader::read (void* destBuffer, int maxBytesToRead)
+{
+    const int bytesToRead = std::min (maxBytesToRead, (int) (size - position));
+    if (! archiveReader->readBytesFromArchive (position, bytesToRead, (ARA::ARAByte*) destBuffer))
+        return 0;
+    position += bytesToRead;
+    return bytesToRead;
+}
+
+bool ARADocumentController::ArchiveReader::setPosition (int64 newPosition)
+{
+    if (newPosition >= (int64) size)
+        return false;
+    position = (size_t) newPosition;
+    return true;
+}
+
+bool ARADocumentController::ArchiveReader::isExhausted()
+{
+    return position >= size;
+}
+
+ARADocumentController::ArchiveWriter::ArchiveWriter (ARA::PlugIn::HostArchiveWriter* writer)
+: archiveWriter (writer), 
+  position (0)
+{}
+
+bool ARADocumentController::ArchiveWriter::write (const void* dataToWrite, size_t numberOfBytes)
+{
+    if (! archiveWriter->writeBytesToArchive (position, numberOfBytes, (const ARA::ARAByte*) dataToWrite))
+        return false;
+    position += numberOfBytes;
+    return true;
+}
+
+bool ARADocumentController::ArchiveWriter::setPosition (int64 newPosition)
+{
+    if (newPosition > (int64) std::numeric_limits<size_t>::max())
+        return false;
+    position = (size_t) newPosition;
+    return true;
 }
 
 //==============================================================================

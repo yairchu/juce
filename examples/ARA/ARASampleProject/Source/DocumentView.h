@@ -93,9 +93,16 @@ public:
 
     const AudioPlayHead::CurrentPositionInfo& getPlayHeadPositionInfo() const { return positionInfo; }
 
-    // DocumentView States
-    void setShowOnlySelectedRegionSequences (bool newVal);
-    bool isShowingOnlySelectedRegionSequences() { return showOnlySelectedRegionSequences; }
+    /* Sets getVisibleRegionSequences to show only RegionSequences provied by the EditorView::getViewSelection()
+       @see getVisibleAreaRegionSequences
+     */
+    void showOnlySelectedRegionSequences();
+
+    /* Sets getVisibleRegionSequences to show all RegionSequences from the ARA Document
+       Except those who are reported as "Hidden" by EditorView::getHiddenRegionSequences()
+       @see getVisibleAreaRegionSequences
+     */
+    void showAllRegionSequences();
 
     void setIsTrackHeadersVisible (bool shouldBeVisible);
     bool isTrackHeadersVisible() const { return trackHeadersView.isVisible(); }
@@ -118,6 +125,7 @@ public:
     void setVisibleTimeRange (Range<double> newRange) { viewport.setVisibleRange (newRange); };
     void zoomBy (double newValue);
 
+    void setFitTrackHeight (bool shouldFit);
     void setTrackHeight (int newHeight);
     int getTrackHeight() const { return trackHeight; }
 
@@ -149,6 +157,11 @@ public:
     void didEndEditing (ARADocument* document) override;
     void didAddRegionSequenceToDocument (ARADocument* document, ARARegionSequence* regionSequence) override;
     void didReorderRegionSequencesInDocument (ARADocument* document) override;
+
+    /** Return the RegionSequences that should be visible by this DocumentView.
+        @see showOnlySelectedRegionSequences(), showAllRegionSequences()
+     */
+    std::function<std::vector<ARARegionSequence*> ()> getVisibleRegionSequences {nullptr};
 
     // update region to range (if needed)
     void setRegionBounds (PlaybackRegionView*, Range<double>);
@@ -185,13 +198,13 @@ public:
 
          @param newTrackHeight           new trackHeight in pixels.
          */
-        virtual void trackHeightChanged (int newTrackHeight) {};
+        virtual void trackHeightChanged (int /*newTrackHeight*/) {};
 
         /** Called when a rulersHeight is changed.
 
          @param newRulersHeight           new rulersHeight in pixels.
          */
-        virtual void rulersHeightChanged (int newRulersHeight) {};
+        virtual void rulersHeightChanged (int /*newRulersHeight*/) {};
     };
 
     /** Registers a listener that will be called for changes of the DocumentView. */
@@ -257,7 +270,7 @@ private:
 
     // Component View States
     bool scrollFollowsPlayHead = true;
-    bool showOnlySelectedRegionSequences = true;
+    bool fitTrackHeight = true;
 
     int trackHeight = 80;
     int rulersHeight = 20;

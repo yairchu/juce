@@ -101,11 +101,32 @@ protected:
     void didEndEditing() noexcept override;
     void doNotifyModelUpdates() noexcept override;
 
-    // Persistency Management
-    // * Overriding these methods does not require calling the base class.
-    // * You may override either the methods with JUCE streams or with the ARA SDK's archive reader/writer.
+    /** Read an ARADocument archive from a juce::InputStream.
+    @param input Data stream containing previously persisted data to be used when restoring the ARADocument
+    @param filter An optional filter to be applied to the stream; nullptr if no filtering is required
+
+    The optional \p filter parameter can be used to restore a subsection of the document, in which case
+    it will not be nullptr. 
+
+    Overriding this method is the preferred way of handling ARA document persistence, but you can also
+    override ARA::PlugIn::DocumentController::doRestoreObjectsFromArchive to deal with an ARA archive 
+    ARA::PlugIn::HostArchiveReader directly. 
+    */
     virtual bool doRestoreObjectsFromStream (InputStream& input, ARA::PlugIn::RestoreObjectsFilter* filter) noexcept;
+
+    /** Write an ARADocument archive to a juce::OutputStream.
+    @param output Data stream that should be used to write the persistent ARADocument data
+    @param filter An optional filter to be applied to the stream; nullptr if no filtering is required
+
+    The optional \p filter parameter can be used to store a subsection of the document, in which case
+    it will not be nullptr. 
+
+    Overriding this method is the preferred way of handling ARA document persistence, but you can also
+    override ARA::PlugIn::DocumentController::doStoreObjectsToArchive to deal with an ARA archive 
+    ARA::PlugIn::HostArchiveWriter directly. 
+    */
     virtual bool doStoreObjectsToStream (OutputStream& output, ARA::PlugIn::StoreObjectsFilter* filter) noexcept;
+
     bool doRestoreObjectsFromArchive (ARA::PlugIn::HostArchiveReader* archiveReader, ARA::PlugIn::RestoreObjectsFilter* filter) noexcept override;
     bool doStoreObjectsToArchive (ARA::PlugIn::HostArchiveWriter* archiveWriter, ARA::PlugIn::StoreObjectsFilter* filter) noexcept override;
 
@@ -161,8 +182,8 @@ protected:
 
     // PlaybackRegion callbacks
     ARA::PlugIn::PlaybackRegion* doCreatePlaybackRegion (ARA::PlugIn::AudioModification* modification, ARA::ARAPlaybackRegionHostRef hostRef) noexcept override;
-    OVERRIDE_TO_NOTIFY_3 (willUpdatePlaybackRegionProperties, PlaybackRegion*, playbackRegion, ARAPlaybackRegion::PropertiesPtr, newProperties);
-    OVERRIDE_TO_NOTIFY_1 (didUpdatePlaybackRegionProperties, PlaybackRegion*, playbackRegion);
+    /*OVERRIDE_TO_NOTIFY_2*/ void willUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion, ARAPlaybackRegion::PropertiesPtr newProperties) noexcept override;
+    /*OVERRIDE_TO_NOTIFY_1*/ void didUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept override;
     void doGetPlaybackRegionHeadAndTailTime (ARA::PlugIn::PlaybackRegion* playbackRegion, ARA::ARATimeDuration* headTime, ARA::ARATimeDuration* tailTime) noexcept override;
     OVERRIDE_TO_NOTIFY_1 (willDestroyPlaybackRegion, PlaybackRegion*, playbackRegion);
 
@@ -173,6 +194,43 @@ protected:
     ARA::PlugIn::EditorRenderer* doCreateEditorRenderer() noexcept override;
     ARA::PlugIn::EditorView* doCreateEditorView() noexcept override;
 
+protected:
+
+    //==============================================================================
+    class ArchiveReader     : public InputStream
+    {
+    public:
+        ArchiveReader (ARA::PlugIn::HostArchiveReader*);
+
+        int64 getPosition() override { return (int64) position; }
+        int64 getTotalLength() override { return (int64) size; }
+
+        bool setPosition (int64) override;
+        bool isExhausted() override;
+        int read (void*, int) override;
+
+    private:
+        ARA::PlugIn::HostArchiveReader* archiveReader;
+        size_t position, size;
+    };
+
+    //==============================================================================
+    class ArchiveWriter     : public OutputStream
+    {
+    public:
+        ArchiveWriter (ARA::PlugIn::HostArchiveWriter*);
+
+        int64 getPosition() override { return (int64) position; }
+        void flush() override {}
+
+        bool setPosition (int64) override;
+        bool write (const void*, size_t) override;
+
+    private:
+        ARA::PlugIn::HostArchiveWriter* archiveWriter;
+        size_t position;
+    };
+
 private:
    #undef OVERRIDE_TO_NOTIFY_1
    #undef OVERRIDE_TO_NOTIFY_2
@@ -180,6 +238,9 @@ private:
    #undef OVERRIDE_TO_NOTIFY_4
 
 private:
+    // this flag is used automatically trigger content update if a property change implies this
+    bool _currentPropertyUpdateAffectsContent = false;
+
     std::map<ARAAudioSource*, ARAContentUpdateScopes> audioSourceUpdates;
     std::map<ARAAudioModification*, ARAContentUpdateScopes> audioModificationUpdates;
     std::map<ARAPlaybackRegion*, ARAContentUpdateScopes> playbackRegionUpdates;

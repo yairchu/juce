@@ -50,6 +50,8 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
         }
         viewport.repaint();
     };
+    // sets default lambda to show only selected region sequences.
+    showOnlySelectedRegionSequences();
 
     addAndMakeVisible (viewport);
 
@@ -103,9 +105,30 @@ void DocumentView::invalidateRegionSequenceViews()
 }
 
 //==============================================================================
-void DocumentView::setShowOnlySelectedRegionSequences (bool newVal)
+void DocumentView::showOnlySelectedRegionSequences()
 {
-    showOnlySelectedRegionSequences = newVal;
+    getVisibleRegionSequences = [=]()
+    {
+        return getARAEditorView()->getViewSelection().getEffectiveRegionSequences<ARARegionSequence>();
+    };
+    invalidateRegionSequenceViews();
+}
+
+void DocumentView::showAllRegionSequences()
+{
+    getVisibleRegionSequences = [=]()
+    {
+        std::vector<ARARegionSequence*> visibleSequences;
+        visibleSequences.clear();
+        for (auto regionSequence : getARADocumentController()->getDocument()->getRegionSequences<ARARegionSequence>())
+        {
+            if (! ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
+            {
+                visibleSequences.push_back (regionSequence);
+            }
+        }
+        return visibleSequences;
+    };
     invalidateRegionSequenceViews();
 }
 
@@ -153,6 +176,12 @@ void DocumentView::zoomBy (double zoomMultiply)
                                            });
 }
 
+void DocumentView::setFitTrackHeight (bool shouldFit)
+{
+    fitTrackHeight = shouldFit;
+    resized();
+}
+
 void DocumentView::setTrackHeight (int newHeight)
 {
     if (newHeight == trackHeight)
@@ -198,7 +227,7 @@ void DocumentView::resized()
     const int trackHeaderWidth = trackHeadersView.isVisible() ? trackHeadersView.getWidth() : 0;
     rulersView.setBounds (0, 0, viewport.getWidth(), rulersHeight);
     const int minTrackHeight = (viewport.getHeightExcludingBorders() / (regionSequenceViews.isEmpty() ? 1 : regionSequenceViews.size()));
-    if (showOnlySelectedRegionSequences)
+    if (fitTrackHeight)
         setTrackHeight (minTrackHeight);
     else
         setTrackHeight (jmax (trackHeight, minTrackHeight));
@@ -234,26 +263,11 @@ void DocumentView::rebuildRegionSequenceViews()
     }
     regionSequenceViews.clear();
 
-    if (showOnlySelectedRegionSequences)
+    for (auto selectedSequence : getVisibleRegionSequences())
     {
-        for (auto selectedSequence : getARAEditorView()->getViewSelection().getEffectiveRegionSequences<ARARegionSequence>())
-        {
-            auto sequence = createViewForRegionSequence (selectedSequence);
-            regionSequenceViews.add (sequence);
-            viewport.getViewedComponent()->addAndMakeVisible (sequence);
-        }
-    }
-    else    // show all RegionSequences of Document...
-    {
-        for (auto regionSequence : getARADocumentController()->getDocument()->getRegionSequences<ARARegionSequence>())
-        {
-            if (! ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
-            {
-                auto sequence = createViewForRegionSequence (regionSequence);
-                regionSequenceViews.add (sequence);
-                viewport.getViewedComponent()->addAndMakeVisible (sequence);
-            }
-        }
+        auto sequence = createViewForRegionSequence (selectedSequence);
+        regionSequenceViews.add (sequence);
+        viewport.getViewedComponent()->addAndMakeVisible (sequence);
     }
 
     // calculate maximum visible time range
@@ -332,10 +346,7 @@ void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double
 //==============================================================================
 void DocumentView::onNewSelection (const ARA::PlugIn::ViewSelection& /*viewSelection*/)
 {
-    if (showOnlySelectedRegionSequences)
-        invalidateRegionSequenceViews();
-    else
-        timeRangeSelectionView.repaint();
+    invalidateRegionSequenceViews();
 }
 
 void DocumentView::onHideRegionSequences (std::vector<ARARegionSequence*> const& /*regionSequences*/)
@@ -351,7 +362,7 @@ void DocumentView::didEndEditing (ARADocument* document)
         rebuildRegionSequenceViews();
 }
 
-void DocumentView::didAddRegionSequenceToDocument (ARADocument* document, ARARegionSequence* regionSequence)
+void DocumentView::didAddRegionSequenceToDocument (ARADocument* document, ARARegionSequence* /*regionSequence*/)
 {
     jassert (document == getARADocumentController()->getDocument());
 
@@ -430,15 +441,14 @@ void DocumentView::TimeRangeSelectionView::paint (juce::Graphics& g)
         const int startPixel = mapper.getPixelForPosition (selection.getTimeRange()->start);
         const int endPixel = mapper.getPixelForPosition (selection.getTimeRange()->start + selection.getTimeRange()->duration);
         const int pixelDuration = endPixel - startPixel;
-        const int trackHeight = documentView.getTrackHeight();
         int y = 0;
         g.setColour (juce::Colours::white.withAlpha (0.7f));
         for (const auto regionSequenceView : documentView.regionSequenceViews)
         {
             const auto regionSequence = regionSequenceView->getRegionSequence();
             if (regionSequence != nullptr && ARA::contains (selection.getRegionSequences(), regionSequence))
-                g.fillRect (startPixel, y, pixelDuration, trackHeight);
-            y += trackHeight;
+                g.fillRect (startPixel, y, pixelDuration, documentView.getTrackHeight());
+            y += documentView.getTrackHeight();
         }
     }
 }

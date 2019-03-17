@@ -31,7 +31,16 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
         documentView->setTrackHeight (editorDefaultSettings.getProperty (trackHeightId, documentView->getTrackHeight()));
         documentView->setTrackHeaderWidth (editorDefaultSettings.getProperty (trackHeaderWidthId, documentView->getTrackHeaderWidth()));
         documentView->setIsTrackHeadersVisible (editorDefaultSettings.getProperty (trackHeadersVisibleId, documentView->isTrackHeadersVisible()));
-        documentView->setShowOnlySelectedRegionSequences (editorDefaultSettings.getProperty (showOnlySelectedId, false));
+        if (editorDefaultSettings.getProperty (showOnlySelectedId, false))
+        {
+            documentView->setFitTrackHeight (true);
+            documentView->showOnlySelectedRegionSequences();
+        }
+        else
+        {
+            documentView->setFitTrackHeight (false);
+            documentView->showAllRegionSequences();
+        }
         documentView->setScrollFollowsPlayHead (editorDefaultSettings.getProperty (scrollFollowsPlayHeadId, documentView->isScrollFollowingPlayHead()));
         documentView->zoomBy (editorDefaultSettings.getProperty (zoomFactorId, documentView->getTimeMapper().getZoomFactor()));
 
@@ -53,11 +62,18 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
 
         onlySelectedTracksButton.setButtonText ("Selected Tracks Only");
         onlySelectedTracksButton.setClickingTogglesState (true);
-        onlySelectedTracksButton.setToggleState (documentView->isShowingOnlySelectedRegionSequences(), dontSendNotification);
+        onlySelectedTracksButton.setToggleState (editorDefaultSettings.getProperty(showOnlySelectedId, false), dontSendNotification);
         onlySelectedTracksButton.onClick = [this]
         {
             const bool isOnlySelected = onlySelectedTracksButton.getToggleState();
-            documentView->setShowOnlySelectedRegionSequences (isOnlySelected);
+            if (isOnlySelected)
+            {
+                documentView->showOnlySelectedRegionSequences();
+            }
+            else
+            {
+                documentView->showAllRegionSequences();
+            }
             verticalZoomLabel.setVisible (! isOnlySelected);
             verticalZoomInButton.setVisible (! isOnlySelected);
             verticalZoomOutButton.setVisible (! isOnlySelected);
@@ -94,15 +110,15 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
         };
         verticalZoomInButton.onClick = [this, zoomStepFactor]
         {
-            documentView->setTrackHeight (documentView->getTrackHeight() * zoomStepFactor);
+            documentView->setTrackHeight ((int) (documentView->getTrackHeight() * zoomStepFactor));
         };
         verticalZoomOutButton.onClick = [this, zoomStepFactor]
         {
-            documentView->setTrackHeight (documentView->getTrackHeight() / zoomStepFactor);
+            documentView->setTrackHeight ((int) (documentView->getTrackHeight () / zoomStepFactor));
         };
         addAndMakeVisible (horizontalZoomInButton);
         addAndMakeVisible (horizontalZoomOutButton);
-        if (! documentView->isShowingOnlySelectedRegionSequences())
+        if (! editorDefaultSettings.getProperty(showOnlySelectedId, false))
         {
             addAndMakeVisible (verticalZoomLabel);
             addAndMakeVisible (verticalZoomInButton);
