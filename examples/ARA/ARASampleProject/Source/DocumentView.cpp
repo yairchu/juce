@@ -351,7 +351,7 @@ void DocumentView::didEndEditing (ARADocument* document)
         rebuildRegionSequenceViews();
 }
 
-void DocumentView::didAddRegionSequenceToDocument (ARADocument* document, ARARegionSequence* regionSequence)
+void DocumentView::didAddRegionSequenceToDocument (ARADocument* document, ARARegionSequence* /*regionSequence*/)
 {
     jassert (document == getARADocumentController()->getDocument());
 
@@ -430,15 +430,14 @@ void DocumentView::TimeRangeSelectionView::paint (juce::Graphics& g)
         const int startPixel = mapper.getPixelForPosition (selection.getTimeRange()->start);
         const int endPixel = mapper.getPixelForPosition (selection.getTimeRange()->start + selection.getTimeRange()->duration);
         const int pixelDuration = endPixel - startPixel;
-        const int trackHeight = documentView.getTrackHeight();
         int y = 0;
         g.setColour (juce::Colours::white.withAlpha (0.7f));
         for (const auto regionSequenceView : documentView.regionSequenceViews)
         {
             const auto regionSequence = regionSequenceView->getRegionSequence();
             if (regionSequence != nullptr && ARA::contains (selection.getRegionSequences(), regionSequence))
-                g.fillRect (startPixel, y, pixelDuration, trackHeight);
-            y += trackHeight;
+                g.fillRect (startPixel, y, pixelDuration, documentView.getTrackHeight());
+            y += documentView.getTrackHeight();
         }
     }
 }
