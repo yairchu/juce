@@ -19,9 +19,10 @@ TimelineViewport::TimelineViewport (TimelinePixelMapperBase* pixelMapperToOwn, j
     , allowScrollH (true)
     , allowScrollV (true)
 {
+    addAndMakeVisible (viewportClip);
     viewportClip.setWantsKeyboardFocus (false);
-    viewportClip.setInterceptsMouseClicks (false, false);
-    setShouldClipBorders (true);
+    viewportClip.setInterceptsMouseClicks (false, true);
+
     hScrollBar->setRangeLimits (pixelMapper->getTimelineRange(), dontSendNotification);
     hScrollBar->addListener (this);
     vScrollBar->addListener (this);
@@ -146,7 +147,6 @@ double TimelineViewport::getZoomFactor()
 #ifdef JUCE_DEBUG
 void TimelineViewport::paint (juce::Graphics &g)
 {
-    g.fillAll (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
     // end of timeline...
     const int endPixel = pixelMapper->getEndPixelForBoundsWithinTimeline (g.getClipBounds().withTrimmedLeft (viewportBorders.getLeft()));
     double rightMostPixel;
@@ -176,7 +176,8 @@ void TimelineViewport::paint (juce::Graphics &g)
 void TimelineViewport::resized()
 {
     invalidateViewport();
-    viewportClip.setBounds (getBounds());
+    const auto bounds = getLocalBounds();
+    viewportClip.setBounds (bounds.withY (viewportBorders.getTop()).withHeight (getHeightExcludingBorders()));
 }
 
 void TimelineViewport::setViewedComponent (juce::Component *newViewedComponentToOwn)
@@ -184,14 +185,14 @@ void TimelineViewport::setViewedComponent (juce::Component *newViewedComponentTo
     if (contentComp.get())
     {
         contentComp->removeComponentListener (this);
-        removeChildComponent (contentComp.get());
+        viewportClip.removeChildComponent (contentComp.get());
     }
     contentComp.reset(newViewedComponentToOwn);
     if (newViewedComponentToOwn == nullptr)
         return;
 
     contentComp->addComponentListener (this);
-    addAndMakeVisible (*contentComp);
+    viewportClip.addAndMakeVisible (*contentComp);
     if (shouldClipBorders)
     {
         viewportClip.toFront (false);
@@ -217,7 +218,7 @@ void TimelineViewport::invalidateViewport()
                 updateComponentsForRange (componentsRange);
             }
         }
-        Point<int> newPos (0, roundToInt (-vScrollBar->getCurrentRangeStart()) + viewportBorders.getTop());
+        Point<int> newPos (0, roundToInt (-vScrollBar->getCurrentRangeStart()));
         if (contentComp->getBounds().getPosition() != newPos)
         {
             contentComp->setTopLeftPosition (newPos);  // (this will re-entrantly call invalidateViewport again)
@@ -230,8 +231,8 @@ void TimelineViewport::invalidateViewport()
 void TimelineViewport::setViewedComponentBorders (BorderSize<int> borders)
 {
     viewportBorders = borders;
-    viewportClip.transparentBounds = Rectangle<int>(viewportBorders.getLeft(), viewportBorders.getTop(), getWidthExcludingBorders(), getHeightExcludingBorders());
     invalidateViewport();
+    resized();
 }
 
 int TimelineViewport::getWidthExcludingBorders()
@@ -267,30 +268,6 @@ void TimelineViewport::setVisibleRange (Range<double> newVisibleRange)
     pixelMapper->setStartPixelPosition (start);
     pixelMapper->setZoomFactor (Range<double>(start, end).getLength() / getWidthExcludingBorders());
     invalidateViewport();
-}
-
-
-void TimelineViewport::ViewportClip::paint (juce::Graphics& g)
-{
-    // avoid transparency.
-    g.setColour (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
-    g.fillRect (0, 0, getWidth(), transparentBounds.getY());
-    g.fillRect (0, transparentBounds.getBottom(), getWidth(), getHeight() - transparentBounds.getBottom());
-    g.setColour (Colours::transparentBlack);
-    g.fillRect (transparentBounds);
-}
-
-void TimelineViewport::setShouldClipBorders (bool shouldClip)
-{
-    shouldClipBorders = shouldClip;
-    if (shouldClipBorders)
-    {
-        addAndMakeVisible (viewportClip);
-    }
-    else
-    {
-        viewportClip.setVisible (false);
-    }
 }
 
 bool TimelineViewport::anchorChildForTimeRange (const Range<double> entireRangeOfParent, const Range<double> visibleRangeOfParent, Component& componentToBound, const float absoluteWidth, bool anchorToEnd)
