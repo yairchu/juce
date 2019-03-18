@@ -31,7 +31,6 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
         return;
     }
 
-    viewport.setShouldClipBorders (false);
     viewport.setViewedComponent (new Component());
     viewport.addAndMakeVisible (rulersView);
     viewport.addAndMakeVisible (playHeadView);

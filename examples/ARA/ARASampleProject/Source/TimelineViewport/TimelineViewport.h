@@ -112,8 +112,6 @@ public:
 
     const TimelinePixelMapperBase& getPixelMapper() const { return *pixelMapper; }
 
-    void setShouldClipBorders (bool shouldClip);
-
     bool anchorChildForTimeRange (const Range<double> entireRangeOfParent, const Range<double> visibleRangeOfParent, Component& componentToBound, const float absoluteWidth, bool anchorToEnd = true);
 
     void resized() override;
@@ -125,17 +123,12 @@ public:
     int getHeightExcludingBorders();
 private:
     void invalidateViewport();
-    class ViewportClip : public Component
-    {
-    public:
-        juce::Rectangle<int> transparentBounds;
-        void paint (Graphics&) override;
-    } viewportClip;
 private:
     std::unique_ptr<TimelinePixelMapperBase> pixelMapper;
     BorderSize<int> viewportBorders;
     std::unique_ptr<ScrollBar> hScrollBar, vScrollBar;
     std::shared_ptr<Component> contentComp;
+    Component viewportClip;
     // range of components currently visible
     Range<double> componentsRange;
     bool shouldClipBorders;
