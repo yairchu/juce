@@ -18,7 +18,6 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
       viewport (new ARASecondsPixelMapper (extension)),
       timeMapper (static_cast<const ARASecondsPixelMapper&>(viewport.getPixelMapper())),
       rulersView (viewport, &lastReportedPosition),
-      playHeadView (*this),
       timeRangeSelectionView (*this),
       positionInfo (posInfo)
 {
@@ -30,11 +29,10 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
         jassertfalse;
         return;
     }
-
     viewport.setViewedComponent (new Component());
     viewport.addAndMakeVisible (rulersView);
-    viewport.addAndMakeVisible (playHeadView);
-    playHeadView.setAlwaysOnTop (true);
+
+    addPlayheadView (new PlayHeadView(*this));
 
     viewport.getViewedComponent()->addAndMakeVisible (trackHeadersView);
     timeRangeSelectionView.setAlwaysOnTop (true);
@@ -241,7 +239,10 @@ void DocumentView::resized()
     viewport.setViewedComponentBorders (BorderSize<int>(rulersHeight, trackHeaderWidth, 0, 0));
     viewport.getViewedComponent()->setBounds (0, 0, getWidth(), y);
     trackHeadersView.setBounds (0, 0, getTrackHeaderWidth(), viewport.getViewedComponent()->getHeight());
-    playHeadView.setBounds (trackHeaderWidth, rulersHeight, viewport.getWidthExcludingBorders(), viewport.getHeightExcludingBorders());
+    if (playHeadView != nullptr)
+    {
+        playHeadView->setBounds (trackHeaderWidth, rulersHeight, viewport.getWidthExcludingBorders(), viewport.getHeightExcludingBorders());
+    }
     // apply needed borders
     auto timeRangeBounds = viewport.getViewedComponent()->getBounds();
     timeRangeBounds.setTop (0);
@@ -387,8 +388,10 @@ void DocumentView::timerCallback()
             if (lastReportedPosition.timeInSeconds < visibleRange.getStart() || lastReportedPosition.timeInSeconds > visibleRange.getEnd())
                 viewport.getScrollBar (false).setCurrentRangeStart (lastReportedPosition.timeInSeconds);
         };
-
-        playHeadView.repaint();
+        if (playHeadView != nullptr)
+        {
+            playHeadView->repaint();
+        }
     }
 }
 
@@ -402,6 +405,19 @@ void DocumentView::removeListener (Listener* const listener)
 {
     listeners.remove (listener);
 }
+
+void DocumentView::addPlayheadView (juce::Component *playheadToOwn)
+{
+    if (playheadToOwn == nullptr)
+    {
+        playHeadView.reset ();
+        return;
+    }
+    playHeadView.reset (playheadToOwn);
+    viewport.addAndMakeVisible (playHeadView.get());
+    playHeadView->setAlwaysOnTop (true);
+}
+
 
 //==============================================================================
 DocumentView::PlayHeadView::PlayHeadView (DocumentView& documentView)

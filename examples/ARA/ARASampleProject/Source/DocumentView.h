@@ -122,6 +122,11 @@ public:
     void setScrollFollowsPlayHead (bool followPlayHead) { scrollFollowsPlayHead = followPlayHead; }
     bool isScrollFollowingPlayHead() const { return scrollFollowsPlayHead; }
 
+    /* Attach a playhead view to DocumentView.
+     * Added juce::Component will be owned!
+     */
+    void addPlayheadView (Component* playheadToOwn);
+
     void setVisibleTimeRange (Range<double> newRange) { viewport.setVisibleRange (newRange); };
     void zoomBy (double newValue);
 
@@ -264,7 +269,7 @@ private:
 
     OwnedArray<RegionSequenceView> regionSequenceViews;
 
-    PlayHeadView playHeadView;
+    std::unique_ptr<Component> playHeadView;
     TimeRangeSelectionView timeRangeSelectionView;
     AudioFormatManager audioFormatManger;
 
