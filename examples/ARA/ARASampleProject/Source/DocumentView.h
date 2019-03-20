@@ -143,6 +143,12 @@ public:
 
     Range<double> getVisibleTimeRange() { return viewport.getVisibleRange(); }
 
+    /** Returns entire document time range
+        Note: host timeline can have different start/end times.
+              but this range is guaranteed to be within the host timeline.
+     **/
+    Range<double> getDocumentTimeRange();
+
     /** Get ScrollBar components owned by the viewport, this allows further customization */
     juce::ScrollBar& getScrollBar (bool isVertical) { return viewport.getScrollBar (isVertical); }
 
@@ -221,7 +227,8 @@ public:
 private:
     void rebuildRegionSequenceViews();
     void updatePlayHeadBounds();
-
+    /** Adds border padding to time range **/
+    Range<double> padTimeRange (Range<double> timeRangeToPad);
 private:
     // TODO JUCE_ARA eventually those should just be LookAndFeel?
     // once RegionSeqeunce will be a view of its own ViewSelection should be
