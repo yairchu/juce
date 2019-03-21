@@ -128,7 +128,7 @@ public:
     void addPlayheadView (Component* playheadToOwn);
 
     void setVisibleTimeRange (Range<double> newRange) { viewport.setVisibleRange (newRange); };
-    void zoomBy (double newValue);
+    void zoomBy (double newValue, bool relativeToPlayhead = true);
 
     void setFitTrackHeight (bool shouldFit);
     void setTrackHeight (int newHeight);

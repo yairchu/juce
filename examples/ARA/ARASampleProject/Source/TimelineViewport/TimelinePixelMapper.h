@@ -58,7 +58,7 @@ public:
     /* Returns timeline's end in pixel.
      * this will return 0 if overflows.
      */
-    int getTimelineEndPixel()
+    int getTimelineEndPixel() const
     {
         // TODO: getPixelForPosition needs to become long sometime...
         long endPx = getPixelForPosition (timelineRange.getEnd());

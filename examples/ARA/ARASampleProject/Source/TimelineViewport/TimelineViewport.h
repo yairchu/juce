@@ -99,8 +99,16 @@ public:
     void setTimelineRange (Range<double> newRange);
 
     /* Sets new visible range to show.
+     @param newVisibleRange - the new range to show
+     @constrainWidthInPixels - the range on viewport to constrain.
      */
-    void setVisibleRange (Range<double> newVisibleRange);
+    void setVisibleRange (Range<double> newVisibleRange, int constrainWidthInPixels = -1);
+
+    /* Sets new visible range to show.
+     @param startPos - start position on viewport.
+     @param pixelRatio - base unit to pixel ratio;
+     */
+    void setVisibleRange (double startPos, double pixelRatio);
 
     /* Returns the viewport's timeline range in the relevant BaseUnit.
      */

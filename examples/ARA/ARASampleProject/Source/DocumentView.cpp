@@ -157,14 +157,28 @@ void DocumentView::setTrackHeaderMinimumWidth (int newWidth)
     trackHeadersView.checkComponentBounds (&trackHeadersView);
 }
 
-void DocumentView::zoomBy (double zoomMultiply)
+void DocumentView::zoomBy (double zoomMultiply, bool relativeToPlay)
 {
     const auto currentZoomFactor = viewport.getZoomFactor();
     const auto newZoomFactor = currentZoomFactor * zoomMultiply;
     if (newZoomFactor == currentZoomFactor)
         return;
 
-    viewport.setZoomFactor (newZoomFactor);
+    // note - this is for seconds only, currently it won't support ppq
+    const auto playheadPosition = getPlayHeadPositionInfo().timeInSeconds;
+    const auto curRange = getVisibleTimeRange();
+
+    if (relativeToPlay && curRange.contains (playheadPosition) && curRange.getStart() != playheadPosition)
+    {
+        const auto playheadX = getTimeMapper().getPixelForPosition (playheadPosition);
+        const auto offset = playheadX / newZoomFactor;
+        const auto start = viewport.getTimelineRange().clipValue (playheadPosition - offset);
+        viewport.setVisibleRange (start, newZoomFactor);
+    }
+    else
+    {
+        viewport.setZoomFactor (newZoomFactor);
+    }
 
     if (getParentComponent() != nullptr)
         resized();
