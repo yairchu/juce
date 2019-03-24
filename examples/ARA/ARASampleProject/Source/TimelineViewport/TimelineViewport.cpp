@@ -273,6 +273,8 @@ void TimelineViewport::setVisibleRange (Range<double> newVisibleRange, int const
         constrainWidth = getWidthExcludingBorders();
     }
 
+    // are you trying to call this method before view has proper bounds?
+    jassert (constrainWidth > 0);
     const Range<double> newLength (
                         getTimelineRange().clipValue (newVisibleRange.getStart()),
                         getTimelineRange().clipValue (newVisibleRange.getEnd())
