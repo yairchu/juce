@@ -258,15 +258,32 @@ void TimelineViewport::setTimelineRange (Range<double> newRange)
     invalidateViewport();
 }
 
-void TimelineViewport::setVisibleRange (Range<double> newVisibleRange)
+void TimelineViewport::setVisibleRange (Range<double> newVisibleRange, int constrainWidthInPixels)
 {
     // visible range should be within timeline range!
     jassert (getTimelineRange().contains(newVisibleRange));
+    int constrainWidth = constrainWidthInPixels;
+    
+    if (constrainWidth != -1)
+    {
+        jassert (constrainWidth > 0 && constrainWidth <= getWidthExcludingBorders());
+    }
+    else
+    {
+        constrainWidth = getWidthExcludingBorders();
+    }
 
-    const auto start = getTimelineRange().clipValue (newVisibleRange.getStart());
-    const auto end = jlimit(start, getTimelineRange().getEnd(), newVisibleRange.getEnd());
-    pixelMapper->setStartPixelPosition (start);
-    pixelMapper->setZoomFactor (Range<double>(start, end).getLength() / getWidthExcludingBorders());
+    const Range<double> newLength (
+                        getTimelineRange().clipValue (newVisibleRange.getStart()),
+                        getTimelineRange().clipValue (newVisibleRange.getEnd())
+                                   );
+    setVisibleRange (newLength.getStart(), (newLength.getLength() / constrainWidth));
+}
+
+void TimelineViewport::setVisibleRange (double startPos, double pixelRatio)
+{
+    pixelMapper->setStartPixelPosition (startPos);
+    pixelMapper->setZoomFactor (pixelRatio);
     invalidateViewport();
 }
 

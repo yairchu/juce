@@ -37,14 +37,10 @@ namespace juce
     using ARAContentUpdateScopes = ARA::ContentUpdateScopes;
 
     inline String convertARAString (ARA::ARAUtf8String str) { return String (CharPointer_UTF8 (str)); }
+    inline String convertOptionalARAString (ARA::ARAUtf8String str, const String& fallbackString = String()) { return (str != nullptr) ? convertARAString(str) : fallbackString; }
 
-    /* Tries to convert and ARA Colour, if fails this will return default Colour constructor.
-     */
-    inline Colour convertARAColour (const ARA::ARAColor* colour)
-    {
-        return colour != nullptr ? Colour::fromFloatRGBA (colour->r, colour->g, colour->b, 1.0f) :
-        Colour();
-    }
+    inline Colour convertARAColour (const ARA::ARAColor* colour) { return Colour::fromFloatRGBA (colour->r, colour->g, colour->b, 1.0f); }
+    inline Colour convertOptionalARAColour (const ARA::ARAColor* colour, const Colour& fallbackColour = Colour()) { return (colour != nullptr) ? convertARAColour(colour) : fallbackColour; }
 }
 
 #endif

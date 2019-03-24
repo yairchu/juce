@@ -38,7 +38,6 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
     timeRangeSelectionView.setAlwaysOnTop (true);
     viewport.getViewedComponent()->addAndMakeVisible (timeRangeSelectionView);
 
-
     viewport.updateComponentsForRange = [=](Range<double> newVisibleRange)
     {
         for (auto regionSequenceView : regionSequenceViews)
@@ -56,6 +55,9 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
     getARADocumentController()->getDocument<ARADocument>()->addListener (this);
 
     lastReportedPosition.resetToDefault();
+
+    // force initial timerange after construction to be valid.
+    viewport.setTimelineRange (padTimeRange (getDocumentTimeRange()));
 
     startTimerHz (60);
 }
@@ -155,14 +157,28 @@ void DocumentView::setTrackHeaderMinimumWidth (int newWidth)
     trackHeadersView.checkComponentBounds (&trackHeadersView);
 }
 
-void DocumentView::zoomBy (double zoomMultiply)
+void DocumentView::zoomBy (double zoomMultiply, bool relativeToPlay)
 {
     const auto currentZoomFactor = viewport.getZoomFactor();
     const auto newZoomFactor = currentZoomFactor * zoomMultiply;
     if (newZoomFactor == currentZoomFactor)
         return;
 
-    viewport.setZoomFactor (newZoomFactor);
+    // note - this is for seconds only, currently it won't support ppq
+    const auto playheadPosition = getPlayHeadPositionInfo().timeInSeconds;
+    const auto curRange = getVisibleTimeRange();
+
+    if (relativeToPlay && curRange.contains (playheadPosition) && curRange.getStart() != playheadPosition)
+    {
+        const auto playheadX = getTimeMapper().getPixelForPosition (playheadPosition);
+        const auto offset = playheadX / newZoomFactor;
+        const auto start = viewport.getTimelineRange().clipValue (playheadPosition - offset);
+        viewport.setVisibleRange (start, newZoomFactor);
+    }
+    else
+    {
+        viewport.setZoomFactor (newZoomFactor);
+    }
 
     if (getParentComponent() != nullptr)
         resized();
@@ -292,16 +308,7 @@ void DocumentView::rebuildRegionSequenceViews()
     }
 
     // ensure visible range covers kMinSecondDuration
-    if (timeRange.getLength() < kMinSecondDuration)
-    {
-        double startAdjustment = (kMinSecondDuration - timeRange.getLength()) / 2.0;
-        timeRange.setStart (timeRange.getStart() - startAdjustment);
-        timeRange.setEnd (timeRange.getStart() + kMinSecondDuration);
-    }
-
-    // apply kMinBorderSeconds offset to start and end
-    timeRange.setStart (timeRange.getStart() - kMinBorderSeconds);
-    timeRange.setEnd (timeRange.getEnd() + kMinBorderSeconds);
+    timeRange = padTimeRange (timeRange);
 
     // TODO JUCE_ARA - currently the entire DocumentView is rebuilt each time
     //                 showOnlySelectedRegionSequences is changed.
@@ -418,6 +425,43 @@ void DocumentView::addPlayheadView (juce::Component *playheadToOwn)
     playHeadView->setAlwaysOnTop (true);
 }
 
+Range<double> DocumentView::getDocumentTimeRange()
+{
+    // calculate viewport to be valid after construction!
+    juce::Range<double> timeRange = { 0.0, 0.0 };
+    bool isFirst = true;
+    for (auto regionSequence : getARADocumentController()->getDocument()->getRegionSequences<ARARegionSequence>())
+    {
+        if (! ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
+        {
+            const auto sequenceTimeRange = regionSequence->getTimeRange();
+            if (isFirst)
+            {
+                timeRange = sequenceTimeRange;
+                isFirst = false;
+                continue;
+            }
+            timeRange = timeRange.getUnionWith (sequenceTimeRange);
+        }
+    }
+    return timeRange;
+}
+
+Range<double> DocumentView::padTimeRange (Range<double> timeRange)
+{
+    if (timeRange.getLength() < kMinSecondDuration)
+    {
+        double startAdjustment = (kMinSecondDuration - timeRange.getLength()) / 2.0;
+        timeRange.setStart (timeRange.getStart() - startAdjustment);
+        timeRange.setEnd (timeRange.getStart() + kMinSecondDuration);
+    }
+
+    // apply kMinBorderSeconds offset to start and end
+    timeRange.setStart (timeRange.getStart() - kMinBorderSeconds);
+    timeRange.setEnd (timeRange.getEnd() + kMinBorderSeconds);
+
+    return timeRange;
+}
 
 //==============================================================================
 DocumentView::PlayHeadView::PlayHeadView (DocumentView& documentView)
