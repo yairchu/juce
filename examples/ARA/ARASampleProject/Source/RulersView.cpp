@@ -237,7 +237,7 @@ void RulersView::ARAChordsRuler::paint (juce::Graphics& g)
             }
             // draw chord rect and name
             g.drawRect (chordRect);
-            g.drawText (convertARAString (interpreter.getNameForChord (*itChord).c_str()), chordRect.withTrimmedLeft (2), Justification::centredLeft);
+            g.drawText (convertOptionalARAString (interpreter.getNameForChord (*itChord).c_str()), chordRect.withTrimmedLeft (2), Justification::centredLeft);
         }
     }
     else

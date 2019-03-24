@@ -61,7 +61,7 @@ PlaybackRegionViewImpl::~PlaybackRegionViewImpl()
 //==============================================================================
 void PlaybackRegionViewImpl::paint (Graphics& g)
 {
-    Colour regionColour = convertARAColour (playbackRegion->getEffectiveColor());
+    Colour regionColour = convertOptionalARAColour (playbackRegion->getEffectiveColor());
 
     auto rect = getLocalBounds();
     g.setColour (isSelected ? Colours::yellow : Colours::black);
@@ -203,10 +203,10 @@ void PlaybackRegionViewImpl::recreatePlaybackRegionReader()
 
 void PlaybackRegionViewImpl::updateRegionName()
 {
-    Colour regionColour = convertARAColour (playbackRegion->getEffectiveColor());
+    Colour regionColour = convertOptionalARAColour (playbackRegion->getEffectiveColor());
     regionName.setFont (Font (12.0f));
     regionName.setMinimumHorizontalScale (1.0);
     regionName.setJustificationType (Justification::topLeft);
-    regionName.setText (convertARAString(playbackRegion->getEffectiveName()), sendNotification);
+    regionName.setText (convertOptionalARAString (playbackRegion->getEffectiveName()), sendNotification);
     regionName.setColour (Label::ColourIds::textColourId, regionColour.contrasting (1.0f));
 }

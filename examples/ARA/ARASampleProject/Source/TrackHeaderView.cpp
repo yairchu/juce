@@ -34,7 +34,7 @@ void TrackHeaderView::paint (juce::Graphics& g)
     if (regionSequence == nullptr)
         return;
 
-    Colour trackColour = convertARAColour (regionSequence->getColor());
+    Colour trackColour = convertOptionalARAColour (regionSequence->getColor());
 
     auto rect = getLocalBounds();
     g.setColour (isSelected ? Colours::yellow : Colours::black);
@@ -48,7 +48,7 @@ void TrackHeaderView::paint (juce::Graphics& g)
     {
         g.setColour (trackColour.contrasting (1.0f));
         g.setFont (Font (12.0f));
-        g.drawText (convertARAString (name), rect, Justification::centredLeft);
+        g.drawText (convertOptionalARAString (name), rect, Justification::centredLeft);
     }
 }
 
