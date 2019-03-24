@@ -127,7 +127,14 @@ public:
      */
     void addPlayheadView (Component* playheadToOwn);
 
+    /* Sets the current visible area by range.
+       Note: This would only work if DocumentView bounds.height is greater than 0.
+     */
     void setVisibleTimeRange (Range<double> newRange) { viewport.setVisibleRange (newRange); };
+
+    /* Sets the current visible area by start position and zoom ratio.
+     */
+    void setVisibleTimeRange (double startPos, double ratio) { viewport.setVisibleRange(startPos, ratio); }
     void zoomBy (double newValue, bool relativeToPlayhead = true);
 
     void setFitTrackHeight (bool shouldFit);
