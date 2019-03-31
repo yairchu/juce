@@ -2355,7 +2355,7 @@ public:
 
         if (head != nullptr)
         {
-            ComSmartPtr<Steinberg::MemoryStream> componentStream (createMemoryStreamForState (*head, "IComponent"));
+            auto componentStream (createMemoryStreamForState (*head, "IComponent"));
 
             if (componentStream != nullptr && holder->component != nullptr)
                 holder->component->setState (componentStream);
@@ -2369,7 +2369,7 @@ public:
                     editController->setComponentState (componentStream);
                 }
 
-                ComSmartPtr<Steinberg::MemoryStream> controllerStream = createMemoryStreamForState (*head, "IEditController");
+                auto controllerStream (createMemoryStreamForState (*head, "IEditController"));
 
                 if (controllerStream != nullptr)
                     editController->setState (controllerStream);
@@ -2574,23 +2574,22 @@ private:
         }
     }
 
-    static Steinberg::MemoryStream* createMemoryStreamForState (XmlElement& head, StringRef identifier)
+    static ComSmartPtr<Steinberg::MemoryStream> createMemoryStreamForState (XmlElement& head, StringRef identifier)
     {
-        Steinberg::MemoryStream* stream = nullptr;
-
         if (auto* state = head.getChildByName (identifier))
         {
             MemoryBlock mem;
 
             if (mem.fromBase64Encoding (state->getAllSubText()))
             {
-                stream = new Steinberg::MemoryStream();
+                ComSmartPtr<Steinberg::MemoryStream> stream (new Steinberg::MemoryStream(), false);
                 stream->setSize ((TSize) mem.getSize());
                 mem.copyTo (stream->getData(), 0, mem.getSize());
+                return stream;
             }
         }
 
-        return stream;
+        return nullptr;
     }
 
     ComSmartPtr<ParamValueQueueList> inputParameterChanges, outputParameterChanges;
