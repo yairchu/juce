@@ -9,6 +9,7 @@ RegionSequenceView::RegionSequenceView (DocumentView& documentView, ARARegionSeq
       regionSequence (sequence),
       trackHeaderView (documentView.createHeaderViewForRegionSequence (regionSequence))
 {
+    setInterceptsMouseClicks (false, true);
     regionSequence->addListener (this);
 
     documentView.getTrackHeadersView().addAndMakeVisible (*trackHeaderView);
