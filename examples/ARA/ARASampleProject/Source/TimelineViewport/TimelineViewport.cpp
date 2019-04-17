@@ -127,6 +127,133 @@ bool TimelineViewport::useMouseWheelMoveIfNeeded (const MouseEvent& e, const Mou
     return didUpdate;
 }
 
+typedef AnimatedPosition<AnimatedPositionBehaviours::ContinuousWithMomentum> ViewportDragPosition;
+
+struct TimelineViewport::DragToScrollListener   : private MouseListener,
+                                                  private ViewportDragPosition::Listener
+{
+    DragToScrollListener (TimelineViewport& v)  : viewport (v)
+    {
+        viewport.viewportClip.addMouseListener (this, true);
+        offsetX.addListener (this);
+        offsetY.addListener (this);
+        offsetX.behaviour.setMinimumVelocity (60);
+        offsetY.behaviour.setMinimumVelocity (60);
+    }
+
+    ~DragToScrollListener() override
+    {
+        viewport.viewportClip.removeMouseListener (this);
+        Desktop::getInstance().removeGlobalMouseListener (this);
+    }
+
+    void positionChanged (ViewportDragPosition&, double) override
+    {
+        double offsetPos = offsetX.getPosition() * viewport.getPixelMapper().getZoomFactor();
+        viewport.getScrollBar (false).setCurrentRangeStart (originalStartPos - offsetPos);
+        viewport.getScrollBar (true).setCurrentRangeStart (originalY - offsetY.getPosition());
+        viewport.invalidateViewport();
+    }
+
+    void mouseDown (const MouseEvent&) override
+    {
+        if (! isGlobalMouseListener)
+        {
+            offsetX.setPosition (offsetX.getPosition());
+            offsetY.setPosition (offsetY.getPosition());
+
+            // switch to a global mouse listener so we still receive mouseUp events
+            // if the original event component is deleted
+            viewport.viewportClip.removeMouseListener (this);
+            Desktop::getInstance().addGlobalMouseListener (this);
+
+            isGlobalMouseListener = true;
+        }
+    }
+
+    void mouseDrag (const MouseEvent& e) override
+    {
+        if (Desktop::getInstance().getNumDraggingMouseSources() == 1 && ! doesMouseEventComponentBlockViewportDrag (e.eventComponent))
+        {
+            auto totalOffset = e.getOffsetFromDragStart().toFloat();
+
+            if (! isDragging && totalOffset.getDistanceFromOrigin() > 8.0f)
+            {
+                isDragging = true;
+                originalStartPos = viewport.getScrollBar (false).getCurrentRangeStart();
+                originalY = viewport.getScrollBar (true).getCurrentRangeStart();
+                offsetX.setPosition (0.0);
+                offsetX.beginDrag();
+                offsetY.setPosition (0.0);
+                offsetY.beginDrag();
+            }
+
+            if (isDragging)
+            {
+                offsetX.drag (totalOffset.x);
+                offsetY.drag (totalOffset.y);
+            }
+        }
+    }
+
+    void mouseUp (const MouseEvent&) override
+    {
+        if (isGlobalMouseListener && Desktop::getInstance().getNumDraggingMouseSources() == 0)
+            endDragAndClearGlobalMouseListener();
+    }
+
+    void endDragAndClearGlobalMouseListener()
+    {
+        offsetX.endDrag();
+        offsetY.endDrag();
+        isDragging = false;
+
+        viewport.viewportClip.addMouseListener (this, true);
+        Desktop::getInstance().removeGlobalMouseListener (this);
+
+        isGlobalMouseListener = false;
+    }
+
+    bool doesMouseEventComponentBlockViewportDrag (const Component* eventComp)
+    {
+        for (auto c = eventComp; c != nullptr && c != &viewport; c = c->getParentComponent())
+            if (c->getViewportIgnoreDragFlag())
+                return true;
+
+        return false;
+    }
+
+    TimelineViewport& viewport;
+    ViewportDragPosition offsetX, offsetY;
+    double originalStartPos = 0.0;
+    double originalY = 0;
+    bool isDragging = false;
+    bool isGlobalMouseListener = false;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DragToScrollListener)
+};
+
+void TimelineViewport::setScrollOnDragEnabled (bool shouldScrollOnDrag)
+{
+    if (isScrollOnDragEnabled() != shouldScrollOnDrag)
+    {
+        if (shouldScrollOnDrag)
+            dragToScrollListener.reset (new DragToScrollListener (*this));
+        else
+            dragToScrollListener.reset();
+    }
+}
+
+bool TimelineViewport::isScrollOnDragEnabled() const noexcept
+{
+    return dragToScrollListener != nullptr;
+}
+
+bool TimelineViewport::isCurrentlyScrollingOnDrag() const noexcept
+{
+    return dragToScrollListener != nullptr && dragToScrollListener->isDragging;
+}
+
 juce::ScrollBar& TimelineViewport::getScrollBar (bool isVertical)
 {
     return isVertical ? *vScrollBar : *hScrollBar;
@@ -337,3 +464,50 @@ void TimelineViewport::setIsScrollWheelAllowed (const bool isHorizontalAllowed, 
     allowScrollV = isVerticalAllowed;
     allowScrollH = isHorizontalAllowed;
 }
+
+bool TimelineViewport::autoScroll (const int mouseX, const int mouseY, const int activeBorderThickness, const int maximumSpeed)
+{
+    if (contentComp != nullptr)
+    {
+        int dx = 0, dy = 0;
+
+        if (getScrollBar (false).isVisible() || allowScrollH)
+        {
+            if (mouseX < activeBorderThickness)
+                dx = activeBorderThickness - mouseX;
+            else if (mouseX >= viewportClip.getWidth() - activeBorderThickness)
+                dx = (viewportClip.getWidth() - activeBorderThickness) - mouseX;
+            double pixelRatio = getZoomFactor();
+            if (dx < 0)
+                dx = jmax (dx * pixelRatio, -maximumSpeed * pixelRatio, (getPixelMapper().getStartPixelPosition() + viewportClip.getWidth() * pixelRatio)  - getPixelMapper().getTimelineRange().getEnd());
+            else
+                dx = jmin (dx * pixelRatio, maximumSpeed * pixelRatio, -getPixelMapper().getTimelineRange().getStart());
+        }
+
+        if (getScrollBar (true).isVisible() || allowScrollV)
+        {
+            if (mouseY < activeBorderThickness)
+                dy = activeBorderThickness - mouseY;
+            else if (mouseY >= viewportClip.getHeight() - activeBorderThickness)
+                dy = (viewportClip.getHeight() - activeBorderThickness) - mouseY;
+
+            if (dy < 0)
+                dy = jmax (dy, -maximumSpeed, viewportClip.getHeight() - contentComp->getBottom());
+            else
+                dy = jmin (dy, maximumSpeed, -contentComp->getY());
+        }
+
+        // dx is relative to time base
+        if (dx != 0 || dy != 0)
+        {
+            auto& hScroll = getScrollBar (false);
+            auto& vScroll = getScrollBar (true);
+            hScroll.setCurrentRangeStart (hScroll.getCurrentRangeStart() + dx);
+            vScroll.setCurrentRangeStart (contentComp->getY() + dy);
+            invalidateViewport();
+            return true;
+        }
+    }
+    return false;
+}
+
