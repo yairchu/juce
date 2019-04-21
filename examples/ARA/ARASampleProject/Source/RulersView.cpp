@@ -100,6 +100,13 @@ void RulersView::addRulerComponent (juce::Component *rulerToOwn)
     addAndMakeVisible (rulerToOwn);
 }
 
+void RulersView::clear()
+{
+    for (auto* x : rulers)
+        removeChildComponent (x);
+    rulers.clear();
+}
+
 void RulersView::addDefaultRulers()
 {
     addRulerComponent (new ARASecondsRuler (*this));
