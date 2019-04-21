@@ -12,7 +12,7 @@ constexpr double kMinBorderSeconds = 1.0;
 constexpr int    kMinRegionSizeInPixels = 2;
 
 //==============================================================================
-DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, const AudioPlayHead::CurrentPositionInfo& posInfo)
+DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, const AudioPlayHead::CurrentPositionInfo& posInfo, Component* canvas)
     : araExtension (extension),
       trackHeadersView (*this),
       viewport (new ARASecondsPixelMapper (extension)),
@@ -29,11 +29,7 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
         jassertfalse;
         return;
     }
-    {
-        auto* c = new Component();
-        c->setInterceptsMouseClicks (false, true);
-        viewport.setViewedComponent (c);
-    }
+    viewport.setViewedComponent (canvas ? canvas : new Component ("DocumentView Canvas"));
     viewport.addAndMakeVisible (rulersView);
 
     addPlayheadView (new PlayHeadView(*this));
