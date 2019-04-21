@@ -19,6 +19,8 @@ TimelineViewport::TimelineViewport (TimelinePixelMapperBase* pixelMapperToOwn, j
     , allowScrollH (true)
     , allowScrollV (true)
 {
+    setInterceptsMouseClicks (false, true);
+
     addAndMakeVisible (viewportClip);
     viewportClip.setWantsKeyboardFocus (false);
     viewportClip.setInterceptsMouseClicks (false, true);

@@ -29,7 +29,11 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
         jassertfalse;
         return;
     }
-    viewport.setViewedComponent (new Component());
+    {
+        auto* c = new Component();
+        c->setInterceptsMouseClicks (false, true);
+        viewport.setViewedComponent (c);
+    }
     viewport.addAndMakeVisible (rulersView);
 
     addPlayheadView (new PlayHeadView(*this));
