@@ -70,12 +70,6 @@ public:
      */
     virtual TrackHeaderView* createHeaderViewForRegionSequence (ARARegionSequence*);
 
-    /*
-     Creates a rulers to be shown on rulersView.
-     This allows setting custom rulers as required.
-     */
-    virtual void createRulers();
-
     template<typename EditorView_t = ARAEditorView>
     EditorView_t* getARAEditorView() const noexcept { return araExtension.getARAEditorView<EditorView_t>(); }
 

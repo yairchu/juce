@@ -63,6 +63,10 @@ DocumentView::DocumentView (const AudioProcessorEditorARAExtension& extension, c
     // force initial timerange after construction to be valid.
     viewport.setTimelineRange (padTimeRange (getDocumentTimeRange()));
 
+    rulersView.setColour (RulersView::ColourIds::rulersBackground, getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
+    setRulersHeight (3 * 20);
+    rulersView.addDefaultRulers();
+
     startTimerHz (60);
 }
 
@@ -89,13 +93,6 @@ TrackHeaderView* DocumentView::createHeaderViewForRegionSequence (ARARegionSeque
 RegionSequenceView* DocumentView::createViewForRegionSequence (ARARegionSequence* regionSequence)
 {
     return new RegionSequenceView (*this, regionSequence);
-}
-
-void DocumentView::createRulers()
-{
-    rulersView.setColour (RulersView::ColourIds::rulersBackground, getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
-    setRulersHeight (3 * 20);
-    rulersView.addDefaultRulers();
 }
 
 //==============================================================================
@@ -222,12 +219,6 @@ void DocumentView::setRulersHeight (int rulersHeight)
 //==============================================================================
 void DocumentView::parentHierarchyChanged()
 {
-    if (rulersView.getNumOfRulers() == 0)
-    {
-        // virtual function should be called after constructor
-        // and parentHierarchyChanged can happen more than once!
-        createRulers();
-    }
     // trigger lazy initial update after construction if needed
     if (regionSequenceViewsAreInvalid && ! getARADocumentController()->isHostEditingDocument())
         rebuildRegionSequenceViews();

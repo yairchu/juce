@@ -23,6 +23,9 @@ public:
 
     void addRulerComponent (Component* rulerToOwn);
 
+    // Remove rulers, to add custom rulers instead.
+    void clear();
+
     void addDefaultRulers();
     int getNumOfRulers() { return rulers.size(); }
 
