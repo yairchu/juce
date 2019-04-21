@@ -83,6 +83,39 @@ public:
 
     void setIsScrollWheelAllowed (bool isHorizontalAllowed, bool isVerticalAllowed);
 
+    /** Enables or disables drag-to-scroll functionality in the viewport.
+
+     If your viewport contains a Component that you don't want to receive mouse events when the
+     user is drag-scrolling, you can disable this with the Component::setViewportIgnoreDragFlag()
+     method.
+     */
+    void setScrollOnDragEnabled (bool shouldScrollOnDrag);
+
+    /** Returns true if drag-to-scroll functionality is enabled. */
+    bool isScrollOnDragEnabled() const noexcept;
+
+    /** Returns true if the user is currently dragging-to-scroll.
+     @see setScrollOnDragEnabled
+     */
+    bool isCurrentlyScrollingOnDrag() const noexcept;
+
+    /** If the specified position is at the edges of the viewport, this method scrolls
+     the viewport to bring that position nearer to the centre.
+
+     Call this if you're dragging an object inside a viewport and want to make it scroll
+     when the user approaches an edge. You might also find Component::beginDragAutoRepeat()
+     useful when auto-scrolling.
+
+     @param mouseX       the x position, relative to the Viewport's top-left
+     @param mouseY       the y position, relative to the Viewport's top-left
+     @param distanceFromEdge     specifies how close to an edge the position needs to be
+     before the viewport should scroll in that direction
+     @param maximumSpeed the maximum number of pixels that the viewport is allowed
+     to scroll by.
+     @returns            true if the viewport was scrolled
+     */
+    bool autoScroll (int mouseX, int mouseY, int distanceFromEdge, int maximumSpeed);
+
     void setZoomFactor (double newFactor);
     double getZoomFactor();
 
@@ -142,4 +175,7 @@ private:
     bool shouldClipBorders;
     int singleStepX = 16, singleStepY = 16;
     bool allowScrollH, allowScrollV;
+
+    struct DragToScrollListener;
+    std::unique_ptr<DragToScrollListener> dragToScrollListener;
 };
