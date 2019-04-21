@@ -44,8 +44,10 @@ public:
                                 This needs to be updated from the processBlock() method of the
                                 audio processor showing the editor. The view code can deal with
                                 this struct being updated concurrently from the render thread.
+     @param canvasComponent     Optional custom top-level component in the viewport.
+                                DocumentView takes the ownership of this component.
      */
-    DocumentView (const AudioProcessorEditorARAExtension& editorARAExtension, const AudioPlayHead::CurrentPositionInfo& positionInfo);
+    DocumentView (const AudioProcessorEditorARAExtension& editorARAExtension, const AudioPlayHead::CurrentPositionInfo& positionInfo, Component* canvasComponent = nullptr);
 
     /** Destructor. */
     ~DocumentView();
