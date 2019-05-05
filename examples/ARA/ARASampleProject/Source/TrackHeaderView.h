@@ -24,6 +24,8 @@ public:
     void didUpdateRegionSequenceProperties (ARARegionSequence* sequence) override;
     void willDestroyRegionSequence (ARARegionSequence* sequence) override;
 
+    ARARegionSequence* getRegionSequence() const { return regionSequence; }
+
 private:
     void detachFromRegionSequence();
 
