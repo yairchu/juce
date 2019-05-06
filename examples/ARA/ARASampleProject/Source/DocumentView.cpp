@@ -166,16 +166,9 @@ void DocumentView::zoomBy (double zoomMultiply, bool relativeToPlay)
     const auto curRange = getVisibleTimeRange();
 
     if (relativeToPlay && curRange.contains (playheadPosition) && curRange.getStart() != playheadPosition)
-    {
-        const auto playheadX = getTimeMapper().getPixelForPosition (playheadPosition);
-        const auto offset = playheadX / newZoomFactor;
-        const auto start = viewport.getTimelineRange().clipValue (playheadPosition - offset);
-        viewport.setVisibleRange (start, newZoomFactor);
-    }
+        viewport.setZoomFactorAroundPosition (newZoomFactor, playheadPosition);
     else
-    {
         viewport.setZoomFactor (newZoomFactor);
-    }
 
     if (getParentComponent() != nullptr)
         resized();

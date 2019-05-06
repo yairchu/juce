@@ -129,6 +129,13 @@ bool TimelineViewport::useMouseWheelMoveIfNeeded (const MouseEvent& e, const Mou
     return didUpdate;
 }
 
+void TimelineViewport::mouseMagnify (const MouseEvent& e, float scaleFactor)
+{
+    setZoomFactorAroundPosition (
+        scaleFactor * getZoomFactor(),
+        pixelMapper->getPositionForPixel (e.x - viewportBorders.getLeft()));
+}
+
 typedef AnimatedPosition<AnimatedPositionBehaviours::ContinuousWithMomentum> ViewportDragPosition;
 
 struct TimelineViewport::DragToScrollListener   : private MouseListener,
@@ -265,6 +272,14 @@ void TimelineViewport::setZoomFactor (double newFactor)
 {
     pixelMapper->setZoomFactor (newFactor);
     invalidateViewport();
+}
+
+void TimelineViewport::setZoomFactorAroundPosition (double newFactor, double position)
+{
+    setVisibleRange (
+        getTimelineRange().clipValue (
+            position - pixelMapper->getPixelForPosition (position) / newFactor),
+        newFactor);
 }
 
 double TimelineViewport::getZoomFactor()
