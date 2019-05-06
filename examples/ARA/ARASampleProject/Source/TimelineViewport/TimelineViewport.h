@@ -81,6 +81,8 @@ public:
     void mouseWheelMove (const MouseEvent&, const MouseWheelDetails&) override;
     bool useMouseWheelMoveIfNeeded (const MouseEvent&, const MouseWheelDetails&);
 
+    void mouseMagnify (const MouseEvent&, float scaleFactor) override;
+
     void setIsScrollWheelAllowed (bool isHorizontalAllowed, bool isVerticalAllowed);
 
     /** Enables or disables drag-to-scroll functionality in the viewport.
