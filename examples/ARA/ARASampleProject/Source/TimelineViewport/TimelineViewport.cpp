@@ -267,6 +267,14 @@ void TimelineViewport::setZoomFactor (double newFactor)
     invalidateViewport();
 }
 
+void TimelineViewport::setZoomFactorAroundPosition (double newFactor, double position)
+{
+    setVisibleRange (
+        getTimelineRange().clipValue (
+            position - pixelMapper->getPixelForPosition (position) / newFactor),
+        newFactor);
+}
+
 double TimelineViewport::getZoomFactor()
 {
     return pixelMapper->getZoomFactor();

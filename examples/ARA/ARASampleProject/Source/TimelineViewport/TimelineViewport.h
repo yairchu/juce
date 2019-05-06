@@ -117,6 +117,7 @@ public:
     bool autoScroll (int mouseX, int mouseY, int distanceFromEdge, int maximumSpeed);
 
     void setZoomFactor (double newFactor);
+    void setZoomFactorAroundPosition (double newFactor, double position);
     double getZoomFactor();
 
     /** This lambda for every change in visible timeline range.
