@@ -1159,7 +1159,7 @@ void AudioProcessor::copyXmlToBinary (const XmlElement& xml, juce::MemoryBlock& 
         MemoryOutputStream out (destData, false);
         out.writeInt (magicXmlNumber);
         out.writeInt (0);
-        xml.writeToStream (out, String(), true, false);
+        xml.writeTo (out, XmlElement::TextFormat().singleLine());
         out.writeByte (0);
     }
 
@@ -1168,10 +1168,9 @@ void AudioProcessor::copyXmlToBinary (const XmlElement& xml, juce::MemoryBlock& 
         = ByteOrder::swapIfBigEndian ((uint32) destData.getSize() - 9);
 }
 
-XmlElement* AudioProcessor::getXmlFromBinary (const void* data, const int sizeInBytes)
+std::unique_ptr<XmlElement> AudioProcessor::getXmlFromBinary (const void* data, const int sizeInBytes)
 {
-    if (sizeInBytes > 8
-         && ByteOrder::littleEndianInt (data) == magicXmlNumber)
+    if (sizeInBytes > 8 && ByteOrder::littleEndianInt (data) == magicXmlNumber)
     {
         auto stringLength = (int) ByteOrder::littleEndianInt (addBytesToPointer (data, 4));
 
@@ -1180,7 +1179,7 @@ XmlElement* AudioProcessor::getXmlFromBinary (const void* data, const int sizeIn
                                                          jmin ((sizeInBytes - 8), stringLength)));
     }
 
-    return nullptr;
+    return {};
 }
 
 bool AudioProcessor::canApplyBusCountChange (bool isInput, bool isAdding,
