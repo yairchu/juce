@@ -339,7 +339,6 @@ private:
     //==============================================================================
     Atomic<int> refCount;
     std::unique_ptr<AudioProcessor> audioProcessor;
-    ScopedJuceInitialiser_GUI libraryInitialiser;
 
     //==============================================================================
     LegacyAudioParametersWrapper juceParameters;
@@ -992,7 +991,6 @@ private:
 
     //==============================================================================
     ComSmartPtr<JuceAudioProcessor> audioProcessor;
-    ScopedJuceInitialiser_GUI libraryInitialiser;
 
     struct MidiController
     {
@@ -1607,8 +1605,6 @@ private:
         WindowsHooks hooks;
        #endif
 
-        ScopedJuceInitialiser_GUI libraryInitialiser;
-
         //==============================================================================
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JuceVST3Editor)
     };
@@ -2222,9 +2218,8 @@ public:
     //==============================================================================
     bool getCurrentPosition (CurrentPositionInfo& info) override
     {
-        const bool isContinousTimeAvailable = (processContext.state & Vst::ProcessContext::kContTimeValid) != 0;
-        info.timeInSamples              = isContinousTimeAvailable && ((processContext.state & Vst::ProcessContext::kPlaying) != 0) ? processContext.continousTimeSamples : jmax ((juce::int64) 0, processContext.projectTimeSamples);
-        info.timeInSeconds              = processContext.systemTime / 1000000000.0;
+        info.timeInSamples              = jmax ((juce::int64) 0, processContext.projectTimeSamples);
+        info.timeInSeconds              = static_cast<double> (info.timeInSamples) / processContext.sampleRate;
         info.bpm                        = jmax (1.0, processContext.tempo);
         info.timeSigNumerator           = jmax (1, (int) processContext.timeSigNumerator);
         info.timeSigDenominator         = jmax (1, (int) processContext.timeSigDenominator);
@@ -3102,8 +3097,10 @@ struct JucePluginFactory  : public IPluginFactory3
             return false;
         }
 
-        auto* entry = classes.add (new ClassEntry (info, createFunction));
+        auto entry = std::make_unique<ClassEntry> (info, createFunction);
         entry->infoW.fromAscii (info);
+
+        classes.push_back (std::move (entry));
 
         return true;
     }
@@ -3152,7 +3149,7 @@ struct JucePluginFactory  : public IPluginFactory3
     {
         if (info != nullptr)
         {
-            if (auto* entry = classes[(int) index])
+            if (auto& entry = classes[(size_t) index])
             {
                 memcpy (info, &entry->infoW, sizeof (PClassInfoW));
                 return kResultOk;
@@ -3164,6 +3161,8 @@ struct JucePluginFactory  : public IPluginFactory3
 
     tresult PLUGIN_API createInstance (FIDString cid, FIDString sourceIid, void** obj) override
     {
+        ScopedJuceInitialiser_GUI libraryInitialiser;
+
         *obj = nullptr;
 
         TUID tuid;
@@ -3185,7 +3184,7 @@ struct JucePluginFactory  : public IPluginFactory3
         TUID iidToQuery;
         sourceFuid.toTUID (iidToQuery);
 
-        for (auto* entry : classes)
+        for (auto& entry : classes)
         {
             if (doUIDsMatch (entry->infoW.cid, cid))
             {
@@ -3221,7 +3220,6 @@ struct JucePluginFactory  : public IPluginFactory3
 
 private:
     //==============================================================================
-    ScopedJuceInitialiser_GUI libraryInitialiser;
     Atomic<int> refCount { 1 };
     const PFactoryInfo factoryInfo;
     ComSmartPtr<Vst::IHostApplication> host;
@@ -3240,10 +3238,10 @@ private:
         bool isUnicode = false;
 
     private:
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ClassEntry)
+        JUCE_DECLARE_NON_COPYABLE (ClassEntry)
     };
 
-    OwnedArray<ClassEntry> classes;
+    std::vector<std::unique_ptr<ClassEntry>> classes;
 
     //==============================================================================
     template<class PClassInfoType>
@@ -3253,7 +3251,7 @@ private:
         {
             zerostruct (*info);
 
-            if (auto* entry = classes[(int) index])
+            if (auto& entry = classes[(size_t) index])
             {
                 if (entry->isUnicode)
                     return kResultFalse;
@@ -3268,7 +3266,9 @@ private:
     }
 
     //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JucePluginFactory)
+    // no leak detector here to prevent it firing on shutdown when running in hosts that
+    // don't release the factory object correctly...
+    JUCE_DECLARE_NON_COPYABLE (JucePluginFactory)
 };
 
 } // juce namespace
