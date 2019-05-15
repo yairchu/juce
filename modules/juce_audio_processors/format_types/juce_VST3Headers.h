@@ -53,6 +53,15 @@
  #if __has_warning("-Wcomma")
   #pragma clang diagnostic ignored "-Wcomma"
  #endif
+ #if __has_warning("-Wzero-as-null-pointer-constant")
+  #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
+ #endif
+ #if __has_warning("-Winconsistent-missing-destructor-override")
+  #pragma clang diagnostic ignored "-Winconsistent-missing-destructor-override"
+ #endif
+ #if __has_warning("-Wcast-align")
+  #pragma clang diagnostic ignored "-Wcast-align"
+ #endif
 #endif
 
 #undef DEVELOPMENT
@@ -140,15 +149,19 @@
 namespace Steinberg
 {
     /** Missing IIDs */
+   #if VST_VERSION < 0x03060D   // 3.6.13
     DEF_CLASS_IID (IPluginBase)
+   #endif
     DEF_CLASS_IID (IPlugView)
     DEF_CLASS_IID (IPlugFrame)
    #if VST_VERSION < 0x030608
     DEF_CLASS_IID (IBStream)
    #endif
+   #if VST_VERSION < 0x03060D   // 3.6.13
     DEF_CLASS_IID (IPluginFactory)
     DEF_CLASS_IID (IPluginFactory2)
     DEF_CLASS_IID (IPluginFactory3)
+   #endif
     DEF_CLASS_IID (IPlugViewContentScaleSupport)
 }
 namespace Presonus
