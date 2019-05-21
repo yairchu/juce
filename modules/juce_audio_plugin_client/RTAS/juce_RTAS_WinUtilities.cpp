@@ -45,14 +45,12 @@
 #include "../utility/juce_IncludeModuleHeaders.h"
 #pragma pack (pop)
 
-namespace juce
-{
-
 //==============================================================================
 void JUCE_CALLTYPE attachSubWindow (void* hostWindow,
                                     int& titleW, int& titleH,
                                     Component* comp)
 {
+    using namespace juce;
     RECT clientRect;
     GetClientRect ((HWND) hostWindow, &clientRect);
 
@@ -77,6 +75,7 @@ void JUCE_CALLTYPE resizeHostWindow (void* hostWindow,
                                      int& titleW, int& titleH,
                                      Component* comp)
 {
+    using namespace juce;
     RECT clientRect, windowRect;
     GetClientRect ((HWND) hostWindow, &clientRect);
     GetWindowRect ((HWND) hostWindow, &windowRect);
@@ -89,19 +88,22 @@ void JUCE_CALLTYPE resizeHostWindow (void* hostWindow,
                   SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOOWNERZORDER);
 }
 
+// RTAS is 32bit, This is just to avoid entire solution not building (64bit RTAS is bogus)
+#if ! _WIN64
 extern "C" BOOL WINAPI DllMainRTAS (HINSTANCE, DWORD, LPVOID);
 
 extern "C" BOOL WINAPI DllMain (HINSTANCE instance, DWORD reason, LPVOID reserved)
 {
     if (reason == DLL_PROCESS_ATTACH)
-        Process::setCurrentModuleInstanceHandle (instance);
+       juce::Process::setCurrentModuleInstanceHandle (instance);
 
     if (GetModuleHandleA ("DAE.DLL") != 0)
         return DllMainRTAS (instance, reason, reserved);
 
-    ignoreUnused (reserved);
+    juce::ignoreUnused (reserved);
     return TRUE;
 }
+#endif
 
 #if ! JucePlugin_EditorRequiresKeyboardFocus
 
@@ -121,7 +123,7 @@ namespace
             TCHAR windowType [32] = { 0 };
             GetClassName (parent, windowType, 31);
 
-            if (String (windowType).equalsIgnoreCase ("MDIClient"))
+            if (juce::String (windowType).equalsIgnoreCase ("MDIClient"))
             {
                 w = parent;
                 break;
@@ -153,7 +155,5 @@ void JUCE_CALLTYPE passFocusToHostWindow (void* hostWindow)
 }
 
 #endif
-
-} // namespace juce
 
 #endif
