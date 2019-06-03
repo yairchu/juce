@@ -27,60 +27,6 @@
 namespace juce
 {
 
-PluginDescription::PluginDescription()
-    : uid (0),
-      isInstrument (false),
-      isARAEnabled (false),
-      numInputChannels (0),
-      numOutputChannels (0),
-      hasSharedContainer (false)
-{
-}
-
-PluginDescription::~PluginDescription()
-{
-}
-
-PluginDescription::PluginDescription (const PluginDescription& other)
-    : name (other.name),
-      descriptiveName (other.descriptiveName),
-      pluginFormatName (other.pluginFormatName),
-      category (other.category),
-      manufacturerName (other.manufacturerName),
-      version (other.version),
-      fileOrIdentifier (other.fileOrIdentifier),
-      lastFileModTime (other.lastFileModTime),
-      lastInfoUpdateTime (other.lastInfoUpdateTime),
-      uid (other.uid),
-      isInstrument (other.isInstrument),
-      isARAEnabled (other.isARAEnabled),
-      numInputChannels (other.numInputChannels),
-      numOutputChannels (other.numOutputChannels),
-      hasSharedContainer (other.hasSharedContainer)
-{
-}
-
-PluginDescription& PluginDescription::operator= (const PluginDescription& other)
-{
-    name = other.name;
-    descriptiveName = other.descriptiveName;
-    pluginFormatName = other.pluginFormatName;
-    category = other.category;
-    manufacturerName = other.manufacturerName;
-    version = other.version;
-    fileOrIdentifier = other.fileOrIdentifier;
-    uid = other.uid;
-    isInstrument = other.isInstrument;
-    isARAEnabled = other.isARAEnabled;
-    lastFileModTime = other.lastFileModTime;
-    lastInfoUpdateTime = other.lastInfoUpdateTime;
-    numInputChannels = other.numInputChannels;
-    numOutputChannels = other.numOutputChannels;
-    hasSharedContainer = other.hasSharedContainer;
-
-    return *this;
-}
-
 bool PluginDescription::isDuplicateOf (const PluginDescription& other) const noexcept
 {
     return fileOrIdentifier == other.fileOrIdentifier
