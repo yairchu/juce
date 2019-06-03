@@ -65,7 +65,6 @@ std::unique_ptr<XmlElement> PluginDescription::createXml() const
     e->setAttribute ("file", fileOrIdentifier);
     e->setAttribute ("uid", String::toHexString (uid));
     e->setAttribute ("isInstrument", isInstrument);
-    e->setAttribute ("isARAEnabled", isARAEnabled);
     e->setAttribute ("fileTime", String::toHexString (lastFileModTime.toMilliseconds()));
     e->setAttribute ("infoUpdateTime", String::toHexString (lastInfoUpdateTime.toMilliseconds()));
     e->setAttribute ("numInputs", numInputChannels);
@@ -88,7 +87,6 @@ bool PluginDescription::loadFromXml (const XmlElement& xml)
         fileOrIdentifier    = xml.getStringAttribute ("file");
         uid                 = xml.getStringAttribute ("uid").getHexValue32();
         isInstrument        = xml.getBoolAttribute ("isInstrument", false);
-        isARAEnabled        = xml.getBoolAttribute ("isARAEnabled", false);
         lastFileModTime     = Time (xml.getStringAttribute ("fileTime").getHexValue64());
         lastInfoUpdateTime  = Time (xml.getStringAttribute ("infoUpdateTime").getHexValue64());
         numInputChannels    = xml.getIntAttribute ("numInputs");
