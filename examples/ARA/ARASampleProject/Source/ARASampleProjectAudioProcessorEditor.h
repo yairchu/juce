@@ -28,7 +28,21 @@ public:
     void timerCallback() override;
 
 private:
+    class ARASampleProjectDocumentViewController : public DocumentViewController
+    {
+    public:
+        ARASampleProjectDocumentViewController (const AudioProcessorEditorARAExtension& editorARAExtension);
+
+        std::vector<ARARegionSequence*> getVisibleRegionSequences() override;
+        void setShouldShowSelectedTracksOnly (bool selectedOnly);
+    private:
+        bool shouldShowSelectedTracksOnly;
+    };
+
+    void setSelectedTrackOnly (bool selectedOnly);
+
     std::unique_ptr<DocumentView> documentView;
+    ARASampleProjectDocumentViewController* documentViewController; // owned by documentView
 
     TextButton hideTrackHeaderButton;
     TextButton followPlayHeadButton;

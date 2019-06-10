@@ -9,11 +9,7 @@
               pluginAUIsSandboxSafe="1" pluginManufacturerCode="ADeC">
   <MAINGROUP id="aCHzDP" name="ARASampleProject">
     <GROUP id="{38BAE513-FAF5-0AD7-A598-7A51E0C50CB5}" name="Source">
-      <GROUP id="{CDA2CA2E-5333-DEA8-40AE-535794378ABD}" name="Views">
-        <FILE id="Y2B0P2" name="ARASecondsPixelMapper.cpp" compile="1" resource="0"
-              file="Source/ARASecondsPixelMapper.cpp"/>
-        <FILE id="T7AkXl" name="ARASecondsPixelMapper.h" compile="0" resource="0"
-              file="Source/ARASecondsPixelMapper.h"/>
+      <GROUP id="{CDA2CA2E-5333-DEA8-40AE-535794378ABD}" name="DocumentView">
         <GROUP id="{9C0A3136-BD4E-69FE-80D6-D020A2A4EA23}" name="TimelineViewport">
           <FILE id="dY055h" name="TimelinePixelMapper.h" compile="0" resource="0"
                 file="Source/TimelineViewport/TimelinePixelMapper.h"/>
@@ -22,23 +18,29 @@
           <FILE id="LfmNX3" name="TimelineViewport.h" compile="0" resource="0"
                 file="Source/TimelineViewport/TimelineViewport.h"/>
         </GROUP>
+        <GROUP id="{AB5A40A3-4E65-FDDE-AE8C-5258CF846BEA}" name="Views">
+          <FILE id="EQ23gh" name="RegionSequenceView.cpp" compile="1" resource="0"
+                file="Source/RegionSequenceView.cpp"/>
+          <FILE id="bsc68x" name="RegionSequenceView.h" compile="0" resource="0"
+                file="Source/RegionSequenceView.h"/>
+          <FILE id="KZJTR6" name="PlaybackRegionView.cpp" compile="1" resource="0"
+                file="Source/PlaybackRegionView.cpp"/>
+          <FILE id="YRS0ck" name="PlaybackRegionView.h" compile="0" resource="0"
+                file="Source/PlaybackRegionView.h"/>
+          <FILE id="OwevFC" name="RulersView.cpp" compile="1" resource="0" file="Source/RulersView.cpp"/>
+          <FILE id="cTWsss" name="RulersView.h" compile="0" resource="0" file="Source/RulersView.h"/>
+          <FILE id="AclhB6" name="TrackHeaderView.cpp" compile="1" resource="0"
+                file="Source/TrackHeaderView.cpp"/>
+          <FILE id="OC5DXa" name="TrackHeaderView.h" compile="0" resource="0"
+                file="Source/TrackHeaderView.h"/>
+        </GROUP>
+        <FILE id="Y2B0P2" name="ARASecondsPixelMapper.cpp" compile="1" resource="0"
+              file="Source/ARASecondsPixelMapper.cpp"/>
+        <FILE id="T7AkXl" name="ARASecondsPixelMapper.h" compile="0" resource="0"
+              file="Source/ARASecondsPixelMapper.h"/>
         <FILE id="zyUNuy" name="DocumentView.cpp" compile="1" resource="0"
               file="Source/DocumentView.cpp"/>
         <FILE id="v4hOwL" name="DocumentView.h" compile="0" resource="0" file="Source/DocumentView.h"/>
-        <FILE id="EQ23gh" name="RegionSequenceView.cpp" compile="1" resource="0"
-              file="Source/RegionSequenceView.cpp"/>
-        <FILE id="bsc68x" name="RegionSequenceView.h" compile="0" resource="0"
-              file="Source/RegionSequenceView.h"/>
-        <FILE id="KZJTR6" name="PlaybackRegionView.cpp" compile="1" resource="0"
-              file="Source/PlaybackRegionView.cpp"/>
-        <FILE id="YRS0ck" name="PlaybackRegionView.h" compile="0" resource="0"
-              file="Source/PlaybackRegionView.h"/>
-        <FILE id="OwevFC" name="RulersView.cpp" compile="1" resource="0" file="Source/RulersView.cpp"/>
-        <FILE id="cTWsss" name="RulersView.h" compile="0" resource="0" file="Source/RulersView.h"/>
-        <FILE id="AclhB6" name="TrackHeaderView.cpp" compile="1" resource="0"
-              file="Source/TrackHeaderView.cpp"/>
-        <FILE id="OC5DXa" name="TrackHeaderView.h" compile="0" resource="0"
-              file="Source/TrackHeaderView.h"/>
       </GROUP>
       <FILE id="IE9maq" name="ARASampleProjectAudioProcessor.cpp" compile="1"
             resource="0" file="Source/ARASampleProjectAudioProcessor.cpp"/>

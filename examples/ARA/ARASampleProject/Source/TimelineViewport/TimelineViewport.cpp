@@ -392,6 +392,9 @@ int TimelineViewport::getHeightExcludingBorders()
 void TimelineViewport::setTimelineRange (Range<double> newRange)
 {
     const auto prevRange = pixelMapper->getTimelineRange();
+    if (newRange.isEmpty() || prevRange == newRange)
+        return;
+
     pixelMapper->setTimelineRange (newRange);
     hScrollBar->setRangeLimits (pixelMapper->getTimelineRange(), dontSendNotification);
     // if this is the first timeline update it might start at a negative position.
