@@ -112,6 +112,9 @@ public:
     /** Adds border padding to time range **/
     virtual Range<double> padTimeRange (Range<double> timeRange);
 
+    /** Returns the top-most vertical position after setTrackHeight */
+    virtual int getTopForCurrentTrackHeight (DocumentView& owner);
+
     /** Return the RegionSequences that should be visible by this DocumentView.
         Default Implementation returns current ARA ViewSelection.
      */

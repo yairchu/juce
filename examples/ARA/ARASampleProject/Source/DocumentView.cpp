@@ -167,6 +167,12 @@ Range<double> DocumentViewController::padTimeRange (Range<double> timeRange)
     return timeRange;
 }
 
+int DocumentViewController::getTopForCurrentTrackHeight (DocumentView& owner)
+{
+    // default would simply keep things the same
+    return roundToInt (owner.getScrollBar (true).getCurrentRangeStart());
+}
+
 std::vector<ARARegionSequence *> DocumentViewController::getVisibleRegionSequences()
 {
     return getARAEditorView()->getViewSelection().getEffectiveRegionSequences<ARARegionSequence>();
@@ -397,7 +403,7 @@ void DocumentView::resized()
     }
     // apply needed borders
     auto timeRangeBounds = viewport.getViewedComponent()->getBounds();
-    timeRangeBounds.setTop (0);
+    timeRangeBounds.setTop (viewController->getTopForCurrentTrackHeight (*this));
     timeRangeBounds.setLeft (trackHeaderWidth);
     timeRangeSelectionView->setBounds (timeRangeBounds);
 }
