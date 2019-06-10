@@ -1000,7 +1000,7 @@ private:
                 {
                     auto vstParamID = audioProcessor->getVSTParamIDForIndex (i);
                     auto* juceParam = audioProcessor->getParamForVSTParamID (vstParamID);
-                    auto* parameterGroup = pluginInstance->parameterTree.getGroupsForParameter (juceParam).getLast();
+                    auto* parameterGroup = pluginInstance->getParameterTree().getGroupsForParameter (juceParam).getLast();
                     auto unitID = JuceAudioProcessor::getUnitID (parameterGroup);
 
                     parameters.addParameter (new Param (*this, *juceParam, vstParamID, unitID,
@@ -1318,8 +1318,9 @@ private:
         tresult PLUGIN_API setContentScaleFactor (Steinberg::IPlugViewContentScaleSupport::ScaleFactor factor) override
         {
            #if ! JUCE_MAC
-            // Cubase 10 doesn't support non-integer scale factors...
-            if (getHostType().type == PluginHostType::SteinbergCubase10)
+            auto hostType = getHostType().type;
+
+            if (hostType == PluginHostType::SteinbergCubase10 || hostType == PluginHostType::FruityLoops)
             {
                 if (component.get() != nullptr)
                     if (auto* peer = component->getPeer())
@@ -1552,8 +1553,9 @@ private:
 
             void handleAsyncUpdate() override
             {
-                if (auto* peer = owner.component->getPeer())
-                    peer->updateBounds();
+                if (owner.component != nullptr)
+                    if (auto* peer = owner.component->getPeer())
+                        peer->updateBounds();
             }
 
             JuceVST3Editor& owner;
@@ -2858,6 +2860,8 @@ private:
    #endif
 
     //==============================================================================
+    ScopedJuceInitialiser_GUI libraryInitialiser;
+
     Atomic<int> refCount { 1 };
 
     AudioProcessor* pluginInstance;
@@ -2892,7 +2896,6 @@ private:
     bool isMidiOutputBusEnabled = false;
    #endif
 
-    ScopedJuceInitialiser_GUI libraryInitialiser;
     static const char* kJucePrivateDataIdentifier;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JuceVST3Component)

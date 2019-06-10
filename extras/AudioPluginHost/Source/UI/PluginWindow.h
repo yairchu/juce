@@ -111,8 +111,8 @@ private:
         list.scrollToEnsureRowIsOnscreen (log.size() - 1);
     }
 
-    constexpr static int maxLogSize = 300;
-    constexpr static int logSizeTrimThreshold = 400;
+    JUCE_CONSTEXPR static const int maxLogSize = 300;
+    JUCE_CONSTEXPR static const int logSizeTrimThreshold = 400;
 
     ListBox list { "Log", this };
 
@@ -198,7 +198,8 @@ public:
 private:
     float getDesktopScaleFactor() const override     { return 1.0f; }
 
-    static AudioProcessorEditor* createProcessorEditor (AudioProcessor& processor, PluginWindow::Type type)
+    static AudioProcessorEditor* createProcessorEditor (AudioProcessor& processor,
+                                                        PluginWindow::Type type)
     {
         if (type == PluginWindow::Type::normal)
         {
@@ -209,7 +210,7 @@ private:
         }
 
         if (type == PluginWindow::Type::generic)
-            return new GenericAudioProcessorEditor (&processor);
+            return new GenericAudioProcessorEditor (processor);
 
         if (type == PluginWindow::Type::programs)
             return new ProgramAudioProcessorEditor (processor);
