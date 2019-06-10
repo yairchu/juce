@@ -15,7 +15,7 @@ class RegionSequenceView  : public juce::Component,
                             private ARARegionSequence::Listener
 {
 public:
-    RegionSequenceView (DocumentView& documentView, ARARegionSequence* sequence);
+    RegionSequenceView (DocumentView& owner, ARARegionSequence* sequence);
     ~RegionSequenceView();
 
     ARARegionSequence* getRegionSequence() const { return regionSequence; }     // careful: may return nullptr!
@@ -24,6 +24,8 @@ public:
 
     /* Updates current RegionSequence regions to new visible range */
     void updateRegionsBounds (Range<double> newVisibleRange);
+
+    DocumentView& getParentDocumentView() { return owner; };
 
     // ARARegionSequence::Listener overrides
     void willRemovePlaybackRegionFromRegionSequence (ARARegionSequence* sequence, ARAPlaybackRegion* playbackRegion) override;
@@ -39,7 +41,7 @@ private:
     void detachFromRegionSequence();
 
 private:
-    DocumentView& documentView;
+    DocumentView& owner;
     ARARegionSequence* regionSequence;
 
     std::unique_ptr<TrackHeaderView> trackHeaderView;

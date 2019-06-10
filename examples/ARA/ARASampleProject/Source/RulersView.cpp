@@ -6,7 +6,7 @@ static constexpr int lightLineWidth = 1;
 static constexpr int heavyLineWidth = 3;
 
 //==============================================================================
-RulersView::RulersView (TimelineViewport& timeline, AudioPlayHead::CurrentPositionInfo* hostPosition)
+RulersView::RulersView (TimelineViewport& timeline, const AudioPlayHead::CurrentPositionInfo* hostPosition)
     : timeline (timeline),
       timeMapper (static_cast<const ARASecondsPixelMapper&>(timeline.getPixelMapper())),
       optionalHostPosition (hostPosition),

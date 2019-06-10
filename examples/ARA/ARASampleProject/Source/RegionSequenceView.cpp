@@ -4,15 +4,15 @@
 #include "PlaybackRegionView.h"
 
 //==============================================================================
-RegionSequenceView::RegionSequenceView (DocumentView& documentView, ARARegionSequence* sequence)
-    : documentView (documentView),
+RegionSequenceView::RegionSequenceView (DocumentView& ownerDocument, ARARegionSequence* sequence)
+    : owner (ownerDocument),
       regionSequence (sequence),
-      trackHeaderView (documentView.createHeaderViewForRegionSequence (regionSequence))
+      trackHeaderView (owner.getController().createHeaderViewForRegionSequence (regionSequence))
 {
     setInterceptsMouseClicks (false, true);
     regionSequence->addListener (this);
 
-    documentView.getTrackHeadersView().addAndMakeVisible (*trackHeaderView);
+    owner.getTrackHeadersView().addAndMakeVisible (*trackHeaderView);
     for (auto playbackRegion : regionSequence->getPlaybackRegions<ARAPlaybackRegion>())
         addRegionSequenceViewAndMakeVisible (playbackRegion);
 }
@@ -24,10 +24,10 @@ RegionSequenceView::~RegionSequenceView()
 
 void RegionSequenceView::addRegionSequenceViewAndMakeVisible (ARAPlaybackRegion* playbackRegion)
 {
-    auto view = documentView.createViewForPlaybackRegion (playbackRegion);
+    auto view = owner.getController().createViewForPlaybackRegion (this, playbackRegion);
     playbackRegionViews.add (view);
     addChildComponent (view);
-    documentView.setRegionBounds (view, documentView.getVisibleTimeRange());
+    owner.setRegionBounds (view, owner.getViewport().getVisibleRange());
 }
 
 void RegionSequenceView::detachFromRegionSequence()
@@ -45,7 +45,7 @@ void RegionSequenceView::updateRegionsBounds (Range<double> newVisibleRange)
 {
     for (auto regionView : playbackRegionViews)
     {
-        documentView.setRegionBounds (regionView, newVisibleRange);
+        owner.setRegionBounds (regionView, newVisibleRange);
     }
 }
 
@@ -76,7 +76,7 @@ void RegionSequenceView::willRemovePlaybackRegionFromRegionSequence (ARARegionSe
         }
     }
 
-    documentView.invalidateRegionSequenceViews();
+    owner.getController().invalidateRegionSequenceViews();
 }
 
 void RegionSequenceView::didAddPlaybackRegionToRegionSequence (ARARegionSequence* sequence, ARAPlaybackRegion* playbackRegion)
@@ -85,7 +85,7 @@ void RegionSequenceView::didAddPlaybackRegionToRegionSequence (ARARegionSequence
 
     addRegionSequenceViewAndMakeVisible (playbackRegion);
 
-    documentView.invalidateRegionSequenceViews();
+    owner.getController().invalidateRegionSequenceViews();
 }
 
 void RegionSequenceView::willDestroyRegionSequence (ARARegionSequence* sequence)
@@ -94,7 +94,7 @@ void RegionSequenceView::willDestroyRegionSequence (ARARegionSequence* sequence)
 
     detachFromRegionSequence();
 
-    documentView.invalidateRegionSequenceViews();
+    owner.getController().invalidateRegionSequenceViews();
 }
 
 void RegionSequenceView::willUpdateRegionSequenceProperties (ARARegionSequence* sequence, ARARegionSequence::PropertiesPtr newProperties)

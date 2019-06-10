@@ -23,7 +23,8 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
 {
     if (isARAEditorView())
     {
-        documentView.reset (new DocumentView (*this, p.getLastKnownPositionInfo()));
+        documentViewController = new ARASampleProjectDocumentViewController (*this);
+        documentView.reset (new DocumentView (documentViewController,  p.getLastKnownPositionInfo()));
         addAndMakeVisible (documentView->getScrollBar (true));
         addAndMakeVisible (documentView->getScrollBar (false));
 
@@ -32,18 +33,12 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
         documentView->setTrackHeaderWidth (editorDefaultSettings.getProperty (trackHeaderWidthId, documentView->getTrackHeaderWidth()));
         documentView->setIsTrackHeadersVisible (editorDefaultSettings.getProperty (trackHeadersVisibleId, documentView->isTrackHeadersVisible()));
         if (editorDefaultSettings.getProperty (showOnlySelectedId, false))
-        {
-            documentView->setFitTrackHeight (true);
-            documentView->showOnlySelectedRegionSequences();
-        }
+            setSelectedTrackOnly (true);
         else
-        {
-            documentView->setFitTrackHeight (false);
-            documentView->showAllRegionSequences();
-        }
+            setSelectedTrackOnly (false);
+
         documentView->setScrollFollowsPlayHead (editorDefaultSettings.getProperty (scrollFollowsPlayHeadId, documentView->isScrollFollowingPlayHead()));
         documentView->zoomBy (editorDefaultSettings.getProperty (zoomFactorId, documentView->getTimeMapper().getZoomFactor()));
-
         // TODO JUCE_ARA hotfix for Unicode chord symbols, see https://forum.juce.com/t/embedding-unicode-string-literals-in-your-cpp-files/12600/7
         documentView->getLookAndFeel().setDefaultSansSerifTypefaceName("Arial Unicode MS");
         documentView->addListener (this);
@@ -62,22 +57,10 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
 
         onlySelectedTracksButton.setButtonText ("Selected Tracks Only");
         onlySelectedTracksButton.setClickingTogglesState (true);
-        onlySelectedTracksButton.setToggleState (editorDefaultSettings.getProperty(showOnlySelectedId, false), dontSendNotification);
+        onlySelectedTracksButton.setToggleState (editorDefaultSettings.getProperty (showOnlySelectedId, false), dontSendNotification);
         onlySelectedTracksButton.onClick = [this]
         {
-            const bool isOnlySelected = onlySelectedTracksButton.getToggleState();
-            if (isOnlySelected)
-            {
-                documentView->showOnlySelectedRegionSequences();
-            }
-            else
-            {
-                documentView->showAllRegionSequences();
-            }
-            verticalZoomLabel.setVisible (! isOnlySelected);
-            verticalZoomInButton.setVisible (! isOnlySelected);
-            verticalZoomOutButton.setVisible (! isOnlySelected);
-            editorDefaultSettings.setProperty (showOnlySelectedId, onlySelectedTracksButton.getToggleState(), nullptr);
+            setSelectedTrackOnly (onlySelectedTracksButton.getToggleState());
         };
         addAndMakeVisible (onlySelectedTracksButton);
 
@@ -116,20 +99,12 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
         {
             documentView->setTrackHeight ((int) (documentView->getTrackHeight () / zoomStepFactor));
         };
+        // zoom
         addAndMakeVisible (horizontalZoomInButton);
         addAndMakeVisible (horizontalZoomOutButton);
-        if (! editorDefaultSettings.getProperty(showOnlySelectedId, false))
-        {
-            addAndMakeVisible (verticalZoomLabel);
-            addAndMakeVisible (verticalZoomInButton);
-            addAndMakeVisible (verticalZoomOutButton);
-        }
-        else
-        {
-            addChildComponent (verticalZoomLabel);
-            addChildComponent (verticalZoomInButton);
-            addChildComponent (verticalZoomOutButton);
-        }
+        addAndMakeVisible (verticalZoomLabel);
+        addAndMakeVisible (verticalZoomInButton);
+        addAndMakeVisible (verticalZoomOutButton);
 
         // show playhead position
         playheadLinearPositionLabel.setJustificationType (Justification::centred);
@@ -230,3 +205,49 @@ void ARASampleProjectAudioProcessorEditor::timerCallback()
     }
     playheadMusicalPositionLabel.setText (musicalPosition, dontSendNotification);
 }
+
+void ARASampleProjectAudioProcessorEditor::setSelectedTrackOnly (bool isOnlySelected)
+{
+    editorDefaultSettings.setProperty (showOnlySelectedId,
+                                       isOnlySelected, nullptr);
+    verticalZoomLabel.setVisible (! isOnlySelected);
+    verticalZoomInButton.setVisible (! isOnlySelected);
+    verticalZoomOutButton.setVisible (! isOnlySelected);
+    editorDefaultSettings.setProperty (showOnlySelectedId, isOnlySelected, nullptr);
+    documentView->setFitTrackHeight (isOnlySelected);
+    documentViewController->setShouldShowSelectedTracksOnly (isOnlySelected);
+}
+
+ARASampleProjectAudioProcessorEditor::ARASampleProjectDocumentViewController::ARASampleProjectDocumentViewController(const juce::AudioProcessorEditorARAExtension &editorARAExtension)
+: DocumentViewController (editorARAExtension),
+  shouldShowSelectedTracksOnly (true)
+{
+}
+
+std::vector<ARARegionSequence *> ARASampleProjectAudioProcessorEditor::ARASampleProjectDocumentViewController::getVisibleRegionSequences()
+{
+    if (shouldShowSelectedTracksOnly)
+    {
+        return getARAEditorView()->getViewSelection().getEffectiveRegionSequences<ARARegionSequence>();
+    }
+    else
+    {
+        std::vector<ARARegionSequence*> visibleSequences;
+        visibleSequences.clear();
+        for (auto regionSequence : getARADocumentController()->getDocument()->getRegionSequences<ARARegionSequence>())
+        {
+            if (! ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
+            {
+                visibleSequences.push_back (regionSequence);
+            }
+        }
+        return visibleSequences;
+    }
+}
+
+void ARASampleProjectAudioProcessorEditor::ARASampleProjectDocumentViewController::setShouldShowSelectedTracksOnly(bool selectedOnly)
+{
+    shouldShowSelectedTracksOnly = selectedOnly;
+    invalidateRegionSequenceViews();
+}
+

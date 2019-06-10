@@ -14,7 +14,7 @@ class RulersView  : public Component,
                     private juce::Timer
 {
 public:
-    RulersView (TimelineViewport& timeline, AudioPlayHead::CurrentPositionInfo* optionalHostPosition = nullptr);
+    RulersView (TimelineViewport& timeline, const AudioPlayHead::CurrentPositionInfo* optionalHostPosition = nullptr);
 
     enum ColourIds
     {
@@ -88,7 +88,7 @@ private:
     const ARASecondsPixelMapper& timeMapper;
     ARADocument* document;
     AudioPlayHead::CurrentPositionInfo lastPaintedPosition;
-    AudioPlayHead::CurrentPositionInfo* optionalHostPosition;
+    const AudioPlayHead::CurrentPositionInfo* optionalHostPosition;
     bool shouldShowLocators;
     OwnedArray<Component> rulers;
 

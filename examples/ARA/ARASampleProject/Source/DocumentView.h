@@ -4,10 +4,163 @@
 
 #include "TimelineViewport/TimelineViewport.h"
 #include "RulersView.h"
+#include "RegionSequenceView.h"
 
 class TrackHeaderView;
-class RegionSequenceView;
 class PlaybackRegionView;
+class DocumentView;
+
+//==============================================================================
+/**
+ Resizable container of TrackHeadersView(s)
+ */
+class TrackHeadersView    : public Component,
+public ComponentBoundsConstrainer
+{
+public:
+    TrackHeadersView ();
+    void setIsResizable (bool isResizable);
+    void resized() override;
+private:
+    ResizableEdgeComponent resizeBorder;
+};
+
+//==============================================================================
+/**
+ One of these is used by a DocumentView as the data controller for document view contents.
+ 
+ The virtual methods that you override in this class take care of drawing elements and reacting to events.
+
+ A single controller can be used for multiple DocumentViews (if needed)
+ 
+ @see DcoumentView
+ 
+ @tags{GUI}
+ */
+class DocumentViewController : public ChangeBroadcaster,
+                               private ARAEditorView::Listener,
+                               private ARADocument::Listener
+{
+public:
+    //==============================================================================
+    /** Creation.
+
+     @param editorARAExtension  the editor extension used for viewing the document
+     @param positionInfo        the time info to be used for showing the playhead
+     This needs to be updated from the processBlock() method of the
+     audio processor showing the editor. The view code can deal with
+     this struct being updated concurrently from the render thread.
+     */
+    DocumentViewController (const AudioProcessorEditorARAExtension& editorARAExtension);
+
+    /** Destructor.
+        Make sure you're overriding it!
+     */
+    virtual ~DocumentViewController();
+
+    /*
+     Creates a new Component that will be used to hold all DocumentView components.
+     (this might be useful if you need finer control of the parent viewed component).
+     */
+    virtual Component* createCanvasComponent();
+    /*
+     Creates a new PlaybackRegionView which will be owned.
+     This allows customizing PlaybackRegionView Component to desired behavior.
+     (for example: showing notes)
+     */
+    virtual PlaybackRegionView* createViewForPlaybackRegion (RegionSequenceView* owner, ARAPlaybackRegion*);
+
+    /*
+     Creates a new RegionSequenceView which will be owned.
+     This allows customizing RegionSequenceView Component to desired behavior.
+     (for example: allow showing cross-fades or interaction between regions)
+     */
+    virtual RegionSequenceView* createViewForRegionSequence (DocumentView& owner, ARARegionSequence*);
+    
+    /*
+     Creates a new TrackHeaderView which will be owned.
+     This allows customizing TrackHeaderView Component to desired behavior.
+     */
+    virtual TrackHeaderView* createHeaderViewForRegionSequence (ARARegionSequence*);
+
+    /*
+     Creates a new RulerView which will be owned.
+     This allows customizing RulerView to have default rulers on construction.
+     */
+    virtual RulersView* createRulersView (DocumentView& owner);
+
+    /*
+     Creates a new component that will paint playhead above all timeline viewport,
+     This allows customizing PlayheadView Component to desired behavior. If nullptr return this will use default component.
+     Component will be owned.
+     */
+    virtual Component* createPlayheadView (DocumentView& owner);
+
+    /*
+     Creates a new component that will paint ARA SelectionView above all timeline viewport.
+     This allows customizing TimeRangeSelectionView Component to desired behavior. If nullptr return this will use default component.
+     Component will be owned.
+     */
+    virtual Component* createTimeRangeSelectionView (DocumentView& owner);
+
+    /** Returns entire document time range
+     Note: host timeline can have different start/end times.
+     but this range must guarantee to be within the host timeline.
+     **/
+    virtual Range<double> getDocumentTimeRange();
+
+    /** Adds border padding to time range **/
+    virtual Range<double> padTimeRange (Range<double> timeRange);
+
+    /** Return the RegionSequences that should be visible by this DocumentView.
+        Default Implementation returns current ARA ViewSelection.
+     */
+    virtual std::vector<ARARegionSequence*> getVisibleRegionSequences();
+
+    // flag that our view needs to be rebuilt
+    void invalidateRegionSequenceViews (NotificationType notificationType = NotificationType::sendNotification);
+
+    const AudioProcessorEditorARAExtension& getARAEditorExtension() const { return araExtension; }
+
+    template<typename EditorView_t = ARAEditorView>
+    EditorView_t* getARAEditorView() const noexcept { return getARAEditorExtension().getARAEditorView<EditorView_t>(); }
+
+    template<typename DocumentController_t = ARADocumentController>
+    DocumentController_t* getARADocumentController() const noexcept { return getARAEditorView()->getDocumentController<DocumentController_t>(); }
+
+    // ARAEditorView::Listener overrides
+    void onNewSelection (const ARA::PlugIn::ViewSelection& viewSelection) override;
+    void onHideRegionSequences (std::vector<ARARegionSequence*> const& regionSequences) override;
+
+    // ARADocument::Listener overrides
+    void didEndEditing (ARADocument* document) override;
+    void didAddRegionSequenceToDocument (ARADocument* document, ARARegionSequence* regionSequence) override;
+    void didReorderRegionSequencesInDocument (ARADocument* document) override;
+
+
+private:
+    const AudioProcessorEditorARAExtension& araExtension;
+
+    // simple utility class to show playhead position
+    class PlayHeadView    : public Component
+    {
+    public:
+        PlayHeadView (DocumentView&);
+        void paint (Graphics&) override;
+    private:
+        DocumentView& documentView;
+    };
+
+    // simple utility class to show selected time range
+    class TimeRangeSelectionView  : public Component
+    {
+    public:
+        TimeRangeSelectionView (DocumentView& documentView);
+        void paint (Graphics&) override;
+    private:
+        DocumentView& documentView;
+    };
+};
 
 //==============================================================================
 /**
@@ -32,96 +185,43 @@ class PlaybackRegionView;
     - replace Viewport with better mechanism to avoid integer overflow with long documents and high zoom level.
  */
 class DocumentView  : public Component,
-                      private ARAEditorView::Listener,
-                      private ARADocument::Listener,
-                      private juce::Timer
+                      private juce::Timer,
+                      private AsyncUpdater,
+                      private ChangeListener
 {
 public:
     /** Creation.
 
-     @param editorARAExtension  the editor extension used for viewing the document
-     @param positionInfo        the time info to be used for showing the playhead
-                                This needs to be updated from the processBlock() method of the
-                                audio processor showing the editor. The view code can deal with
-                                this struct being updated concurrently from the render thread.
-     @param canvasComponent     Optional custom top-level component in the viewport.
+     @param controllerToOwn     Controller object to manage DocumentView.
                                 DocumentView takes the ownership of this component.
+     @param positionInfo        Positional data for this view (for rulers/playhead/etc)
      */
-    DocumentView (const AudioProcessorEditorARAExtension& editorARAExtension, const AudioPlayHead::CurrentPositionInfo& positionInfo, Component* canvasComponent = nullptr);
+    DocumentView (DocumentViewController* controllerToOwn, const AudioPlayHead::CurrentPositionInfo& positionInfo);
 
     /** Destructor. */
     ~DocumentView();
 
-    /*
-     Creates a new PlaybackRegionView which will be owned.
-     This allows customizing PlaybackRegionView Component to desired behavior.
-     (for example: showing notes)
-     */
-    virtual PlaybackRegionView* createViewForPlaybackRegion (ARAPlaybackRegion*);
+    DocumentViewController& getController() { return *viewController; }
 
-    /*
-     Creates a new RegionSequenceView which will be owned.
-     This allows customizing RegionSequenceView Component to desired behavior.
-     (for example: allow showing cross-fades or interaction between regions)
-     */
-    virtual RegionSequenceView* createViewForRegionSequence (ARARegionSequence*);
-
-    /*
-     Creates a new TrackHeaderView which will be owned.
-     This allows customizing TrackHeaderView Component to desired behavior.
-     */
-    virtual TrackHeaderView* createHeaderViewForRegionSequence (ARARegionSequence*);
-
-    template<typename EditorView_t = ARAEditorView>
-    EditorView_t* getARAEditorView() const noexcept { return araExtension.getARAEditorView<EditorView_t>(); }
-
-    template<typename DocumentController_t = ARADocumentController>
-    DocumentController_t* getARADocumentController() const noexcept { return getARAEditorView()->getDocumentController<DocumentController_t>(); }
-
-    const ARASecondsPixelMapper& getTimeMapper() { return timeMapper; }
-
-    // flag that our view needs to be rebuilt
-    void invalidateRegionSequenceViews();
-
-    Component& getTrackHeadersView() { return trackHeadersView; }
-
-    AudioFormatManager& getAudioFormatManger() { return audioFormatManger; }
-
-    const AudioPlayHead::CurrentPositionInfo& getPlayHeadPositionInfo() const { return positionInfo; }
-
-    /* Sets getVisibleRegionSequences to show only RegionSequences provied by the EditorView::getViewSelection()
-       @see getVisibleAreaRegionSequences
-     */
-    void showOnlySelectedRegionSequences();
-
-    /* Sets getVisibleRegionSequences to show all RegionSequences from the ARA Document
-       Except those who are reported as "Hidden" by EditorView::getHiddenRegionSequences()
-       @see getVisibleAreaRegionSequences
-     */
-    void showAllRegionSequences();
+    const AudioPlayHead::CurrentPositionInfo& getPlayHeadPositionInfo() const { return lastReportedPosition; }
 
     void setIsTrackHeadersVisible (bool shouldBeVisible);
-    bool isTrackHeadersVisible() const { return trackHeadersView.isVisible(); }
+    bool isTrackHeadersVisible() const;
 
     /* Sets if DocumentView should show ARAEditor ViewSelection */
-    void setIsViewSelectionVisible (bool isVisible) { timeRangeSelectionView.setVisible (isVisible); }
+    void setIsViewSelectionVisible (bool isVisible) { timeRangeSelectionView->setVisible (isVisible); }
     /* @return true if DocumentView is showing ARAEditor ViewSelection */
-    bool getIsViewSelectionVisible() { return timeRangeSelectionView.isVisible(); }
+    bool getIsViewSelectionVisible() { return timeRangeSelectionView->isVisible(); }
 
-    int getTrackHeaderWidth() const { return trackHeadersView.getWidth(); }
-    int getTrackHeaderMaximumWidth () { return trackHeadersView.getMaximumWidth(); }
-    int getTrackHeaderMinimumWidth () { return trackHeadersView.getMinimumWidth(); }
+    int getTrackHeaderWidth() const;
+    int getTrackHeaderMaximumWidth();
+    int getTrackHeaderMinimumWidth();
     void setTrackHeaderWidth (int newWidth);
     void setTrackHeaderMaximumWidth (int newWidth);
     void setTrackHeaderMinimumWidth (int newWidth);
 
     void setScrollFollowsPlayHead (bool followPlayHead) { scrollFollowsPlayHead = followPlayHead; }
     bool isScrollFollowingPlayHead() const { return scrollFollowsPlayHead; }
-
-    /* Attach a playhead view to DocumentView.
-     * Added juce::Component will be owned!
-     */
-    void addPlayheadView (Component* playheadToOwn);
 
     /* Sets the current visible area by range.
        Note: This would only work if DocumentView bounds.height is greater than 0.
@@ -139,51 +239,37 @@ public:
 
     void setRulersHeight (int rulersHeight);
     int getRulersHeight() const { return rulersHeight; }
-    RulersView& getRulersView() { return rulersView; }
+    RulersView& getRulersView() { return *rulersView; }
 
     /** Returns borders of "static" components within the viewport */
     BorderSize<int> getViewportBorders() { return viewport.getViewedComponentBorders(); };
 
     Range<double> getVisibleTimeRange() { return viewport.getVisibleRange(); }
 
-    /** Returns entire document time range
-        Note: host timeline can have different start/end times.
-              but this range is guaranteed to be within the host timeline.
-     **/
-    Range<double> getDocumentTimeRange();
+    TimelineViewport& getViewport() { return viewport; }
+    TrackHeadersView& getTrackHeadersView() { return *trackHeadersView; }
+
+    const ARASecondsPixelMapper& getTimeMapper() const { return timeMapper; }
 
     /** Get ScrollBar components owned by the viewport, this allows further customization */
     juce::ScrollBar& getScrollBar (bool isVertical) { return viewport.getScrollBar (isVertical); }
 
     //==============================================================================
-    void parentHierarchyChanged() override;
     void paint (Graphics&) override;
     void resized() override;
 
     // juce::Timer overrides
     void timerCallback() override;
 
-    // ARAEditorView::Listener overrides
-    void onNewSelection (const ARA::PlugIn::ViewSelection& viewSelection) override;
-    void onHideRegionSequences (std::vector<ARARegionSequence*> const& regionSequences) override;
+    // Listen for DocumentViewController invalidation
+    void changeListenerCallback (ChangeBroadcaster*) override;
+    void handleAsyncUpdate() override;
 
-    // ARADocument::Listener overrides
-    void didEndEditing (ARADocument* document) override;
-    void didAddRegionSequenceToDocument (ARADocument* document, ARARegionSequence* regionSequence) override;
-    void didReorderRegionSequencesInDocument (ARADocument* document) override;
-
-    /** Return the RegionSequences that should be visible by this DocumentView.
-        @see showOnlySelectedRegionSequences(), showAllRegionSequences()
-     */
-    std::function<std::vector<ARARegionSequence*> ()> getVisibleRegionSequences {nullptr};
-
-    // update region to range (if needed)
+    // update region bounds based on new range (if needed)
     void setRegionBounds (PlaybackRegionView*, Range<double>);
 
-    // simplify anchoring sub-components to views.
-    // caveats - it assumes units are linear.
-    // @return true if anchored and visible, false if out of bounds.
-    bool anchorChildForTimeRange (const Range<double> entireRangeOfParent, const Range<double> visibleRangeOfParent, Component& componentToBound, const float absoluteWidth, bool anchorToEnd = false) { return viewport.anchorChildForTimeRange(entireRangeOfParent, visibleRangeOfParent, componentToBound, absoluteWidth, anchorToEnd); }
+    const RegionSequenceView& getRegionSequenceView (int idx) const { return *regionSequenceViews[idx]; }
+    int getNumOfTracks() const { return regionSequenceViews.size(); }
 
     //==============================================================================
     /**
@@ -228,60 +314,19 @@ public:
     void removeListener (Listener* listener);
 
 private:
-    void rebuildRegionSequenceViews();
     void updatePlayHeadBounds();
-    /** Adds border padding to time range **/
-    Range<double> padTimeRange (Range<double> timeRangeToPad);
 private:
-    // TODO JUCE_ARA eventually those should just be LookAndFeel?
-    // once RegionSeqeunce will be a view of its own ViewSelection should be
-    // refactored/migrated to it.
+    std::unique_ptr<DocumentViewController> viewController;
 
-    // simple utility class to show playhead position
-    class PlayHeadView    : public Component
-    {
-    public:
-        PlayHeadView (DocumentView& documentView);
-        void paint (Graphics&) override;
-    private:
-        DocumentView& documentView;
-    };
-
-    // simple utility class to show selected time range
-    class TimeRangeSelectionView  : public Component
-    {
-    public:
-        TimeRangeSelectionView (DocumentView& documentView);
-        void paint (Graphics&) override;
-    private:
-        DocumentView& documentView;
-    };
-
-    // resizable container of TrackHeaderViews
-    class TrackHeadersView    : public Component,
-                                public ComponentBoundsConstrainer
-    {
-    public:
-        TrackHeadersView (DocumentView& documentView);
-        void setIsResizable (bool isResizable);
-        void resized() override;
-    private:
-        DocumentView& documentView;
-        ResizableEdgeComponent resizeBorder;
-    };
-
-    const AudioProcessorEditorARAExtension& araExtension;
-
-    TrackHeadersView trackHeadersView;
     TimelineViewport viewport;
     const ARASecondsPixelMapper& timeMapper;
-    RulersView rulersView;
 
     OwnedArray<RegionSequenceView> regionSequenceViews;
 
+    std::unique_ptr<RulersView> rulersView;
     std::unique_ptr<Component> playHeadView;
-    TimeRangeSelectionView timeRangeSelectionView;
-    AudioFormatManager audioFormatManger;
+    std::unique_ptr<Component> timeRangeSelectionView;
+    std::unique_ptr<TrackHeadersView> trackHeadersView;
 
     // Component View States
     bool scrollFollowsPlayHead = true;
@@ -289,11 +334,9 @@ private:
 
     int trackHeight = 80;
     int rulersHeight = 20;
-    bool regionSequenceViewsAreInvalid = true;
 
+    const AudioPlayHead::CurrentPositionInfo& positionInfo;
     juce::AudioPlayHead::CurrentPositionInfo lastReportedPosition;
-    const juce::AudioPlayHead::CurrentPositionInfo& positionInfo;
-
     ListenerList<Listener> listeners;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DocumentView)

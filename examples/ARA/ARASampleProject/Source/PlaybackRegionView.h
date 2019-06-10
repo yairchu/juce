@@ -10,7 +10,7 @@
 class PlaybackRegionView    : public Component
 {
 public:
-    PlaybackRegionView (DocumentView& documentView, ARAPlaybackRegion* region);
+    PlaybackRegionView (RegionSequenceView* ownerTrack, ARAPlaybackRegion* region);
     virtual ~PlaybackRegionView();
 
     ARAPlaybackRegion* getPlaybackRegion() const { return playbackRegion; }
@@ -23,7 +23,7 @@ public:
 
 private:
     ARAPlaybackRegion* playbackRegion;
-    DocumentView& documentView;
+    RegionSequenceView* ownerTrack;
 };
 
 /**
@@ -40,7 +40,7 @@ class PlaybackRegionViewImpl : public PlaybackRegionView,
                                private ARAPlaybackRegion::Listener
 {
 public:
-    PlaybackRegionViewImpl (DocumentView& documentView, ARAPlaybackRegion* region);
+    PlaybackRegionViewImpl (RegionSequenceView* ownerTrack, ARAPlaybackRegion* region);
     ~PlaybackRegionViewImpl() override;
 
     void paint (Graphics&) override;
@@ -69,7 +69,7 @@ private:
     void recreatePlaybackRegionReader();
 
 private:
-    DocumentView& documentView;
+    RegionSequenceView* ownerTrack;
     ARAPlaybackRegion* playbackRegion;
     ARAPlaybackRegionReader* playbackRegionReader = nullptr;  // careful: "weak" pointer, actual pointer is owned by our audioThumb
     bool isSelected = false;
@@ -77,6 +77,7 @@ private:
 
     AudioThumbnailCache audioThumbCache;
     AudioThumbnail audioThumb;
+    AudioFormatManager formatManager;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PlaybackRegionViewImpl)
 };

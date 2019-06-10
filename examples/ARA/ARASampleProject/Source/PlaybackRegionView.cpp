@@ -1,8 +1,8 @@
 #include "PlaybackRegionView.h"
 #include "DocumentView.h"
 
-PlaybackRegionView::PlaybackRegionView (DocumentView& documentView, ARAPlaybackRegion* region)
-    : playbackRegion (region), documentView (documentView)
+PlaybackRegionView::PlaybackRegionView (RegionSequenceView* track, ARAPlaybackRegion* region)
+    : playbackRegion (region), ownerTrack (track)
 {}
 
 PlaybackRegionView::~PlaybackRegionView()
@@ -12,28 +12,30 @@ PlaybackRegionView::~PlaybackRegionView()
 
 Range<double> PlaybackRegionView::getVisibleTimeRange() const
 {
-    if (getLocalBounds().getWidth() == 0 || ! isVisible())
+    if (getLocalBounds().getWidth() == 0 || ! isVisible() || ownerTrack == nullptr)
         return {0.0, 0.0};
 
     auto range = getTimeRange();
-    return { jmax (range.getStart(), documentView.getTimeMapper().getPositionForPixel (getBoundsInParent().getX())),
-             jmin (range.getEnd(), documentView.getTimeMapper().getPositionForPixel (getBoundsInParent().getRight()))
+    return { jmax (range.getStart(), ownerTrack->getParentDocumentView().getTimeMapper().getPositionForPixel (getBoundsInParent().getX())),
+             jmin (range.getEnd(), ownerTrack->getParentDocumentView().getTimeMapper().getPositionForPixel (getBoundsInParent().getRight()))
            };
 }
 
 
 //==============================================================================
-PlaybackRegionViewImpl::PlaybackRegionViewImpl (DocumentView& documentView, ARAPlaybackRegion* region)
-    : PlaybackRegionView (documentView, region),
-      documentView (documentView),
+PlaybackRegionViewImpl::PlaybackRegionViewImpl (RegionSequenceView* track, ARAPlaybackRegion* region)
+    : PlaybackRegionView (track, region),
+      ownerTrack (track),
       playbackRegion (region),
       audioThumbCache (1),
-      audioThumb (128, documentView.getAudioFormatManger(), audioThumbCache)
+      audioThumb (128, formatManager, audioThumbCache)
 {
     audioThumb.addChangeListener (this);
 
-    documentView.getARAEditorView()->addListener (this);
-    onNewSelection (documentView.getARAEditorView()->getViewSelection());
+    jassert (ownerTrack != nullptr);
+
+    ownerTrack->getParentDocumentView().getController().getARAEditorView()->addListener (this);
+    onNewSelection (ownerTrack->getParentDocumentView().getController().getARAEditorView()->getViewSelection());
 
     playbackRegion->getRegionSequence()->getDocument<ARADocument>()->addListener (this);
     playbackRegion->getAudioModification<ARAAudioModification>()->addListener (this);
@@ -47,7 +49,8 @@ PlaybackRegionViewImpl::PlaybackRegionViewImpl (DocumentView& documentView, ARAP
 
 PlaybackRegionViewImpl::~PlaybackRegionViewImpl()
 {
-    documentView.getARAEditorView()->removeListener (this);
+    jassert (ownerTrack != nullptr);
+    ownerTrack->getParentDocumentView().getController().getARAEditorView()->removeListener (this);
 
     playbackRegion->removeListener (this);
     playbackRegion->getAudioModification<ARAAudioModification>()->removeListener (this);
@@ -76,7 +79,7 @@ void PlaybackRegionViewImpl::paint (Graphics& g)
         auto clipBounds = g.getClipBounds();
         if (clipBounds.getWidth() > 0)
         {
-            const auto& mapper = documentView.getTimeMapper();
+            const auto& mapper = ownerTrack->getParentDocumentView().getTimeMapper();
             const auto regionTimeRange = getTimeRange();
             const auto visibleRange = mapper.getRangeForPixels (getX(), getRight());
 
@@ -98,7 +101,7 @@ void PlaybackRegionViewImpl::resized()
 {
     regionName.setBounds (0, 0, 1, regionName.getFont().getHeight());
     const int minTextWidth = 40.0;
-    documentView.anchorChildForTimeRange (getTimeRange(), getVisibleTimeRange(), regionName,  regionName.getFont().getStringWidthFloat (regionName.getText()) + minTextWidth);
+    ownerTrack->getParentDocumentView().getViewport().anchorChildForTimeRange (getTimeRange(), getVisibleTimeRange(), regionName,  regionName.getFont().getStringWidthFloat (regionName.getText()) + minTextWidth);
 }
 
 //==============================================================================
@@ -126,7 +129,7 @@ void PlaybackRegionViewImpl::didEndEditing (ARADocument* document)
     if ((playbackRegionReader ==  nullptr) || ! playbackRegionReader->isValid())
     {
         recreatePlaybackRegionReader();
-        documentView.setRegionBounds (this, documentView.getVisibleTimeRange());
+        ownerTrack->getParentDocumentView().setRegionBounds (this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange());
     }
 }
 
@@ -163,7 +166,7 @@ void PlaybackRegionViewImpl::willUpdatePlaybackRegionProperties (ARAPlaybackRegi
         (playbackRegion->getColor() != newProperties->color))
     {
         updateRegionName();
-        documentView.setRegionBounds (this, documentView.getVisibleTimeRange());
+        ownerTrack->getParentDocumentView().setRegionBounds (this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange());
     }
 }
 
@@ -177,7 +180,7 @@ void PlaybackRegionViewImpl::didUpdatePlaybackRegionContent (ARAPlaybackRegion* 
     if (scopeFlags.affectSamples() &&
         ! playbackRegion->getAudioModification()->getAudioSource()->getDocument()->getDocumentController()->isHostEditingDocument())
     {
-        documentView.setRegionBounds (this, documentView.getVisibleTimeRange());
+        ownerTrack->getParentDocumentView().setRegionBounds (this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange());
     }
 }
 
