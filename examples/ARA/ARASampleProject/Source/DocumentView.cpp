@@ -72,9 +72,9 @@ PlaybackRegionView* DocumentViewController::createViewForPlaybackRegion (RegionS
     return new PlaybackRegionViewImpl (ownerTrack, playbackRegion);
 }
 
-TrackHeaderView* DocumentViewController::createHeaderViewForRegionSequence (ARARegionSequence* regionSequence)
+TrackHeaderView* DocumentViewController::createHeaderViewForRegionSequence (RegionSequenceView& ownerTrack)
 {
-    return new TrackHeaderView (getARAEditorView(), regionSequence);
+    return new TrackHeaderView (getARAEditorView(), ownerTrack);
 }
 
 RegionSequenceView* DocumentViewController::createViewForRegionSequence (DocumentView& owner, ARARegionSequence* regionSequence)

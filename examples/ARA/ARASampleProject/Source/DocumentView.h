@@ -81,7 +81,7 @@ public:
      Creates a new TrackHeaderView which will be owned.
      This allows customizing TrackHeaderView Component to desired behavior.
      */
-    virtual TrackHeaderView* createHeaderViewForRegionSequence (ARARegionSequence*);
+    virtual TrackHeaderView* createHeaderViewForRegionSequence (RegionSequenceView& ownerTrack);
 
     /*
      Creates a new RulerView which will be owned.
