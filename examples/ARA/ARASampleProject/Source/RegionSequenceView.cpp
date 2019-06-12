@@ -7,7 +7,7 @@
 RegionSequenceView::RegionSequenceView (DocumentView& ownerDocument, ARARegionSequence* sequence)
     : owner (ownerDocument),
       regionSequence (sequence),
-      trackHeaderView (owner.getController().createHeaderViewForRegionSequence (regionSequence))
+      trackHeaderView (owner.getController().createHeaderViewForRegionSequence (*this))
 {
     setInterceptsMouseClicks (false, true);
     regionSequence->addListener (this);
@@ -32,6 +32,9 @@ void RegionSequenceView::addRegionSequenceViewAndMakeVisible (ARAPlaybackRegion*
 
 void RegionSequenceView::detachFromRegionSequence()
 {
+    // detach header if needed
+    trackHeaderView.reset();
+
     if (regionSequence == nullptr)
         return;
 

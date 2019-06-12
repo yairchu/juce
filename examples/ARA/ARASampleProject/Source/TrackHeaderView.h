@@ -1,6 +1,7 @@
 #pragma once
 
 #include "JuceHeader.h"
+#include "RegionSequenceView.h"
 
 //==============================================================================
 /**
@@ -12,7 +13,7 @@ class TrackHeaderView   : public Component,
                           private ARARegionSequence::Listener
 {
 public:
-    TrackHeaderView (ARAEditorView* editorView, ARARegionSequence* regionSequence);
+    TrackHeaderView (ARAEditorView* editorView, RegionSequenceView& ownerTrack);
     ~TrackHeaderView();
 
     void paint (Graphics&) override;
@@ -24,14 +25,14 @@ public:
     void didUpdateRegionSequenceProperties (ARARegionSequence* sequence) override;
     void willDestroyRegionSequence (ARARegionSequence* sequence) override;
 
-    ARARegionSequence* getRegionSequence() const { return regionSequence; }
+    ARARegionSequence* getRegionSequence() const { return owner.getRegionSequence(); }
 
 private:
     void detachFromRegionSequence();
 
 private:
     ARAEditorView* editorView;
-    ARARegionSequence* regionSequence;
+    RegionSequenceView& owner;
     bool isSelected = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TrackHeaderView)
