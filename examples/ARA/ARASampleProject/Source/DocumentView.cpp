@@ -399,7 +399,7 @@ void DocumentView::resized()
     trackHeadersView->setBounds (0, 0, getTrackHeaderWidth(), viewport.getViewedComponent()->getHeight());
     if (playHeadView != nullptr)
     {
-        playHeadView->setBounds (trackHeaderWidth, rulersHeight, viewport.getWidthExcludingBorders(), viewport.getHeightExcludingBorders());
+        playHeadView->setBounds (trackHeaderWidth, 0, viewport.getWidthExcludingBorders(), viewport.getHeight() - viewport.getViewedComponentBorders().getBottom());
     }
     // apply needed borders
     auto timeRangeBounds = viewport.getViewedComponent()->getBounds();
@@ -528,7 +528,7 @@ void DocumentViewController::PlayHeadView::paint (juce::Graphics &g)
     if (playheadPos <= endPos)
     {
         g.setColour (findColour (ScrollBar::ColourIds::thumbColourId));
-        g.fillRect (mapper.getPixelForPosition (playheadPos), 0, 1, getHeight());
+        g.fillRect (mapper.getPixelForPosition (playheadPos), documentView.getRulersView().getBottom(), 1, getHeight());
     }
 }
 
