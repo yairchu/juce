@@ -470,24 +470,9 @@ void DocumentView::handleAsyncUpdate()
     juce::Range<double> timeRange = { 0.0, 0.0 };
     if (! regionSequenceViews.isEmpty())
     {
-        bool isFirst = true;
-        for (auto v : regionSequenceViews)
-        {
-            if (v->isEmpty())
-                continue;
-
-            const auto sequenceTimeRange = v->getTimeRange();
-            if (isFirst)
-            {
-                timeRange = sequenceTimeRange;
-                isFirst = false;
-                continue;
-            }
-            timeRange = timeRange.getUnionWith (sequenceTimeRange);
-        }
+        timeRange = getController().getDocumentTimeRange();
+        timeRange = getController().padTimeRange (timeRange);
     }
-
-    timeRange = getController().padTimeRange (timeRange);
 
     // TODO JUCE_ARA - currently the entire DocumentView is rebuilt each time
     //                 showOnlySelectedRegionSequences is changed.
