@@ -298,6 +298,13 @@ public:
         */
         virtual void didUpdateAudioSourceProperties (ARAAudioSource* audioSource) {}
 
+        /** Called when the audio source's analysis progress changes.
+
+            Note that this may be triggered internally by the plug-in, in which case it may be called
+            outside of a host edit cycle - see ARADocumentController::notifyAudioSourceAnalysisProgress().
+        */
+        virtual void doUpdateAudioSourceAnalysisProgress (ARAAudioSource* audioSource, ARA::ARAAnalysisProgressState state, float value) {}
+
         /** Called when the audio source's content changes.
             @param audioSource The audio source with updated content
             @param scopeFlags The scope of the content update.

@@ -93,9 +93,6 @@ namespace juce
 void ARADocumentController::notifyAudioSourceAnalysisProgress (ARAAudioSource* audioSource, ARA::ARAAnalysisProgressState state, float value)
 {
     analysisProgressUpdates[audioSource].add ({state, value});
-    
-    // Can be added in the future if ever needed to notify listeners other than the host.
-    // notify_listeners (doNotifyAudioSourceAnalysisProgress, ARAAudioSource*, audioSource, state, value);
 }
 
 void ARADocumentController::notifyAudioSourceContentChanged (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags, bool notifyAllAudioModificationsAndPlaybackRegions)
@@ -155,9 +152,12 @@ void ARADocumentController::doNotifyModelUpdates() noexcept
     {
         for (const auto& singleAudioSourceAnalysisProgressUpdates : analysisProgressUpdates)
         {
-            const auto* audioSource = singleAudioSourceAnalysisProgressUpdates.first;
-            for (const auto& analysisProgressUpdate : singleAudioSourceAnalysisProgressUpdates.second)
-                hostModelUpdateController->notifyAudioSourceAnalysisProgress(audioSource->getHostRef(), analysisProgressUpdate.state, analysisProgressUpdate.value);
+            auto* audioSource = singleAudioSourceAnalysisProgressUpdates.first;
+            for (const auto& update : singleAudioSourceAnalysisProgressUpdates.second)
+            {
+                hostModelUpdateController->notifyAudioSourceAnalysisProgress (audioSource->getHostRef(), update.state, update.value);
+                notify_listeners (doUpdateAudioSourceAnalysisProgress, ARAAudioSource*, audioSource, update.state, update.value);
+            }
         }
 
         for (auto& audioSourceUpdate : audioSourceUpdates)
