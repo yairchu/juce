@@ -634,6 +634,7 @@ protected:
         void createConfigProperties (PropertyListBuilder& props) override
         {
             addXcodePluginInstallPathProperties (props);
+            addRecommendedLLVMCompilerWarningsProperty (props);
             addGCCOptimisationProperty (props);
 
             if (iOS)
@@ -1251,10 +1252,11 @@ public:
             if (config.isFastMathEnabled())
                 s.set ("GCC_FAST_MATH", "YES");
 
-            auto extraFlags = owner.replacePreprocessorTokens (config, owner.getExtraCompilerFlagsString()).trim();
+            auto flags = (owner.replacePreprocessorTokens (config, owner.getExtraCompilerFlagsString())
+                          + " " + config.getRecommendedCompilerWarningFlags().joinIntoString (" ")).trim();
 
-            if (extraFlags.isNotEmpty())
-                s.set ("OTHER_CPLUSPLUSFLAGS", extraFlags.quoted());
+            if (flags.isNotEmpty())
+                s.set ("OTHER_CPLUSPLUSFLAGS", flags.quoted());
 
             auto installPath = getInstallPathForConfiguration (config);
 
@@ -1910,7 +1912,7 @@ public:
         {
             auto minVersion = (type == Target::AudioUnitv3PlugIn ? minimumAUv3SDKVersion : oldestDeploymentTarget);
 
-            for (int v = minVersion; v < currentSDKVersion; ++v)
+            for (int v = minVersion; v <= currentSDKVersion; ++v)
                 if (deploymentTarget == getSDKDisplayName (v))
                     return getVersionName (v);
 
@@ -1919,7 +1921,7 @@ public:
 
         String getOSXSDKVersion (const String& sdkVersion) const
         {
-            for (int v = oldestSDKVersion; v < currentSDKVersion; ++v)
+            for (int v = oldestSDKVersion; v <= currentSDKVersion; ++v)
                 if (sdkVersion == getSDKDisplayName (v))
                     return getSDKRootName (v);
 
