@@ -90,6 +90,14 @@ namespace juce
 
 //==============================================================================
 
+void ARADocumentController::notifyAudioSourceAnalysisProgress (ARAAudioSource* audioSource, ARA::ARAAnalysisProgressState state, float value)
+{
+    analysisProgressUpdates[audioSource].add ({state, value});
+    
+    // Can be added in the future if ever needed to notify listeners other than the host.
+    // notify_listeners (doNotifyAudioSourceAnalysisProgress, ARAAudioSource*, audioSource, state, value);
+}
+
 void ARADocumentController::notifyAudioSourceContentChanged (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags, bool notifyAllAudioModificationsAndPlaybackRegions)
 {
     audioSourceUpdates[audioSource] += scopeFlags;
@@ -145,6 +153,13 @@ void ARADocumentController::doNotifyModelUpdates() noexcept
     auto hostModelUpdateController = getHostModelUpdateController();
     if (hostModelUpdateController != nullptr)
     {
+        for (const auto& singleAudioSourceAnalysisProgressUpdates : analysisProgressUpdates)
+        {
+            const auto* audioSource = singleAudioSourceAnalysisProgressUpdates.first;
+            for (const auto& analysisProgressUpdate : singleAudioSourceAnalysisProgressUpdates.second)
+                hostModelUpdateController->notifyAudioSourceAnalysisProgress(audioSource->getHostRef(), analysisProgressUpdate.state, analysisProgressUpdate.value);
+        }
+
         for (auto& audioSourceUpdate : audioSourceUpdates)
             hostModelUpdateController->notifyAudioSourceContentChanged (audioSourceUpdate.first->getHostRef(), nullptr, audioSourceUpdate.second);
 
@@ -155,6 +170,7 @@ void ARADocumentController::doNotifyModelUpdates() noexcept
             hostModelUpdateController->notifyPlaybackRegionContentChanged (playbackRegionUpdate.first->getHostRef(), nullptr, playbackRegionUpdate.second);
     }
 
+    analysisProgressUpdates.clear();
     audioSourceUpdates.clear();
     audioModificationUpdates.clear();
     playbackRegionUpdates.clear();
