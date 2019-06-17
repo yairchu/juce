@@ -287,36 +287,6 @@ double TimelineViewport::getZoomFactor()
     return pixelMapper->getZoomFactor();
 }
 
-// TODO: for developing this is kept during testing/code-reviewing.
-#ifdef JUCE_DEBUG
-void TimelineViewport::paint (juce::Graphics &g)
-{
-    // end of timeline...
-    const int endPixel = pixelMapper->getEndPixelForBoundsWithinTimeline (g.getClipBounds().withTrimmedLeft (viewportBorders.getLeft()));
-    double rightMostPixel;
-    if (endPixel == pixelMapper->getTimelineEndPixel())
-    {
-        g.setColour (Colours::blue);
-        g.drawLine (endPixel -1 + viewportBorders.getLeft(), viewportBorders.getTop(), endPixel -1 + viewportBorders.getLeft(), getHeight() - viewportBorders.getBottom());
-        rightMostPixel = getTimelineRange().getEnd();
-    }
-    else
-    {
-        const auto endPixel = getLocalBounds().getWidth();
-        rightMostPixel = pixelMapper->isPixelPositionWithinBounds (endPixel) ? pixelMapper->getPositionForPixel (endPixel): -1;
-    }
-
-    g.setColour (Colours::white);
-    auto range = pixelMapper->getTimelineRange();
-    String positionText = "Timeline Length:\n" + String(range.getStart()) + " - " + String(range.getEnd()) + "\nVisible Length: " + String(componentsRange.getStart()) + " - " + String(componentsRange.getEnd())  + "\nZoom: 1px:" + String(pixelMapper->getZoomFactor()) + pixelMapper->getBaseUnitDescription() +
-    "\nLeftPos(t): " + String(pixelMapper->getStartPixelPosition()) +
-    " RightPos(t): " + String(rightMostPixel) + " Width(px) exld border: " + String(getLocalBounds().getWidth() - viewportBorders.getLeft()) +
-    " Height: " + String(getLocalBounds().getHeight()) +
-    "\nExpected End Pixel (if valid): " + String (endPixel);
-    g.drawFittedText (positionText, getLocalBounds(), Justification::centred, 5);
-}
-#endif
-
 void TimelineViewport::resized()
 {
     invalidateViewport();

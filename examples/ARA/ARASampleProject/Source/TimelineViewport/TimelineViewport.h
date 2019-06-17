@@ -159,9 +159,6 @@ public:
     bool anchorChildForTimeRange (const Range<double> entireRangeOfParent, const Range<double> visibleRangeOfParent, Component& componentToBound, const float absoluteWidth, bool anchorToEnd = true);
 
     void resized() override;
-#ifdef JUCE_DEBUG
-    void paint (Graphics& g) override;
-#endif
 
     int getWidthExcludingBorders();
     int getHeightExcludingBorders();
