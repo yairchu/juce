@@ -356,7 +356,7 @@ void TimelineViewport::invalidateViewport()
         if (componentsRange != curRange)
         {
             componentsRange = curRange;
-            hScrollBar->setCurrentRange (componentsRange);
+            hScrollBar->setCurrentRange (componentsRange.getIntersectionWith (getTimelineRange()));
             if (updateComponentsForRange != nullptr)
             {
                 updateComponentsForRange (componentsRange);
