@@ -76,14 +76,6 @@ void DrawableText::setColour (Colour newColour)
     }
 }
 
-bool DrawableText::replaceColour (Colour originalColour, Colour replacementColour)
-{
-    if (colour != originalColour)
-        return false;
-    setColour (replacementColour);
-    return true;
-}
-
 void DrawableText::setFont (const Font& newFont, bool applySizeAndScale)
 {
     if (font != newFont)
@@ -206,6 +198,15 @@ Path DrawableText::getOutlineAsPath() const
     pathOfAllGlyphs.applyTransform (getTextTransform (w, h).followedBy (getTransform()));
 
     return pathOfAllGlyphs;
+}
+
+bool DrawableText::replaceColour (Colour originalColour, Colour replacementColour)
+{
+    if (colour != originalColour)
+        return false;
+
+    setColour (replacementColour);
+    return true;
 }
 
 } // namespace juce
