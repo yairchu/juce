@@ -228,6 +228,7 @@ namespace Ids
     DECLARE_ID (androidExternalWriteNeeded);
     DECLARE_ID (androidInAppBilling);
     DECLARE_ID (androidVibratePermissionNeeded);
+    DECLARE_ID (androidPushNotifications);
     DECLARE_ID (androidEnableRemoteNotifications);
     DECLARE_ID (androidRemoteNotificationsConfigFile);
     DECLARE_ID (androidEnableContentSharing);
