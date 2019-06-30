@@ -347,6 +347,10 @@ void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double
 void DocumentView::setFitTrackHeight (bool shouldFit)
 {
     fitTrackHeight = shouldFit;
+    if (!fitTrackHeight && trackHeight == 0)
+    {
+        trackHeight = (viewport.getHeightExcludingBorders() / (jmax (1, regionSequenceViews.size())));
+    }
     resized();
 }
 
