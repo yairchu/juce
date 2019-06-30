@@ -384,15 +384,15 @@ void DocumentView::resized()
     const int minTrackHeight = (viewport.getHeightExcludingBorders() / (jmax (1, regionSequenceViews.size())));
     if (fitTrackHeight)
         setTrackHeight (minTrackHeight);
-    else
-        setTrackHeight (jmax (trackHeight, minTrackHeight));
+
+    auto visibleTrackHeight = jmax (trackHeight, minTrackHeight);
 
     int y = 0; // viewport below handles border offsets.
     for (auto v : regionSequenceViews)
     {
         // this also triggers RegionSequence's trackHeader resizing
-        v->setBounds (trackHeaderWidth, y, getWidth(), trackHeight);
-        y += trackHeight;
+        v->setBounds (trackHeaderWidth, y, getWidth(), visibleTrackHeight);
+        y += visibleTrackHeight;
     }
     viewport.setViewedComponentBorders (BorderSize<int>(rulersHeight, trackHeaderWidth, 0, 0));
     viewport.getViewedComponent()->setBounds (0, 0, getWidth(), y);
