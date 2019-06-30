@@ -328,7 +328,7 @@ void DocumentView::zoomBy (double zoomMultiply, bool relativeToPlay)
                                            });
 }
 
-void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double> newVisibleRange)
+void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double> newVisibleRange, BorderSize<int> borders)
 {
     const auto regionTimeRange = regionView->getTimeRange();
     const auto& mapper = getTimeMapper();
@@ -337,9 +337,9 @@ void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double
     if (isIntersect && regionView->getParentComponent() != nullptr)
     {
         auto visibleRegionArea = newVisibleRange.getIntersectionWith (regionTimeRange);
-        const auto start = mapper.getPixelForPosition (visibleRegionArea.getStart());
-        const auto end   = mapper.getPixelForPosition (visibleRegionArea.getEnd());
-        regionView->setBounds (start, 0, jmax (kMinRegionSizeInPixels, end - start), regionView->getParentHeight());
+        const auto start = mapper.getPixelForPosition (visibleRegionArea.getStart() + borders.getLeft());
+        const auto end   = mapper.getPixelForPosition (visibleRegionArea.getEnd() - borders.getRight());
+        regionView->setBounds (start, borders.getTop(), jmax (kMinRegionSizeInPixels, end - start), regionView->getParentHeight() - borders.getBottom());
         regionView->resized();
     }
 }
@@ -384,15 +384,15 @@ void DocumentView::resized()
     const int minTrackHeight = (viewport.getHeightExcludingBorders() / (jmax (1, regionSequenceViews.size())));
     if (fitTrackHeight)
         setTrackHeight (minTrackHeight);
-    else
-        setTrackHeight (jmax (trackHeight, minTrackHeight));
+
+    auto visibleTrackHeight = jmax (trackHeight, minTrackHeight);
 
     int y = 0; // viewport below handles border offsets.
     for (auto v : regionSequenceViews)
     {
         // this also triggers RegionSequence's trackHeader resizing
-        v->setBounds (trackHeaderWidth, y, getWidth(), trackHeight);
-        y += trackHeight;
+        v->setBounds (trackHeaderWidth, y, getWidth(), visibleTrackHeight);
+        y += visibleTrackHeight;
     }
     viewport.setViewedComponentBorders (BorderSize<int>(rulersHeight, trackHeaderWidth, 0, 0));
     viewport.getViewedComponent()->setBounds (0, 0, getWidth(), y);

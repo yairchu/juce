@@ -48,7 +48,7 @@ void RegionSequenceView::updateRegionsBounds (Range<double> newVisibleRange)
 {
     for (auto regionView : playbackRegionViews)
     {
-        owner.setRegionBounds (regionView, newVisibleRange);
+        owner.setRegionBounds (regionView, newVisibleRange, trackBorders);
     }
 }
 
@@ -116,3 +116,12 @@ void RegionSequenceView::willUpdateRegionSequenceProperties (ARARegionSequence* 
     }
 }
 
+BorderSize<int> RegionSequenceView::getTrackBorders()
+{
+    return trackBorders;
+}
+
+void RegionSequenceView::setTrackBorders (BorderSize<int> newBorders)
+{
+    trackBorders = newBorders;
+}

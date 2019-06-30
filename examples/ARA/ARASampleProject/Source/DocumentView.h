@@ -269,7 +269,7 @@ public:
     void handleAsyncUpdate() override;
 
     // update region bounds based on new range (if needed)
-    void setRegionBounds (PlaybackRegionView*, Range<double>);
+    void setRegionBounds (PlaybackRegionView*, Range<double>, BorderSize<int> regionSequenceBorders = BorderSize<int>());
 
     const RegionSequenceView& getRegionSequenceView (int idx) const { return *regionSequenceViews[idx]; }
     int getNumOfTracks() const { return regionSequenceViews.size(); }
