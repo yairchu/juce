@@ -36,11 +36,17 @@ public:
     // juce::Component
     void resized() override;
 
+    // Set borders for the Track.
+    // Keep in mind, left/right borders would add/substract from time!
+    void setTrackBorders (BorderSize<int>);
+    BorderSize<int> getTrackBorders();
+
 private:
     void addRegionSequenceViewAndMakeVisible (ARAPlaybackRegion* playbackRegion);
     void detachFromRegionSequence();
 
 private:
+    BorderSize<int> trackBorders;
     DocumentView& owner;
     ARARegionSequence* regionSequence;
 

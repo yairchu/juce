@@ -328,7 +328,7 @@ void DocumentView::zoomBy (double zoomMultiply, bool relativeToPlay)
                                            });
 }
 
-void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double> newVisibleRange)
+void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double> newVisibleRange, BorderSize<int> borders)
 {
     const auto regionTimeRange = regionView->getTimeRange();
     const auto& mapper = getTimeMapper();
@@ -337,9 +337,9 @@ void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double
     if (isIntersect && regionView->getParentComponent() != nullptr)
     {
         auto visibleRegionArea = newVisibleRange.getIntersectionWith (regionTimeRange);
-        const auto start = mapper.getPixelForPosition (visibleRegionArea.getStart());
-        const auto end   = mapper.getPixelForPosition (visibleRegionArea.getEnd());
-        regionView->setBounds (start, 0, jmax (kMinRegionSizeInPixels, end - start), regionView->getParentHeight());
+        const auto start = mapper.getPixelForPosition (visibleRegionArea.getStart() + borders.getLeft());
+        const auto end   = mapper.getPixelForPosition (visibleRegionArea.getEnd() - borders.getRight());
+        regionView->setBounds (start, borders.getTop(), jmax (kMinRegionSizeInPixels, end - start), regionView->getParentHeight() - borders.getBottom());
         regionView->resized();
     }
 }
