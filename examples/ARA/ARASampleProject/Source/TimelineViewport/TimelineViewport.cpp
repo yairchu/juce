@@ -48,7 +48,7 @@ void TimelineViewport::componentMovedOrResized (Component &component, bool wasMo
     vScrollBar->setRangeLimits (0, contentHeight, dontSendNotification);
     if (viewportHeight > 0)
     {
-        const Range<double> range = {static_cast<double>(startPos), static_cast<double>(jmin (startPos + viewportHeight, contentHeight))};
+        const auto range = contentHeight == viewportHeight ? Range<double> (0, contentHeight) : Range<double> (static_cast<double>(startPos), static_cast<double>(jmin (startPos + viewportHeight, contentHeight)));
         vScrollBar->setCurrentRange (range, dontSendNotification);
     }
     invalidateViewport();
