@@ -58,10 +58,8 @@ void RegionSequenceView::resized()
     trackHeaderView->setBounds (0, getBoundsInParent().getY(), trackHeaderView->getParentWidth(), getHeight());
     // updates all visible PlaybackRegions to new position.
     for (auto region : playbackRegionViews)
-    {
         if (region->isVisible())
-            region->setBounds (region->getBounds().withHeight(getHeight()));
-    }
+            region->setBounds (region->getBounds().withHeight (getHeight()-trackBorders.getTopAndBottom()));
 }
 
 //==============================================================================

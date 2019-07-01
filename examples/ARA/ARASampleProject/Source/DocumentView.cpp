@@ -338,8 +338,8 @@ void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double
     {
         auto visibleRegionArea = newVisibleRange.getIntersectionWith (regionTimeRange);
         const auto start = mapper.getPixelForPosition (visibleRegionArea.getStart() + borders.getLeft());
-        const auto end   = mapper.getPixelForPosition (visibleRegionArea.getEnd() - borders.getRight());
-        regionView->setBounds (start, borders.getTop(), jmax (kMinRegionSizeInPixels, end - start), regionView->getParentHeight() - borders.getBottom());
+        const auto end   = mapper.getPixelForPosition (visibleRegionArea.getEnd() - borders.getLeftAndRight());
+        regionView->setBounds (start, borders.getTop(), jmax (kMinRegionSizeInPixels, end - start), regionView->getParentHeight() - borders.getTopAndBottom());
         regionView->resized();
     }
 }
