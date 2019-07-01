@@ -63,6 +63,10 @@ void TimelineViewport::scrollBarMoved (juce::ScrollBar *scrollBarThatHasMoved, d
 {
     if (scrollBarThatHasMoved == hScrollBar.get())
     {
+        // this wouldn't change for ScrollBar length.
+        // use setVisibleTimeRange().
+        // rationale: if you'd like to show smaller than visible timeline area
+        //            this would've break persistancy for smaller zoom ratios.
         pixelMapper->setStartPixelPosition (newRangeStart);
     }
     invalidateViewport();
@@ -399,7 +403,7 @@ void TimelineViewport::setVisibleRange (Range<double> newVisibleRange, int const
                         getTimelineRange().clipValue (newVisibleRange.getStart()),
                         getTimelineRange().clipValue (newVisibleRange.getEnd())
                                    );
-    setVisibleRange (newLength.getStart(), (newLength.getLength() / constrainWidth));
+    setVisibleRange (newLength.getStart(), (constrainWidth / newLength.getLength()));
 }
 
 void TimelineViewport::setVisibleRange (double startPos, double pixelRatio)

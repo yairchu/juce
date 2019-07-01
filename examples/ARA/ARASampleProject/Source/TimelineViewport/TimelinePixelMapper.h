@@ -70,6 +70,9 @@ public:
     void setZoomFactor (double newZoomFactor)
     {
         jassert (newZoomFactor > 0.0);
+        if (zoomFactor == newZoomFactor)
+            return;
+
         zoomFactor = newZoomFactor;
         onZoomChanged();
     }
