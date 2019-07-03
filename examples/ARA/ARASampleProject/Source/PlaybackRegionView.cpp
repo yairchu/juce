@@ -129,7 +129,9 @@ void PlaybackRegionViewImpl::didEndEditing (ARADocument* document)
     if ((playbackRegionReader ==  nullptr) || ! playbackRegionReader->isValid())
     {
         recreatePlaybackRegionReader();
-        ownerTrack->getParentDocumentView().setRegionBounds (this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange());
+        ownerTrack->getParentDocumentView().setRegionBounds (
+            this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange(),
+            ownerTrack->getTrackBorders());
     }
 }
 
@@ -166,7 +168,9 @@ void PlaybackRegionViewImpl::willUpdatePlaybackRegionProperties (ARAPlaybackRegi
         (playbackRegion->getColor() != newProperties->color))
     {
         updateRegionName();
-        ownerTrack->getParentDocumentView().setRegionBounds (this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange());
+        ownerTrack->getParentDocumentView().setRegionBounds (
+            this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange(),
+            ownerTrack->getTrackBorders());
     }
 }
 
@@ -180,7 +184,9 @@ void PlaybackRegionViewImpl::didUpdatePlaybackRegionContent (ARAPlaybackRegion* 
     if (scopeFlags.affectSamples() &&
         ! playbackRegion->getAudioModification()->getAudioSource()->getDocument()->getDocumentController()->isHostEditingDocument())
     {
-        ownerTrack->getParentDocumentView().setRegionBounds (this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange());
+        ownerTrack->getParentDocumentView().setRegionBounds (
+            this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange(),
+            ownerTrack->getTrackBorders());
     }
 }
 
