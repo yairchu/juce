@@ -27,7 +27,8 @@ void RegionSequenceView::addRegionSequenceViewAndMakeVisible (ARAPlaybackRegion*
     auto view = owner.getController().createViewForPlaybackRegion (this, playbackRegion);
     playbackRegionViews.add (view);
     addChildComponent (view);
-    owner.setRegionBounds (view, owner.getViewport().getVisibleRange());
+    owner.setRegionBounds (
+        view, owner.getViewport().getVisibleRange(), trackBorders);
 }
 
 void RegionSequenceView::detachFromRegionSequence()
