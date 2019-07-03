@@ -349,7 +349,7 @@ void DocumentView::setFitTrackHeight (bool shouldFit)
     fitTrackHeight = shouldFit;
     if (!fitTrackHeight && trackHeight == 0)
     {
-        trackHeight = (viewport.getHeightExcludingBorders() / (jmax (1, regionSequenceViews.size())));
+        trackHeight = calcMinTrackHeight();
     }
     resized();
 }
@@ -385,7 +385,7 @@ void DocumentView::resized()
     viewport.setBounds (getLocalBounds());
     const int trackHeaderWidth = trackHeadersView->isVisible() ? trackHeadersView->getWidth() : 0;
     rulersView->setBounds (0, 0, viewport.getWidth(), rulersHeight);
-    const int minTrackHeight = (viewport.getHeightExcludingBorders() / (jmax (1, regionSequenceViews.size())));
+    const int minTrackHeight = calcMinTrackHeight();
     if (fitTrackHeight)
         setTrackHeight (minTrackHeight);
 
@@ -499,6 +499,11 @@ void DocumentView::handleAsyncUpdate()
     }
     resized();
     repaint();
+}
+
+int DocumentView::calcMinTrackHeight() const
+{
+    return viewport.getHeightExcludingBorders() / (jmax (1, regionSequenceViews.size()));
 }
 
 //==============================================================================

@@ -318,6 +318,7 @@ public:
 
 private:
     void updatePlayHeadBounds();
+    int calcMinTrackHeight() const;
 private:
     std::unique_ptr<DocumentViewController> viewController;
 
