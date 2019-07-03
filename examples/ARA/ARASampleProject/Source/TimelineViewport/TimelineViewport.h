@@ -120,7 +120,7 @@ public:
 
     void setZoomFactor (double newFactor);
     void setZoomFactorAroundPosition (double newFactor, double position);
-    double getZoomFactor();
+    double getZoomFactor() const;
 
     /** This lambda for every change in visible timeline range.
             - viewport scrolled
@@ -163,8 +163,8 @@ public:
     void paint (Graphics& g) override;
 #endif
 
-    int getWidthExcludingBorders();
-    int getHeightExcludingBorders();
+    int getWidthExcludingBorders() const;
+    int getHeightExcludingBorders() const;
 private:
     void invalidateViewport();
 private:

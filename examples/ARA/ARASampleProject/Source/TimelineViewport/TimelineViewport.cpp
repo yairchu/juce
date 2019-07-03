@@ -289,7 +289,7 @@ void TimelineViewport::setZoomFactorAroundPosition (double newFactor, double pos
         newFactor);
 }
 
-double TimelineViewport::getZoomFactor()
+double TimelineViewport::getZoomFactor() const
 {
     return pixelMapper->getZoomFactor();
 }
@@ -386,12 +386,12 @@ void TimelineViewport::setViewedComponentBorders (BorderSize<int> borders)
     resized();
 }
 
-int TimelineViewport::getWidthExcludingBorders()
+int TimelineViewport::getWidthExcludingBorders() const
 {
     return getWidth() - viewportBorders.getLeftAndRight();
 }
 
-int TimelineViewport::getHeightExcludingBorders()
+int TimelineViewport::getHeightExcludingBorders() const
 {
     return getHeight() - viewportBorders.getTopAndBottom();
 }
