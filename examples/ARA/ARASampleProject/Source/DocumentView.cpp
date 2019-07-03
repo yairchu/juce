@@ -10,6 +10,7 @@
 constexpr double kMinSecondDuration = 1.0;
 constexpr double kMinBorderSeconds = 1.0;
 constexpr int    kMinRegionSizeInPixels = 2;
+constexpr int    kMinTrackHeightInPixels = 36;
 
 //==============================================================================
 TrackHeadersView::TrackHeadersView ()
@@ -503,7 +504,10 @@ void DocumentView::handleAsyncUpdate()
 
 int DocumentView::calcMinTrackHeight() const
 {
-    return viewport.getHeightExcludingBorders() / (jmax (1, regionSequenceViews.size()));
+    return jmax (
+        kMinTrackHeightInPixels,
+        viewport.getHeightExcludingBorders() / (jmax (1, regionSequenceViews.size()))
+    );
 }
 
 //==============================================================================
