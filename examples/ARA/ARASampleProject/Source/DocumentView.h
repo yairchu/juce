@@ -274,6 +274,7 @@ public:
 
     const RegionSequenceView& getRegionSequenceView (int idx) const { return *regionSequenceViews[idx]; }
     int getNumOfTracks() const { return regionSequenceViews.size(); }
+    bool canVerticalZoomOutFurther() const;
 
     //==============================================================================
     /**
@@ -319,7 +320,7 @@ public:
 
 private:
     void updatePlayHeadBounds();
-    int calcMinTrackHeight() const;
+    int calcSingleTrackFitHeight() const;
 private:
     std::unique_ptr<DocumentViewController> viewController;
 
