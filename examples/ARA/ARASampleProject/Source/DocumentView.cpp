@@ -393,6 +393,11 @@ void DocumentView::componentMovedOrResized (Component& component,
         resized();
 }
 
+bool DocumentView::canVerticalZoomOutFurther() const
+{
+    return trackHeight > kMinTrackHeightInPixels;
+}
+
 //==============================================================================
 void DocumentView::paint (Graphics& g)
 {
