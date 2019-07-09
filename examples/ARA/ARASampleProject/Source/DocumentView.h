@@ -190,7 +190,8 @@ private:
 class DocumentView  : public Component,
                       private juce::Timer,
                       private AsyncUpdater,
-                      private ChangeListener
+                      private ChangeListener,
+                      private ComponentListener
 {
 public:
     /** Creation.
@@ -261,6 +262,10 @@ public:
     void paint (Graphics&) override;
     void resized() override;
 
+    // juce::ComponentListener overrides
+    void componentMovedOrResized (Component& component,
+                                          bool wasMoved,
+                                          bool wasResized) override;
     // juce::Timer overrides
     void timerCallback() override;
 
