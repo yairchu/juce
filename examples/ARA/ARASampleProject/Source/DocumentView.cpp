@@ -355,6 +355,12 @@ void DocumentView::setFitTrackHeight (bool shouldFit)
     resized();
 }
 
+void DocumentView::setFitTrackWidth (bool shouldFit)
+{
+    fitTrackWidth = shouldFit;
+    resized();
+}
+
 void DocumentView::setTrackHeight (int newHeight)
 {
     if (newHeight == trackHeight)
@@ -389,6 +395,8 @@ void DocumentView::resized()
     const int minTrackHeight = calcMinTrackHeight();
     if (fitTrackHeight)
         setTrackHeight (minTrackHeight);
+    if (getWidth() > 0 && fitTrackWidth)
+        setVisibleTimeRange (viewController->getDocumentTimeRange());
 
     auto visibleTrackHeight = jmax (trackHeight, minTrackHeight);
 

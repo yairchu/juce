@@ -237,6 +237,7 @@ public:
     void zoomBy (double newValue, bool relativeToPlayhead = true);
 
     void setFitTrackHeight (bool shouldFit);
+    void setFitTrackWidth (bool shouldFit);
     void setTrackHeight (int newHeight);
     int getTrackHeight() const { return trackHeight; }
 
@@ -335,6 +336,7 @@ private:
     // Component View States
     bool scrollFollowsPlayHead = true;
     bool fitTrackHeight = true;
+    bool fitTrackWidth = true;
 
     int trackHeight = 80;
     int rulersHeight = 20;
