@@ -349,7 +349,7 @@ void DocumentView::setFitTrackHeight (bool shouldFit)
     fitTrackHeight = shouldFit;
     if (!fitTrackHeight && trackHeight == 0)
     {
-        trackHeight = calcMinTrackHeight();
+        trackHeight = kMinTrackHeightInPixels;
     }
     resized();
 }
@@ -388,6 +388,11 @@ void DocumentView::componentMovedOrResized (Component& component,
         resized();
 }
 
+bool DocumentView::canVerticalZoomOutFurther() const
+{
+    return trackHeight > kMinTrackHeightInPixels;
+}
+
 //==============================================================================
 void DocumentView::paint (Graphics& g)
 {
@@ -399,13 +404,12 @@ void DocumentView::resized()
     viewport.setBounds (getLocalBounds());
     const int trackHeaderWidth = trackHeadersView->isVisible() ? trackHeadersView->getWidth() : 0;
     rulersView->setBounds (0, 0, viewport.getWidth(), rulersHeight);
-    const int minTrackHeight = calcMinTrackHeight();
     if (fitTrackHeight)
-        setTrackHeight (minTrackHeight);
+        setTrackHeight (calcSingleTrackFitHeight());
     if (getWidth() > 0 && fitTrackWidth)
         setVisibleTimeRange (viewController->getDocumentTimeRange());
 
-    auto visibleTrackHeight = jmax (trackHeight, minTrackHeight);
+    auto visibleTrackHeight = jmax (trackHeight, kMinTrackHeightInPixels);
 
     int y = 0; // viewport below handles border offsets.
     for (auto v : regionSequenceViews)
@@ -517,7 +521,7 @@ void DocumentView::handleAsyncUpdate()
     repaint();
 }
 
-int DocumentView::calcMinTrackHeight() const
+int DocumentView::calcSingleTrackFitHeight() const
 {
     return jmax (
         kMinTrackHeightInPixels,
