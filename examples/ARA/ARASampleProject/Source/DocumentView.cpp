@@ -35,10 +35,6 @@ void TrackHeadersView::resized()
     {
         header->setBounds (header->getBounds().withWidth (getWidth()));
     }
-    if (isShowing() && getParentComponent())
-    {
-        getParentComponent()->resized();
-    }
 }
 
 //==============================================================================
@@ -239,6 +235,8 @@ DocumentView::DocumentView (DocumentViewController* ctrl, const AudioPlayHead::C
     timeRangeSelectionView.reset (viewController->createTimeRangeSelectionView(*this));
 
     viewport.getViewedComponent()->addAndMakeVisible (getTrackHeadersView());
+    // DocumentView in-charge of settings bounds.
+    getTrackHeadersView().addComponentListener (this);
     timeRangeSelectionView->setAlwaysOnTop (true);
     viewport.getViewedComponent()->addAndMakeVisible (*timeRangeSelectionView);
 
@@ -255,6 +253,7 @@ DocumentView::DocumentView (DocumentViewController* ctrl, const AudioPlayHead::C
 
 DocumentView::~DocumentView()
 {
+    getTrackHeadersView().removeComponentListener (this);
     viewController->removeAllChangeListeners();
 }
 
@@ -384,6 +383,14 @@ void DocumentView::setRulersHeight (int rulersHeight)
 bool DocumentView::canVerticalZoomOutFurther() const
 {
     return trackHeight > kMinTrackHeightInPixels;
+}
+
+void DocumentView::componentMovedOrResized (Component& component,
+                              bool wasMoved,
+                              bool wasResized)
+{
+    if (&component == &getTrackHeadersView())
+        resized();
 }
 
 //==============================================================================
