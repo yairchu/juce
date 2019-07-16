@@ -25,7 +25,7 @@ class ARAPlaybackRegion;
         } \
     \
     private: \
-        ListenerList<Listener> listeners;
+        ListenerList<Listener, Array<Listener*, CriticalSection>> listeners;
 
 //==============================================================================
 /**
