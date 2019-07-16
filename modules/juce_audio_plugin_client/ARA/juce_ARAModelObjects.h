@@ -13,43 +13,19 @@ class ARAAudioSource;
 class ARAAudioModification;
 class ARAPlaybackRegion;
 
-template<class ModelClassType>
-class ARAListenableModelClass
-{
-public:
-    class Listener
-    {
-    public:
-        /** Default Listener constructor */
-        Listener() = default;
-        /** Does not remove listener, you must do this yourself. */
-        virtual ~Listener() = default;
-    };
-
-    ARAListenableModelClass() = default;
-    virtual ~ARAListenableModelClass() = default;
-
-    /** Subscribe \p l to notified by changes to the object.
-        @param l The listener instance. 
-    */
-    inline void addListener (Listener* l) { listeners.add (l); }
-
-    /** Unsubscribe \p l from object notifications.
-        @param l The listener instance.
-    */
-    inline void removeListener (Listener* l) { listeners.remove (l); }
-
-    template<typename Callback>
-    inline void notifyListeners (Callback&& callback)
-    {
-        reinterpret_cast<ListenerList<typename ModelClassType::Listener>*> (&listeners)->callExpectingUnregistration (callback);
-    }
-
-private:
-    ListenerList<Listener> listeners;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARAListenableModelClass)
-};
+#define ARA_LISTENABLE_MODEL \
+    public: \
+        inline void addListener (Listener* l) { listeners.add (l); } \
+        inline void removeListener (Listener* l) { listeners.remove (l); } \
+    \
+        template<typename Callback> \
+        inline void notifyListeners (Callback&& callback) \
+        { \
+            listeners.callExpectingUnregistration (callback); \
+        } \
+    \
+    private: \
+        ListenerList<Listener> listeners;
 
 //==============================================================================
 /**
@@ -57,17 +33,18 @@ private:
 
     @tags{ARA}
 */
-class ARADocument: public ARA::PlugIn::Document,
-                   public ARAListenableModelClass<ARADocument>
+class ARADocument: public ARA::PlugIn::Document
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARADocumentProperties>;
 
     ARADocument (ARADocumentController* documentController);
 
-    class Listener  : public ARAListenableModelClass<ARADocument>::Listener
+    class Listener
     {
     public:
+        virtual ~Listener() = default;
+
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_BEGIN
 
         /** Called before the document enters an editing state.
@@ -152,6 +129,8 @@ public:
 
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_END
     };
+
+   ARA_LISTENABLE_MODEL
 };
 
 
@@ -161,18 +140,16 @@ public:
 
     @tags{ARA}
 */
-class ARAMusicalContext  : public ARA::PlugIn::MusicalContext,
-                           public ARAListenableModelClass<ARAMusicalContext>
+class ARAMusicalContext  : public ARA::PlugIn::MusicalContext
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARAMusicalContextProperties>;
 
     ARAMusicalContext (ARADocument* document, ARA::ARAMusicalContextHostRef hostRef);
 
-    class Listener  : public ARAListenableModelClass<ARAMusicalContext>::Listener
+    class Listener
     {
     public:
-        Listener() = default;
         virtual ~Listener() = default;
 
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_BEGIN
@@ -205,6 +182,8 @@ public:
 
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_END
     };
+
+   ARA_LISTENABLE_MODEL
 };
 
 
@@ -214,18 +193,16 @@ public:
 
     @tags{ARA}
 */
-class ARARegionSequence  : public ARA::PlugIn::RegionSequence,
-                           public ARAListenableModelClass<ARARegionSequence>
+class ARARegionSequence  : public ARA::PlugIn::RegionSequence
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARARegionSequenceProperties>;
 
     ARARegionSequence (ARADocument* document, ARA::ARARegionSequenceHostRef hostRef);
 
-    class Listener  : public ARAListenableModelClass<ARARegionSequence>::Listener
+    class Listener
     {
     public:
-        Listener() = default;
         virtual ~Listener() = default;
 
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_BEGIN
@@ -271,6 +248,8 @@ public:
         If the region sequence has no playback regions, this also returns 0.0.
      */
     double getCommonSampleRate() const;
+
+   ARA_LISTENABLE_MODEL
 };
 
 //==============================================================================
@@ -279,18 +258,16 @@ public:
 
     @tags{ARA}
 */
-class ARAAudioSource  : public ARA::PlugIn::AudioSource,
-                        public ARAListenableModelClass<ARAAudioSource>
+class ARAAudioSource  : public ARA::PlugIn::AudioSource
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARAAudioSourceProperties>;
 
     ARAAudioSource (ARADocument* document, ARA::ARAAudioSourceHostRef hostRef);
 
-    class Listener  : public ARAListenableModelClass<ARAAudioSource>::Listener
+    class Listener
     {
     public:
-        Listener() = default;
         virtual ~Listener() = default;
 
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_BEGIN
@@ -370,6 +347,8 @@ public:
                                                              regions associated with this audio source should be notified. 
     */
     void notifyContentChanged (ARAContentUpdateScopes scopeFlags, bool notifyAllAudioModificationsAndPlaybackRegions = false);
+
+   ARA_LISTENABLE_MODEL
 };
 
 
@@ -379,15 +358,14 @@ public:
 
     @tags{ARA}
 */
-class ARAAudioModification  : public ARA::PlugIn::AudioModification,
-                              public ARAListenableModelClass<ARAAudioModification>
+class ARAAudioModification  : public ARA::PlugIn::AudioModification
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARAAudioModificationProperties>;
 
     ARAAudioModification (ARAAudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef, ARAAudioModification* optionalModificationToClone);
 
-    class Listener  : public ARAListenableModelClass<ARAAudioModification>::Listener
+    class Listener
     {
     public:
         Listener() = default;
@@ -451,6 +429,8 @@ public:
                                         playback regions should be notified of the content change. 
     */
     void notifyContentChanged (ARAContentUpdateScopes scopeFlags, bool notifyAllPlaybackRegions = false);
+
+   ARA_LISTENABLE_MODEL
 };
 
 
@@ -460,18 +440,16 @@ public:
 
     @tags{ARA}
 */
-class ARAPlaybackRegion  : public ARA::PlugIn::PlaybackRegion,
-                           public ARAListenableModelClass<ARAPlaybackRegion>
+class ARAPlaybackRegion  : public ARA::PlugIn::PlaybackRegion
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARAPlaybackRegionProperties>;
 
     ARAPlaybackRegion (ARAAudioModification* audioModification, ARA::ARAPlaybackRegionHostRef hostRef);
 
-    class Listener  : public ARAListenableModelClass<ARAPlaybackRegion>::Listener
+    class Listener
     {
     public:
-        Listener() = default;
         virtual ~Listener() = default;
 
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_BEGIN
@@ -540,6 +518,8 @@ public:
         @param scopeFlags The scope of the content update. 
     */
     void notifyContentChanged (ARAContentUpdateScopes scopeFlags);
+
+   ARA_LISTENABLE_MODEL
 
 private:
     double headTime = 0.0;
