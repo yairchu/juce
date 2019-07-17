@@ -323,6 +323,10 @@ public:
     /** Deregisters a previously-registered listener. */
     void removeListener (Listener* listener);
 
+protected:
+    /** Non-const protected getter to allow subclasses to modify or repaint specific region sequences views */
+    RegionSequenceView& getRegionSequenceViewProtected (int idx) { return *regionSequenceViews[idx]; }
+
 private:
     void updatePlayHeadBounds();
     int calcSingleTrackFitHeight() const;
