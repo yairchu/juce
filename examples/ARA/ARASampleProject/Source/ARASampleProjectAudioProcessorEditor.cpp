@@ -25,6 +25,7 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
     {
         documentViewController = new ARASampleProjectDocumentViewController (*this);
         documentView.reset (new DocumentView (documentViewController,  p.getLastKnownPositionInfo()));
+        documentView->setFitTrackWidth (false);
         addAndMakeVisible (documentView->getScrollBar (true));
         addAndMakeVisible (documentView->getScrollBar (false));
 
