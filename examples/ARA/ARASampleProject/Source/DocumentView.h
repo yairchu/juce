@@ -240,6 +240,7 @@ public:
     void setFitTrackHeight (bool shouldFit);
     void setFitTrackWidth (bool shouldFit);
     void setTrackHeight (int newHeight);
+    void setMinTrackHeight (int);
     int getTrackHeight() const { return trackHeight; }
 
     void setRulersHeight (int rulersHeight);
@@ -350,6 +351,7 @@ private:
 
     int trackHeight = 80;
     int rulersHeight = 20;
+    int minTrackHeight = 36;
 
     const AudioPlayHead::CurrentPositionInfo& positionInfo;
     juce::AudioPlayHead::CurrentPositionInfo lastReportedPosition;
