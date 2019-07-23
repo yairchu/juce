@@ -405,8 +405,6 @@ void DocumentView::resized()
     rulersView->setBounds (0, 0, viewport.getWidth(), rulersHeight);
     if (fitTrackHeight)
         setTrackHeight (calcSingleTrackFitHeight());
-    if (getWidth() > 0 && fitTrackWidth)
-        setVisibleTimeRange (viewController->getDocumentTimeRange());
 
     auto visibleTrackHeight = jmax (trackHeight, minTrackHeight);
 
@@ -419,6 +417,11 @@ void DocumentView::resized()
     }
     viewport.setViewedComponentBorders (BorderSize<int>(rulersHeight, trackHeaderWidth, 0, 0));
     viewport.getViewedComponent()->setBounds (0, 0, getWidth(), y);
+
+    // should be calculated after viewport borders have been updated.
+    if (getWidth() > 0 && fitTrackWidth)
+        setVisibleTimeRange (viewController->getDocumentTimeRange());
+
     trackHeadersView->setBounds (0, 0, getTrackHeaderWidth(), viewport.getViewedComponent()->getHeight());
     if (playHeadView != nullptr)
     {
