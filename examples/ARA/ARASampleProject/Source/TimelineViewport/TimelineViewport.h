@@ -137,6 +137,7 @@ public:
     /* Sets new visible range to show.
      @param newVisibleRange - the new range to show
      @constrainWidthInPixels - the range on viewport to constrain.
+                               if not provided, uses current width excluding borders.
      */
     void setVisibleRange (Range<double> newVisibleRange, int constrainWidthInPixels = -1);
 
@@ -166,7 +167,9 @@ public:
     int getWidthExcludingBorders() const;
     int getHeightExcludingBorders() const;
 private:
-    void invalidateViewport();
+    // newTimelineRange - optional explicit range to avoid rounding errors
+    //                    due to pixel<>timebase conversion.
+    void invalidateViewport (Range<double> newTimelineRange = Range<double>());
 private:
     std::unique_ptr<TimelinePixelMapperBase> pixelMapper;
     BorderSize<int> viewportBorders;
