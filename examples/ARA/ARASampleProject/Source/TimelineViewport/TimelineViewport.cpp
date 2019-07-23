@@ -388,7 +388,6 @@ void TimelineViewport::invalidateViewport (Range<double> newTimelineRange)
 void TimelineViewport::setViewedComponentBorders (BorderSize<int> borders)
 {
     viewportBorders = borders;
-    invalidateViewport();
     resized();
 }
 
