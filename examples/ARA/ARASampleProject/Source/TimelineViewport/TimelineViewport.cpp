@@ -322,8 +322,8 @@ void TimelineViewport::setViewedComponent (juce::Component *newViewedComponentTo
         viewportClip.toFront (false);
     }
     // init on attach
-    vScrollBar->setRangeLimits (0, jmax (contentComp->getHeight(), getHeightExcludingBorders()));
-    vScrollBar->setCurrentRange (0, getHeightExcludingBorders());
+    vScrollBar->setRangeLimits (0, jmax (contentComp->getHeight(), getHeightExcludingBorders()), dontSendNotification);
+    vScrollBar->setCurrentRange (0, getHeightExcludingBorders(), dontSendNotification);
 }
 
 void TimelineViewport::invalidateViewport (Range<double> newTimelineRange)
@@ -339,7 +339,7 @@ void TimelineViewport::invalidateViewport (Range<double> newTimelineRange)
             componentsRange = curRange;
             const auto newVisibleRange = componentsRange.getIntersectionWith (getTimelineRange());
             jassert (newVisibleRange.getLength() <= getTimelineRange().getLength());
-            hScrollBar->setCurrentRange (newVisibleRange);
+            hScrollBar->setCurrentRange (newVisibleRange, dontSendNotification);
             if (updateComponentsForRange != nullptr)
             {
                 updateComponentsForRange (componentsRange);
