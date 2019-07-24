@@ -63,8 +63,11 @@ void TimelineViewport::scrollBarMoved (juce::ScrollBar *scrollBarThatHasMoved, d
 {
     if (scrollBarThatHasMoved == hScrollBar.get())
     {
+        if (hScrollBar->getCurrentRange() == getVisibleRange())
+            return;
+
         // this wouldn't change for ScrollBar length.
-        // use setVisibleTimeRange().
+        // use setVisibleRange().
         // rationale: if you'd like to show smaller than visible timeline area
         //            this would've break persistancy for smaller zoom ratios.
         pixelMapper->setStartPixelPosition (newRangeStart);
@@ -323,17 +326,20 @@ void TimelineViewport::setViewedComponent (juce::Component *newViewedComponentTo
     vScrollBar->setCurrentRange (0, getHeightExcludingBorders());
 }
 
-void TimelineViewport::invalidateViewport()
+void TimelineViewport::invalidateViewport (Range<double> newTimelineRange)
 {
     // invalidate vertical axis
     if (contentComp.get())
     {
         // update components time range.
-        Range<double> curRange (pixelMapper->getStartPixelPosition(), (pixelMapper->getPositionForPixel (getWidthExcludingBorders())));
+        Range<double> curRange = newTimelineRange.isEmpty() ? Range<double>(pixelMapper->getStartPixelPosition(), (pixelMapper->getPositionForPixel (getWidthExcludingBorders()))) : newTimelineRange;
+
         if (componentsRange != curRange)
         {
             componentsRange = curRange;
-            hScrollBar->setCurrentRange (componentsRange.getIntersectionWith (getTimelineRange()));
+            const auto newVisibleRange = componentsRange.getIntersectionWith (getTimelineRange());
+            jassert (newVisibleRange.getLength() <= getTimelineRange().getLength());
+            hScrollBar->setCurrentRange (newVisibleRange);
             if (updateComponentsForRange != nullptr)
             {
                 updateComponentsForRange (componentsRange);
@@ -403,7 +409,10 @@ void TimelineViewport::setVisibleRange (Range<double> newVisibleRange, int const
                         getTimelineRange().clipValue (newVisibleRange.getStart()),
                         getTimelineRange().clipValue (newVisibleRange.getEnd())
                                    );
-    setVisibleRange (newLength.getStart(), (constrainWidth / newLength.getLength()));
+    pixelMapper->setStartPixelPosition (newLength.getStart());
+    pixelMapper->setZoomFactor (constrainWidth / newLength.getLength());
+    invalidateViewport (newLength);
+
 }
 
 void TimelineViewport::setVisibleRange (double startPos, double pixelRatio)
