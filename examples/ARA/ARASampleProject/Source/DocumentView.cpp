@@ -420,7 +420,7 @@ void DocumentView::resized()
 
     // should be calculated after viewport borders have been updated.
     if (getWidth() > 0 && fitTrackWidth)
-        setVisibleTimeRange (viewController->getDocumentTimeRange());
+        setVisibleTimeRange (viewController->padTimeRange (viewController->getDocumentTimeRange()));
 
     trackHeadersView->setBounds (0, 0, getTrackHeaderWidth(), viewport.getViewedComponent()->getHeight());
     if (playHeadView != nullptr)
