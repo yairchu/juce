@@ -367,8 +367,9 @@ void TimelineViewport::invalidateViewport (Range<double> newTimelineRange)
         if (componentsRange != curRange)
         {
             componentsRange = curRange;
-            const auto newVisibleRange = componentsRange.getIntersectionWith (getTimelineRange());
+            const auto newVisibleRange = componentsRange.constrainRange (getTimelineRange());
             jassert (newVisibleRange.getLength() <= getTimelineRange().getLength());
+
             hScrollBar->setCurrentRange (newVisibleRange, dontSendNotification);
             if (updateComponentsForRange != nullptr)
             {
