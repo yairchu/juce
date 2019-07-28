@@ -36,7 +36,7 @@ TimelineViewport::~TimelineViewport()
     hScrollBar->removeListener (this);
     vScrollBar->removeListener (this);
     if (contentComp.get())
-        contentComp->addComponentListener (this);
+        contentComp->removeComponentListener (this);
 }
 
 void TimelineViewport::componentMovedOrResized (Component &component, bool wasMoved, bool wasResized)
