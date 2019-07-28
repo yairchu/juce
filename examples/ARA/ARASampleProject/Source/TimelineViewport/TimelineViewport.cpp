@@ -36,7 +36,7 @@ TimelineViewport::~TimelineViewport()
     hScrollBar->removeListener (this);
     vScrollBar->removeListener (this);
     if (contentComp.get())
-        contentComp->addComponentListener (this);
+        contentComp->removeComponentListener (this);
 }
 
 void TimelineViewport::componentMovedOrResized (Component &component, bool wasMoved, bool wasResized)
@@ -337,8 +337,9 @@ void TimelineViewport::invalidateViewport (Range<double> newTimelineRange)
         if (componentsRange != curRange)
         {
             componentsRange = curRange;
-            const auto newVisibleRange = componentsRange.getIntersectionWith (getTimelineRange());
+            const auto newVisibleRange = componentsRange.constrainRange (getTimelineRange());
             jassert (newVisibleRange.getLength() <= getTimelineRange().getLength());
+
             hScrollBar->setCurrentRange (newVisibleRange, dontSendNotification);
             if (updateComponentsForRange != nullptr)
             {
@@ -358,7 +359,6 @@ void TimelineViewport::invalidateViewport (Range<double> newTimelineRange)
 void TimelineViewport::setViewedComponentBorders (BorderSize<int> borders)
 {
     viewportBorders = borders;
-    invalidateViewport();
     resized();
 }
 

@@ -420,7 +420,7 @@ void DocumentView::resized()
 
     // should be calculated after viewport borders have been updated.
     if (getWidth() > 0 && fitTrackWidth)
-        setVisibleTimeRange (viewController->getDocumentTimeRange());
+        setVisibleTimeRange (viewController->padTimeRange (viewController->getDocumentTimeRange()));
 
     trackHeadersView->setBounds (0, 0, getTrackHeaderWidth(), viewport.getViewedComponent()->getHeight());
     if (playHeadView != nullptr)
@@ -439,12 +439,21 @@ void DocumentView::timerCallback()
     if (lastReportedPosition.timeInSeconds != positionInfo.timeInSeconds)
     {
         lastReportedPosition = positionInfo;
-
+        
         if (scrollFollowsPlayHead && positionInfo.isPlaying)
         {
+            // TODO - this is for seconds only, currently it won't support ppq
             const auto visibleRange = getVisibleTimeRange();
             if (lastReportedPosition.timeInSeconds < visibleRange.getStart() || lastReportedPosition.timeInSeconds > visibleRange.getEnd())
-                viewport.getScrollBar (false).setCurrentRangeStart (lastReportedPosition.timeInSeconds);
+            {
+                // out of known range, but we still support showing it
+                if (lastReportedPosition.timeInSeconds < timeMapper.getStartPixelPosition() ||
+                    lastReportedPosition.timeInSeconds > timeMapper.getPositionForPixel (viewport.getWidthExcludingBorders())
+                    )
+                {
+                    viewport.setVisibleRange (lastReportedPosition.timeInSeconds, viewport.getZoomFactor());
+                }
+            }
         };
         if (playHeadView != nullptr)
         {

@@ -124,7 +124,7 @@ RulersView::ARASecondsRuler::ARASecondsRuler (const RulersView &owner) : rulersV
 
 void RulersView::ARASecondsRuler::paint (juce::Graphics& g)
 {
-    const auto bounds = g.getClipBounds();
+    const auto bounds = getLocalBounds();
     const auto visibleRange = rulersView.timeline.getVisibleRange();
     const auto& timeMapper = rulersView.timeMapper;
 
@@ -160,7 +160,7 @@ RulersView::ARABeatsRuler::ARABeatsRuler (const RulersView &owner) : rulersView 
 
 void RulersView::ARABeatsRuler::paint (juce::Graphics& g)
 {
-    const auto bounds = g.getClipBounds();
+    const auto bounds = getLocalBounds();
     const auto visibleRange = rulersView.timeline.getVisibleRange();
     const auto& timeMapper = rulersView.timeMapper;
 
@@ -208,7 +208,7 @@ RulersView::ARAChordsRuler::ARAChordsRuler (const RulersView &owner) : rulersVie
 
 void RulersView::ARAChordsRuler::paint (juce::Graphics& g)
 {
-    const auto bounds = g.getClipBounds();
+    const auto bounds = getLocalBounds();
     const auto visibleRange = rulersView.timeline.getVisibleRange();
     const auto timelineRange = rulersView.timeline.getTimelineRange();
     const auto& timeMapper = rulersView.timeMapper;
