@@ -362,19 +362,15 @@ void TimelineViewport::invalidateViewport (Range<double> newTimelineRange)
     if (contentComp.get())
     {
         // update components time range.
-        Range<double> curRange = newTimelineRange.isEmpty() ? Range<double>(pixelMapper->getStartPixelPosition(), (pixelMapper->getPositionForPixel (getWidthExcludingBorders()))) : newTimelineRange;
+        componentsRange = newTimelineRange.isEmpty() ? Range<double>(pixelMapper->getStartPixelPosition(), (pixelMapper->getPositionForPixel (getWidthExcludingBorders()))) : newTimelineRange;
 
-        if (componentsRange != curRange)
+        const auto newVisibleRange = componentsRange.constrainRange (getTimelineRange());
+        jassert (newVisibleRange.getLength() <= getTimelineRange().getLength());
+
+        hScrollBar->setCurrentRange (newVisibleRange, dontSendNotification);
+        if (updateComponentsForRange != nullptr)
         {
-            componentsRange = curRange;
-            const auto newVisibleRange = componentsRange.constrainRange (getTimelineRange());
-            jassert (newVisibleRange.getLength() <= getTimelineRange().getLength());
-
-            hScrollBar->setCurrentRange (newVisibleRange, dontSendNotification);
-            if (updateComponentsForRange != nullptr)
-            {
-                updateComponentsForRange (componentsRange);
-            }
+            updateComponentsForRange (componentsRange);
         }
         Point<int> newPos (0, roundToInt (-vScrollBar->getCurrentRangeStart()));
         if (contentComp->getBounds().getPosition() != newPos)
