@@ -282,6 +282,11 @@ public:
     int getNumOfTracks() const { return regionSequenceViews.size(); }
     bool canVerticalZoomOutFurther() const;
 
+    /* Tries to set visible range based on playhead.
+       this will 'jump' to playhead if playhead is out of current visible range.
+    */
+    void followPlayheadIfNeeded();
+
     //==============================================================================
     /**
      A class for receiving events from a DocumentView.
@@ -329,7 +334,6 @@ protected:
     RegionSequenceView& getRegionSequenceViewProtected (int idx) { return *regionSequenceViews[idx]; }
 
 private:
-    void followPlayheadIfNeeded();
     void updatePlayHeadBounds();
     int calcSingleTrackFitHeight() const;
 private:
