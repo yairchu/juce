@@ -64,11 +64,9 @@ private:
 
     // ARA Converters
     typedef ARA::PlugIn::HostContentReader<ARA::kARAContentTypeBarSignatures> ARAContentTypeBarSignatures;
-    std::unique_ptr<const ARAContentTypeBarSignatures> barSignaturesReader;
-    std::unique_ptr<const ARA::BarSignaturesConverter<const ARAContentTypeBarSignatures>> barSignaturesConverter;
+    typedef ARA::BarSignaturesConverter<const ARAContentTypeBarSignatures> ARABarSignaturesConverter;
     typedef ARA::PlugIn::HostContentReader<ARA::kARAContentTypeTempoEntries> ARAContentTypeTempoEntries;
-    std::unique_ptr<const ARAContentTypeTempoEntries> tempoReader;
-    std::unique_ptr<const ARA::TempoConverter<ARAContentTypeTempoEntries>> tempoConverter;
+    typedef ARA::TempoConverter<const ARAContentTypeTempoEntries> ARATempoConverter;
 
     double pixelsPerSecond {1.0};
     double maxPixelsPerSecond, minPixelsPerSecond;
