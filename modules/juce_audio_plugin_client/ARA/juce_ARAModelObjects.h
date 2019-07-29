@@ -363,7 +363,7 @@ class ARAAudioModification  : public ARA::PlugIn::AudioModification
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARAAudioModificationProperties>;
 
-    ARAAudioModification (ARAAudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef, ARAAudioModification* optionalModificationToClone);
+    ARAAudioModification (ARAAudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef, const ARAAudioModification* optionalModificationToClone);
 
     class Listener
     {

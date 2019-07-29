@@ -350,7 +350,7 @@ private:
     std::unique_ptr<TrackHeadersView> trackHeadersView;
 
     // Component View States
-    bool scrollFollowsPlayHead = true;
+    bool scrollFollowsPlayHead = false;
     bool fitTrackHeight = true;
     bool fitTrackWidth = true;
 

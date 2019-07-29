@@ -356,6 +356,7 @@ void DocumentView::setFitTrackHeight (bool shouldFit)
 void DocumentView::setFitTrackWidth (bool shouldFit)
 {
     fitTrackWidth = shouldFit;
+    scrollFollowsPlayHead = !shouldFit;
     resized();
 }
 
