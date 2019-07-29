@@ -329,6 +329,7 @@ protected:
     RegionSequenceView& getRegionSequenceViewProtected (int idx) { return *regionSequenceViews[idx]; }
 
 private:
+    void followPlayheadIfNeeded();
     void updatePlayHeadBounds();
     int calcSingleTrackFitHeight() const;
 private:
