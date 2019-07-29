@@ -328,8 +328,7 @@ void TimelineViewport::setViewedComponent (juce::Component *newViewedComponentTo
 
 void TimelineViewport::invalidateViewport (Range<double> newTimelineRange)
 {
-    // invalidate vertical axis
-    if (contentComp.get())
+    if (contentComp.get() && contentComp->isShowing())
     {
         // update components time range.
         Range<double> curRange = newTimelineRange.isEmpty() ? Range<double>(pixelMapper->getStartPixelPosition(), (pixelMapper->getPositionForPixel (getWidthExcludingBorders()))) : newTimelineRange;
@@ -346,6 +345,7 @@ void TimelineViewport::invalidateViewport (Range<double> newTimelineRange)
                 updateComponentsForRange (componentsRange);
             }
         }
+        // invalidate vertical axis
         Point<int> newPos (0, roundToInt (-vScrollBar->getCurrentRangeStart()));
         if (contentComp->getBounds().getPosition() != newPos)
         {

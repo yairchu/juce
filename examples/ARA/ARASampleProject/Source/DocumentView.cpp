@@ -441,23 +441,27 @@ void DocumentView::timerCallback()
         lastReportedPosition = positionInfo;
         
         if (scrollFollowsPlayHead && positionInfo.isPlaying)
-        {
-            // TODO - this is for seconds only, currently it won't support ppq
-            const auto visibleRange = getVisibleTimeRange();
-            if (lastReportedPosition.timeInSeconds < visibleRange.getStart() || lastReportedPosition.timeInSeconds > visibleRange.getEnd())
-            {
-                // out of known range, but we still support showing it
-                if (lastReportedPosition.timeInSeconds < timeMapper.getStartPixelPosition() ||
-                    lastReportedPosition.timeInSeconds > timeMapper.getPositionForPixel (viewport.getWidthExcludingBorders())
-                    )
-                {
-                    viewport.setVisibleRange (lastReportedPosition.timeInSeconds, viewport.getZoomFactor());
-                }
-            }
-        };
+            followPlayheadIfNeeded();
+
         if (playHeadView != nullptr)
         {
             playHeadView->repaint();
+        }
+    }
+}
+
+void DocumentView::followPlayheadIfNeeded()
+{
+    // TODO - this is for seconds only, currently it won't support ppq
+    const auto visibleRange = getVisibleTimeRange();
+    if (lastReportedPosition.timeInSeconds < visibleRange.getStart() || lastReportedPosition.timeInSeconds > visibleRange.getEnd())
+    {
+        // out of known range, but we still support showing it
+        if (lastReportedPosition.timeInSeconds < timeMapper.getStartPixelPosition() ||
+            lastReportedPosition.timeInSeconds > timeMapper.getPositionForPixel (viewport.getWidthExcludingBorders())
+            )
+        {
+            viewport.setVisibleRange (lastReportedPosition.timeInSeconds, viewport.getZoomFactor());
         }
     }
 }
