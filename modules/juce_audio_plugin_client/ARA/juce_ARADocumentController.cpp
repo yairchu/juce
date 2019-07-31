@@ -97,6 +97,8 @@ void ARADocumentController::notifyAudioSourceAnalysisProgress (ARAAudioSource* a
 
 void ARADocumentController::notifyAudioSourceContentChanged (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags, bool notifyAllAudioModificationsAndPlaybackRegions)
 {
+    jassert (scopeFlags.affectEverything() || !scopeFlags.affectSamples());
+
     audioSourceUpdates[audioSource] += scopeFlags;
 
     notify_listeners (doUpdateAudioSourceContent, ARAAudioSource*, audioSource, scopeFlags);
@@ -145,7 +147,7 @@ void ARADocumentController::didEndEditing() noexcept
     notify_listeners (didEndEditing, ARADocument*, getDocument());
 }
 
-void ARADocumentController::doNotifyModelUpdates() noexcept
+void ARADocumentController::doNotifyModelContentUpdates() noexcept
 {
     auto hostModelUpdateController = getHostModelUpdateController();
     if (hostModelUpdateController != nullptr)
@@ -197,28 +199,28 @@ bool ARADocumentController::doRestoreObjectsFromArchive (ARA::PlugIn::HostArchiv
 bool ARADocumentController::doStoreObjectsToArchive (ARA::PlugIn::HostArchiveWriter* archiveWriter, const ARA::PlugIn::StoreObjectsFilter* filter) noexcept
 {
     ArchiveWriter writer (archiveWriter);
-    return doStoreObjectsToStream(writer, filter);
+    return doStoreObjectsToStream (writer, filter);
 }
 
 //==============================================================================
 
 ARA::PlugIn::MusicalContext* ARADocumentController::doCreateMusicalContext (ARA::PlugIn::Document* document, ARA::ARAMusicalContextHostRef hostRef) noexcept
 {
-    return new ARAMusicalContext (static_cast<ARADocument*>(document), hostRef);
+    return new ARAMusicalContext (static_cast<ARADocument*> (document), hostRef);
 }
 
 //==============================================================================
 
 ARA::PlugIn::RegionSequence* ARADocumentController::doCreateRegionSequence (ARA::PlugIn::Document* document, ARA::ARARegionSequenceHostRef hostRef) noexcept
 {
-    return new ARARegionSequence (static_cast<ARADocument*>(document), hostRef);
+    return new ARARegionSequence (static_cast<ARADocument*> (document), hostRef);
 }
 
 //==============================================================================
 
-ARA::PlugIn::AudioSource* ARADocumentController::doCreateAudioSource (ARA::PlugIn::Document *document, ARA::ARAAudioSourceHostRef hostRef) noexcept
+ARA::PlugIn::AudioSource* ARADocumentController::doCreateAudioSource (ARA::PlugIn::Document* document, ARA::ARAAudioSourceHostRef hostRef) noexcept
 {
-    return new ARAAudioSource (static_cast<ARADocument*>(document), hostRef);
+    return new ARAAudioSource (static_cast<ARADocument*> (document), hostRef);
 }
 
 //==============================================================================
@@ -232,7 +234,7 @@ ARA::PlugIn::AudioModification* ARADocumentController::doCreateAudioModification
 
 ARA::PlugIn::PlaybackRegion* ARADocumentController::doCreatePlaybackRegion (ARA::PlugIn::AudioModification* modification, ARA::ARAPlaybackRegionHostRef hostRef) noexcept
 {
-    return new ARAPlaybackRegion (static_cast<ARAAudioModification*>(modification), hostRef);
+    return new ARAPlaybackRegion (static_cast<ARAAudioModification*> (modification), hostRef);
 }
 
 void ARADocumentController::willUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion, ARAPlaybackRegion::PropertiesPtr newProperties) noexcept 
@@ -241,10 +243,10 @@ void ARADocumentController::willUpdatePlaybackRegionProperties (ARA::PlugIn::Pla
     // post a sample content update to any of our playback region listeners
     jassert(! _currentPropertyUpdateAffectsContent);
     _currentPropertyUpdateAffectsContent =
-        ((playbackRegion->getStartInAudioModificationTime () != newProperties->startInModificationTime) ||
-        (playbackRegion->getDurationInAudioModificationTime () != newProperties->durationInModificationTime) ||
-        (playbackRegion->getStartInPlaybackTime () != newProperties->startInPlaybackTime) ||
-        (playbackRegion->getDurationInPlaybackTime () != newProperties->durationInPlaybackTime)||
+        ((playbackRegion->getStartInAudioModificationTime() != newProperties->startInModificationTime) ||
+        (playbackRegion->getDurationInAudioModificationTime() != newProperties->durationInModificationTime) ||
+        (playbackRegion->getStartInPlaybackTime() != newProperties->startInPlaybackTime) ||
+        (playbackRegion->getDurationInPlaybackTime() != newProperties->durationInPlaybackTime)||
         (playbackRegion->isTimestretchEnabled() != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationTimestretch) != 0)) ||
         (playbackRegion->isTimeStretchReflectingTempo() != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationTimestretchReflectingTempo) != 0)) ||
         (playbackRegion->hasContentBasedFadeAtHead() != ((newProperties->transformationFlags & ARA::kARAPlaybackTransformationContentBasedFadeAtHead) != 0)) ||

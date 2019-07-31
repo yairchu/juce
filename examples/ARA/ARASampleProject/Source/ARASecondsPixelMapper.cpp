@@ -60,10 +60,6 @@ void ARASecondsPixelMapper::detachFromMusicalContext()
         return;
 
     musicalContext->removeListener (this);
-    tempoConverter.reset();
-    barSignaturesConverter.reset();
-    barSignaturesReader.reset();
-    tempoReader.reset();
 
     musicalContext = nullptr;
 }
@@ -87,10 +83,6 @@ void ARASecondsPixelMapper::findMusicalContext()
         detachFromMusicalContext();
 
         musicalContext = newMusicalContext;
-        tempoReader.reset (new const ARAContentTypeTempoEntries (musicalContext));
-        tempoConverter.reset (new const ARA::TempoConverter<ARAContentTypeTempoEntries> (*tempoReader));
-        barSignaturesReader.reset (new const ARAContentTypeBarSignatures (musicalContext));
-        barSignaturesConverter.reset (new const ARA::BarSignaturesConverter<const ARAContentTypeBarSignatures> (*barSignaturesReader));
         musicalContext->addListener (this);
     }
     // TODO INVALIDATE
@@ -142,14 +134,16 @@ double ARASecondsPixelMapper::getQuarterForTime (double timeInSeconds) const
 {
     // you shouldn't call this method before making sure there's musicalContext!
     jassert (canTempoMap());
-    return tempoConverter->getQuarterForTime (timeInSeconds);
+    const ARAContentTypeTempoEntries tempoReader (musicalContext);
+    return ARATempoConverter (tempoReader).getQuarterForTime (timeInSeconds);
 }
 
 double ARASecondsPixelMapper::getTimeForQuarter (double quarterPosition) const
 {
     // you shouldn't call this method before making sure there's musicalContext!
     jassert (canTempoMap());
-    return tempoConverter->getTimeForQuarter (quarterPosition);
+    const ARAContentTypeTempoEntries tempoReader (musicalContext);
+    return ARATempoConverter (tempoReader).getTimeForQuarter (quarterPosition);
 }
 
 int ARASecondsPixelMapper::getPixelForQuarter (double quarterPosition) const
@@ -163,28 +157,32 @@ double ARASecondsPixelMapper::getBeatForQuarter (double beatPosition) const
 {
     // you shouldn't call this method before making sure there's musicalContext!
     jassert (canTempoMap());
-    return barSignaturesConverter->getBeatForQuarter (beatPosition);
+    const ARAContentTypeBarSignatures barSignaturesReader (musicalContext);
+    return ARABarSignaturesConverter (barSignaturesReader).getBeatForQuarter (beatPosition);
 }
 
 double ARASecondsPixelMapper::getQuarterForBeat (double quarterPosition) const
 {
     // you shouldn't call this method before making sure there's musicalContext!
     jassert (canTempoMap());
-    return barSignaturesConverter->getQuarterForBeat (quarterPosition);
+    const ARAContentTypeBarSignatures barSignaturesReader (musicalContext);
+    return ARABarSignaturesConverter (barSignaturesReader).getQuarterForBeat (quarterPosition);
 }
 
 ARA::ARAContentBarSignature ARASecondsPixelMapper::getBarSignatureForQuarter (double quarterPosition) const
 {
     // you shouldn't call this method before making sure there's musicalContext!
     jassert (canTempoMap());
-    return barSignaturesConverter->getBarSignatureForQuarter (quarterPosition);
+    const ARAContentTypeBarSignatures barSignaturesReader (musicalContext);
+    return ARABarSignaturesConverter (barSignaturesReader).getBarSignatureForQuarter (quarterPosition);
 }
 
 double ARASecondsPixelMapper::getBeatDistanceFromBarStartForQuarter (double quarterPosition) const
 {
     // you shouldn't call this method before making sure there's musicalContext!
     jassert (canTempoMap());
-    return barSignaturesConverter->getBeatDistanceFromBarStartForQuarter (quarterPosition);
+    const ARAContentTypeBarSignatures barSignaturesReader (musicalContext);
+    return ARABarSignaturesConverter (barSignaturesReader).getBeatDistanceFromBarStartForQuarter (quarterPosition);
 }
 
 void ARASecondsPixelMapper::onZoomChanged()
@@ -196,10 +194,11 @@ int ARASecondsPixelMapper::getBarIndexForQuarter (ARA::ARAQuarterPosition quarte
 {
     // you shouldn't call this method before making sure there's musicalContext!
     jassert (canTempoMap());
-    return barSignaturesConverter->getBeatForQuarter (quarterPosition);
+    const ARAContentTypeBarSignatures barSignaturesReader (musicalContext);
+    return ARABarSignaturesConverter (barSignaturesReader).getBeatForQuarter (quarterPosition);
 }
 
 bool ARASecondsPixelMapper::canTempoMap() const
 {
-    return musicalContext != nullptr && tempoReader.get();
+    return musicalContext != nullptr;
 }
