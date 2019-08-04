@@ -64,6 +64,7 @@ PlaybackRegionViewImpl::~PlaybackRegionViewImpl()
 //==============================================================================
 void PlaybackRegionViewImpl::paint (Graphics& g)
 {
+    SettableTooltipClient::setTooltip (playbackRegionToString());
     Colour regionColour = convertOptionalARAColour (playbackRegion->getEffectiveColor());
 
     auto rect = getLocalBounds();
@@ -102,6 +103,21 @@ void PlaybackRegionViewImpl::resized()
     regionName.setBounds (0, 0, 1, regionName.getFont().getHeight());
     const int minTextWidth = 40.0;
     ownerTrack->getParentDocumentView().getViewport().anchorChildForTimeRange (getTimeRange(), getVisibleTimeRange(), regionName,  regionName.getFont().getStringWidthFloat (regionName.getText()) + minTextWidth);
+}
+
+//==============================================================================
+String PlaybackRegionViewImpl::playbackRegionToString() const
+{
+    const auto audioMod = "AudioMod: " + String (playbackRegion->getAudioModification()->getEffectiveName()) + "(" +  String (playbackRegion->getAudioModification()->getPersistentID()) + ")";
+    const auto audioSource = "AudioSource: " + String (playbackRegion->getAudioModification()->getAudioSource()->getName()) + "(" +  String (playbackRegion->getAudioModification()->getAudioSource()->getPersistentID()) + ")" +
+    "\nDuration : " + String (playbackRegion->getAudioModification()->getAudioSource()->getDuration(), 3);
+    const auto region = String ("PlaybackRegion: \n") +
+    "Head: " + String (playbackRegion->getHeadTime(), 2) +
+    "\nTail: " + String (playbackRegion->getTailTime(), 2) +
+    "\nStart (within mod): " + String (playbackRegion->getStartInAudioModificationTime(), 2) +
+    "\nEnd (within mod): " + String (playbackRegion->getEndInAudioModificationTime());
+
+    return region + "\n" + audioMod + "\n" + audioSource;
 }
 
 //==============================================================================
