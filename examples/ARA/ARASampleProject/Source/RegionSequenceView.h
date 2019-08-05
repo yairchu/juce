@@ -25,7 +25,7 @@ public:
     /* Updates current RegionSequence regions to new visible range */
     void updateRegionsBounds (Range<double> newVisibleRange);
 
-    DocumentView& getParentDocumentView() { return owner; };
+    DocumentView& getParentDocumentView() { return owner; }
 
     // ARARegionSequence::Listener overrides
     void willRemovePlaybackRegionFromRegionSequence (ARARegionSequence* sequence, ARAPlaybackRegion* playbackRegion) override;

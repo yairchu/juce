@@ -33,6 +33,7 @@ private:
 */
 class PlaybackRegionViewImpl : public PlaybackRegionView,
                                public ChangeListener,
+                               public SettableTooltipClient,
                                private ARAEditorView::Listener,
                                private ARADocument::Listener,
                                private ARAAudioSource::Listener,
@@ -67,6 +68,7 @@ public:
 private:
     void updateRegionName();
     void recreatePlaybackRegionReader();
+    String playbackRegionToString() const;
 
 private:
     RegionSequenceView* ownerTrack;

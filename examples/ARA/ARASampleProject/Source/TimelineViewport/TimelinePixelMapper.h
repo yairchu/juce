@@ -32,20 +32,20 @@ public:
                         notice! this can be greater than visible time of course.
      */
     TimelinePixelMapperBase (Range<double> supportedTimelineRange = {0.0, 0.0})
-    : timelineRange (supportedTimelineRange) {};
+    : timelineRange (supportedTimelineRange) {}
 
-    virtual ~TimelinePixelMapperBase() {};
+    virtual ~TimelinePixelMapperBase() {}
 
     /* Returns human-readable description of the base unit.
      * (Eg. seconds, PPQ, meter, frame)
      */
     virtual String getBaseUnitDescription() const = 0;
 
-    void setTimelineRange (Range<double> newRange) { timelineRange = newRange; };
+    void setTimelineRange (Range<double> newRange) { timelineRange = newRange; }
 
     /* Returns the actual supported timeline range that can be mapped.
      */
-    const Range<double> getTimelineRange() const { return timelineRange; };
+    const Range<double> getTimelineRange() const { return timelineRange; }
 
     /* Sets the start position in BaseUnit for timelinePixelStart pixel.
      */
@@ -120,7 +120,7 @@ protected:
     Range<double> timelineRange;
 private:
     /* notifies when new zoomFactor is set */
-    virtual void onZoomChanged() {};
+    virtual void onZoomChanged() {}
     double pixelsStartPosition {0};
     double zoomFactor {1.0};
 };

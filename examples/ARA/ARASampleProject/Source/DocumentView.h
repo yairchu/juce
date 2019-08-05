@@ -230,7 +230,7 @@ public:
     /* Sets the current visible area by range.
        Note: This would only work if DocumentView bounds.height is greater than 0.
      */
-    void setVisibleTimeRange (Range<double> newRange) { viewport.setVisibleRange (newRange); };
+    void setVisibleTimeRange (Range<double> newRange) { viewport.setVisibleRange (newRange); }
 
     /* Sets the current visible area by start position and zoom ratio.
      */
@@ -248,7 +248,7 @@ public:
     RulersView& getRulersView() { return *rulersView; }
 
     /** Returns borders of "static" components within the viewport */
-    BorderSize<int> getViewportBorders() { return viewport.getViewedComponentBorders(); };
+    BorderSize<int> getViewportBorders() { return viewport.getViewedComponentBorders(); }
 
     Range<double> getVisibleTimeRange() { return viewport.getVisibleRange(); }
 
@@ -314,13 +314,13 @@ public:
 
          @param newTrackHeight           new trackHeight in pixels.
          */
-        virtual void trackHeightChanged (int /*newTrackHeight*/) {};
+        virtual void trackHeightChanged (int /*newTrackHeight*/) {}
 
         /** Called when a rulersHeight is changed.
 
          @param newRulersHeight           new rulersHeight in pixels.
          */
-        virtual void rulersHeightChanged (int /*newRulersHeight*/) {};
+        virtual void rulersHeightChanged (int /*newRulersHeight*/) {}
     };
 
     /** Registers a listener that will be called for changes of the DocumentView. */

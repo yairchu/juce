@@ -69,5 +69,4 @@ private:
     typedef ARA::TempoConverter<const ARAContentTypeTempoEntries> ARATempoConverter;
 
     double pixelsPerSecond {1.0};
-    double maxPixelsPerSecond, minPixelsPerSecond;
 };
