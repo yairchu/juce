@@ -12,24 +12,8 @@ constexpr double kMinBorderSeconds = 1.0;
 constexpr int    kMinRegionSizeInPixels = 2;
 
 //==============================================================================
-TrackHeadersView::TrackHeadersView ()
-: resizeBorder (this, this, ResizableEdgeComponent::Edge::rightEdge)
-{
-    setSize (120, getHeight());
-    setMinimumWidth (60);
-    setMaximumWidth (240);
-    resizeBorder.setAlwaysOnTop (true);
-    addAndMakeVisible (resizeBorder);
-}
-
-void TrackHeadersView::setIsResizable (bool isResizable)
-{
-    resizeBorder.setVisible (isResizable);
-}
-
 void TrackHeadersView::resized()
 {
-    resizeBorder.setBounds (getWidth() - 1, 0, 1, getHeight());
     for (auto header : getChildren())
     {
         header->setBounds (header->getBounds().withWidth (getWidth()));
@@ -71,6 +55,11 @@ PlaybackRegionView* DocumentViewController::createViewForPlaybackRegion (RegionS
 TrackHeaderView* DocumentViewController::createHeaderViewForRegionSequence (RegionSequenceView& ownerTrack)
 {
     return new TrackHeaderView (getARAEditorView(), ownerTrack);
+}
+
+Component* DocumentViewController::createTrackHeaderResizer (DocumentView &owner)
+{
+    return new TrackHeadersResizer (owner);
 }
 
 RegionSequenceView* DocumentViewController::createViewForRegionSequence (DocumentView& owner, ARARegionSequence* regionSequence)
@@ -224,6 +213,10 @@ DocumentView::DocumentView (DocumentViewController* ctrl, const AudioPlayHead::C
 
     viewport.setViewedComponent (viewController->createCanvasComponent());
 
+    trackHeadersResizer.reset (viewController->createTrackHeaderResizer (*this));
+    viewport.getViewedComponent()->addAndMakeVisible (trackHeadersResizer.get());
+    trackHeadersResizer->setAlwaysOnTop (true);
+
     rulersView.reset (viewController->createRulersView (*this));
     viewport.addAndMakeVisible (*rulersView);
 
@@ -234,8 +227,6 @@ DocumentView::DocumentView (DocumentViewController* ctrl, const AudioPlayHead::C
     timeRangeSelectionView.reset (viewController->createTimeRangeSelectionView(*this));
 
     viewport.getViewedComponent()->addAndMakeVisible (getTrackHeadersView());
-    // DocumentView in-charge of settings bounds.
-    getTrackHeadersView().addComponentListener (this);
     timeRangeSelectionView->setAlwaysOnTop (true);
     viewport.getViewedComponent()->addAndMakeVisible (*timeRangeSelectionView);
 
@@ -252,7 +243,6 @@ DocumentView::DocumentView (DocumentViewController* ctrl, const AudioPlayHead::C
 
 DocumentView::~DocumentView()
 {
-    getTrackHeadersView().removeComponentListener (this);
     viewController->removeAllChangeListeners();
 }
 
@@ -260,46 +250,58 @@ DocumentView::~DocumentView()
 
 int  DocumentView::getTrackHeaderWidth() const
 {
-    return trackHeadersView->getWidth();
+    return layout.trackHeader.width;
 }
 int  DocumentView::getTrackHeaderMaximumWidth ()
 {
-    return trackHeadersView->getMaximumWidth();
+    return layout.trackHeader.maxWidth;
 }
 int  DocumentView::getTrackHeaderMinimumWidth ()
 {
-    return trackHeadersView->getMinimumWidth();
+    return layout.trackHeader.minWidth;
 }
 
 void DocumentView::setIsTrackHeadersVisible (bool shouldBeVisible)
 {
-    trackHeadersView->setVisible (shouldBeVisible);
+    layout.trackHeader.visibleWidth = shouldBeVisible ? layout.trackHeader.width : 0;
+    layout.invalidateLayout (*this);
     if (getParentComponent() != nullptr)
+    {
         resized();
+        repaint();
+    }
 }
 
 bool DocumentView::isTrackHeadersVisible() const
 {
-    return trackHeadersView->isVisible();
+    return layout.trackHeader.visibleWidth > 0;
 }
 
 void DocumentView::setTrackHeaderWidth (int newWidth)
 {
-    trackHeadersView->setBoundsForComponent (trackHeadersView.get(), trackHeadersView->getBounds().withWidth (newWidth), false, false, false, true);
+    layout.trackHeader.width = newWidth;
+    if (isTrackHeadersVisible())
+        layout.trackHeader.visibleWidth = newWidth;
+
+    layout.invalidateLayout (*this);
+    if (getParentComponent() != nullptr)
+        resized();
 }
 
 void DocumentView::setTrackHeaderMaximumWidth (int newWidth)
 {
-    trackHeadersView->setIsResizable (getTrackHeaderMinimumWidth() < newWidth);
-    trackHeadersView->setMaximumWidth (newWidth);
-    trackHeadersView->checkComponentBounds (trackHeadersView.get());
+    jassert (newWidth > 0);
+    layout.trackHeader.maxWidth = newWidth;
+    if (layout.trackHeader.maxWidth < layout.trackHeader.width)
+        setTrackHeaderWidth (newWidth);
 }
 
 void DocumentView::setTrackHeaderMinimumWidth (int newWidth)
 {
-    trackHeadersView->setIsResizable (newWidth < getTrackHeaderMaximumWidth());
-    trackHeadersView->setMinimumWidth (newWidth);
-    trackHeadersView->checkComponentBounds (trackHeadersView.get());
+    jassert (newWidth > 0);
+    layout.trackHeader.minWidth = newWidth;
+    if (layout.trackHeader.width < layout.trackHeader.minWidth)
+        setTrackHeaderWidth (newWidth);
 }
 
 void DocumentView::zoomBy (double zoomMultiply, bool relativeToPlay)
@@ -346,11 +348,13 @@ void DocumentView::setRegionBounds (PlaybackRegionView* regionView, Range<double
 void DocumentView::setFitTrackHeight (bool shouldFit)
 {
     fitTrackHeight = shouldFit;
-    if (!fitTrackHeight && trackHeight == 0)
+    if (!fitTrackHeight && layout.track.height == 0)
     {
-        trackHeight = minTrackHeight;
+        layout.track.height = layout.track.minHeight;
     }
-    resized();
+    layout.invalidateLayout (*this);
+    if (getParentComponent() != nullptr)
+        resized();
 }
 
 void DocumentView::setFitTrackWidth (bool shouldFit)
@@ -362,35 +366,31 @@ void DocumentView::setFitTrackWidth (bool shouldFit)
 
 void DocumentView::setTrackHeight (int newHeight)
 {
-    if (newHeight == trackHeight)
+    if (newHeight == layout.track.height)
         return;
 
-    trackHeight = newHeight;
+    layout.track.height = newHeight;
+    layout.track.visibleHeight = jmax (layout.track.height, layout.track.minHeight);
+    layout.invalidateLayout (*this);
+
     if (getParentComponent() != nullptr)
         resized();
 
     listeners.callExpectingUnregistration ([&] (Listener& l)
                                            {
-                                               l.trackHeightChanged (trackHeight);
+                                               // should we notify the visible height or expected height?
+                                               l.trackHeightChanged (layout.track.height);
                                            });
 }
 
 void DocumentView::setRulersHeight (const int newHeight)
 {
-    DocumentView::rulersHeight = newHeight;
-}
-
-void DocumentView::componentMovedOrResized (Component& component,
-                              bool /*wasMoved*/,
-                              bool /*wasResized*/)
-{
-    if (&component == &getTrackHeadersView())
-        resized();
+    layout.rulers.height = newHeight;
 }
 
 bool DocumentView::canVerticalZoomOutFurther() const
 {
-    return trackHeight > minTrackHeight;
+    return layout.track.height > layout.track.minHeight;
 }
 
 //==============================================================================
@@ -402,36 +402,32 @@ void DocumentView::paint (Graphics& g)
 void DocumentView::resized()
 {
     viewport.setBounds (getLocalBounds());
-    const int trackHeaderWidth = trackHeadersView->isVisible() ? trackHeadersView->getWidth() : 0;
-    rulersView->setBounds (0, 0, viewport.getWidth(), rulersHeight);
+    rulersView->setBounds (0, 0, viewport.getWidth(), layout.rulers.height);
     if (fitTrackHeight)
         setTrackHeight (calcSingleTrackFitHeight());
 
-    auto visibleTrackHeight = jmax (trackHeight, minTrackHeight);
+    // width before the actual track regions
+    const auto preContentWidth = layout.trackHeader.visibleWidth + layout.resizer.visibleWidth;
 
-    int y = 0; // viewport below handles border offsets.
-    for (auto v : regionSequenceViews)
-    {
-        // this also triggers RegionSequence's trackHeader resizing
-        v->setBounds (trackHeaderWidth, y, getWidth(), visibleTrackHeight);
-        y += visibleTrackHeight;
-    }
-    viewport.setViewedComponentBorders (BorderSize<int>(rulersHeight, trackHeaderWidth, 0, 0));
-    viewport.getViewedComponent()->setBounds (0, 0, getWidth(), y);
+    viewport.setViewedComponentBorders (BorderSize<int> (layout.rulers.height,  preContentWidth, 0, 0));
+    viewport.getViewedComponent()->setBounds (0, 0, getWidth(), jmax (layout.track.visibleHeight * getNumOfTracks(), viewport.getHeightExcludingBorders()));
 
     // should be calculated after viewport borders have been updated.
     if (getWidth() > 0 && fitTrackWidth)
         setVisibleTimeRange (viewController->padTimeRange (viewController->getDocumentTimeRange()));
 
+    layout.tracksLayout.performLayout (viewport.getViewedComponent()->getLocalBounds());
+
     trackHeadersView->setBounds (0, 0, getTrackHeaderWidth(), viewport.getViewedComponent()->getHeight());
+
     if (playHeadView != nullptr)
     {
-        playHeadView->setBounds (trackHeaderWidth, 0, viewport.getWidthExcludingBorders(), viewport.getHeight() - viewport.getViewedComponentBorders().getBottom());
+        playHeadView->setBounds (preContentWidth, 0, viewport.getWidthExcludingBorders(), viewport.getHeight() - viewport.getViewedComponentBorders().getBottom());
     }
     // apply needed borders
     auto timeRangeBounds = viewport.getViewedComponent()->getBounds();
     timeRangeBounds.setTop (viewController->getTopForCurrentTrackHeight (*this));
-    timeRangeBounds.setLeft (trackHeaderWidth);
+    timeRangeBounds.setLeft (preContentWidth);
     timeRangeSelectionView->setBounds (timeRangeBounds);
 }
 
@@ -497,6 +493,7 @@ void DocumentView::handleAsyncUpdate()
     //               and preserve all views that can still be used. We could also try to build some
     //               sort of LRU cache for the audio thumbs if that is easier...
 
+    jassert (trackHeadersView.get());
     regionSequenceViews.clear();
 
     for (auto selectedSequence : viewController->getVisibleRegionSequences())
@@ -505,6 +502,8 @@ void DocumentView::handleAsyncUpdate()
         regionSequenceViews.add (sequence);
         getViewport().getViewedComponent()->addAndMakeVisible (sequence);
     }
+
+    layout.invalidateLayout (*this);
 
     // calculate maximum visible time range
     juce::Range<double> timeRange = { 0.0, 0.0 };
@@ -533,24 +532,28 @@ void DocumentView::handleAsyncUpdate()
     {
         regionSequenceView->updateRegionsBounds (timeRange);
     }
-    resized();
-    repaint();
+
+    if (getParentComponent() != nullptr)
+    {
+        resized();
+        repaint();
+    }
 }
 
 int DocumentView::calcSingleTrackFitHeight() const
 {
     return jmax (
-        minTrackHeight,
+        layout.track.minHeight,
         viewport.getHeightExcludingBorders() / (jmax (1, regionSequenceViews.size()))
     );
 }
 
 void DocumentView::setMinTrackHeight (int newVal)
 {
-    if (minTrackHeight == newVal)
+    if (layout.track.minHeight == newVal)
         return;
-    minTrackHeight = newVal;
-    setTrackHeight (trackHeight); // Apply changes if necessary
+    layout.track.minHeight = newVal;
+    setTrackHeight (layout.track.height); // Apply changes if necessary
 }
 
 //==============================================================================
@@ -602,5 +605,112 @@ void DocumentViewController::TimeRangeSelectionView::paint (juce::Graphics& g)
                 g.fillRect (startPixel, y, pixelDuration, height);
             y += height;
         }
+    }
+}
+
+//==============================================================================
+DocumentViewController::TrackHeadersResizer::TrackHeadersResizer (DocumentView& documentView)
+    : colour (Colours::grey.withAlpha (0.2f)),
+      documentView (documentView) {}
+void DocumentViewController::TrackHeadersResizer::paint (Graphics& g)
+{
+    g.setColour (colour);
+    g.fillRect (static_cast<int> (floor (documentView.layout.resizer.width * 0.5)), 0, documentView.layout.resizer.visibleWidth, getHeight());
+}
+
+int DocumentViewController::TrackHeadersResizer::getMouseXforResizableArea (const MouseEvent &event) const
+{
+    return event.getEventRelativeTo (documentView.getViewport().getViewedComponent()).getPosition().getX();
+}
+
+void DocumentViewController::TrackHeadersResizer::setCursor()
+{
+    if (documentView.getTrackHeaderWidth() == documentView.getTrackHeaderMaximumWidth())
+        setMouseCursor (MouseCursor::LeftEdgeResizeCursor);
+    else if (documentView.getTrackHeaderWidth() == documentView.getTrackHeaderMinimumWidth())
+        setMouseCursor (MouseCursor::RightEdgeResizeCursor);
+    else
+        setMouseCursor (MouseCursor::LeftRightResizeCursor);
+}
+
+void DocumentViewController::TrackHeadersResizer::mouseEnter (const MouseEvent &event)
+{
+    setCursor();
+}
+
+void DocumentViewController::TrackHeadersResizer::mouseExit (const MouseEvent &event)
+{
+    setMouseCursor (MouseCursor::ParentCursor);
+}
+
+void DocumentViewController::TrackHeadersResizer::mouseDrag (const MouseEvent &event)
+{
+    // ruler height and 1px for resizer excluded
+    const auto& viewport = documentView.getViewport();
+    auto newWidth = jlimit (
+                            documentView.getTrackHeaderMinimumWidth(),
+                            jmin (viewport.getWidthExcludingBorders(), documentView.getTrackHeaderMaximumWidth()),
+                            getMouseXforResizableArea(event));
+    documentView.setTrackHeaderWidth (newWidth);
+    setCursor();
+}
+//==============================================================================
+
+void DocumentLayout::invalidateLayout (DocumentView& view)
+{
+    using Track = Grid::TrackInfo;
+    // invalidate col layout
+    tracksLayout.templateColumns =
+    {
+        Track ("headerColStart", Grid::Px (trackHeader.visibleWidth), "headerColEnd"),
+        Track ("resizerColStart", Grid::Px (resizer.visibleWidth), "resizerColEnd"),
+        Track ("contentColStart", 1_fr, "contentColEnd")
+    };
+
+    tracksLayout.autoRows = Grid::TrackInfo(1_fr);
+    tracksLayout.autoColumns = Grid::TrackInfo(1_fr);
+
+    // invalidate row layout
+    auto& tracks = tracksLayout.templateRows;
+    tracks.clear();
+    const auto totalTrackIndexes = view.getNumOfTracks() -1;
+    // this is inclusive (see totalTrackIndexes), for 0 tracks it'll be -1 so it won't add.
+    for (auto i = 0; i <= totalTrackIndexes; ++i)
+    {
+        if (i < totalTrackIndexes)
+        {
+            tracks.add (Grid::TrackInfo (Grid::Px (track.visibleHeight)));
+        }
+        else
+        {
+            tracks.add (Grid::TrackInfo (Grid::Px (track.visibleHeight), "lastTrack"));
+        }
+    }
+    tracks.add (Track (1_fr, "endOfTracks"));
+
+    // rebuilds layout
+    auto& items = tracksLayout.items;
+    items.clear();
+
+    auto headers = GridItem (view.getTrackHeadersView());
+    headers.setArea (1, "headerColStart", "endOfTracks", "headerColEnd");
+    items.add (headers);
+    auto resizerItem = GridItem (view.getTrackHeadersResizer());
+    resizerItem.setArea (1, "resizerColStart", "endOfTracks", "resizerColEnd");
+    resizerItem.alignSelf = resizer.alignment;
+    resizerItem.justifySelf = resizer.justification;
+    resizerItem.width = resizer.width;
+    items.add (resizerItem);
+
+    // add track items
+    for (auto i = 0; i < view.getNumOfTracks(); ++i)
+    {
+        auto& track = view.getRegionSequenceView (i);
+        auto trackToLayout = GridItem (track);
+        // TODO - host provides track orders. (see getOrderIndex())
+        // but if tracks are invisible or not within selection,
+        // we must sort them to our current grid rows. (to avoid 1 row of track ordered 5 for example).
+        trackToLayout.setArea (i+1, "contentColStart");
+        tracksLayout.items.add (trackToLayout);
     }
 }
