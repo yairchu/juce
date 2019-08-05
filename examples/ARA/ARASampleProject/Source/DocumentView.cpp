@@ -375,14 +375,14 @@ void DocumentView::setTrackHeight (int newHeight)
                                            });
 }
 
-void DocumentView::setRulersHeight (int rulersHeight)
+void DocumentView::setRulersHeight (const int newHeight)
 {
-    DocumentView::rulersHeight = rulersHeight;
+    DocumentView::rulersHeight = newHeight;
 }
 
 void DocumentView::componentMovedOrResized (Component& component,
-                              bool wasMoved,
-                              bool wasResized)
+                              bool /*wasMoved*/,
+                              bool /*wasResized*/)
 {
     if (&component == &getTrackHeadersView())
         resized();
@@ -554,8 +554,8 @@ void DocumentView::setMinTrackHeight (int newVal)
 }
 
 //==============================================================================
-DocumentViewController::PlayHeadView::PlayHeadView (DocumentView& documentView)
-    : documentView (documentView)
+DocumentViewController::PlayHeadView::PlayHeadView (DocumentView& docView)
+    : documentView (docView)
 {
     setInterceptsMouseClicks (false, true);
     setWantsKeyboardFocus (false);

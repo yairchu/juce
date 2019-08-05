@@ -6,8 +6,8 @@ static constexpr int lightLineWidth = 1;
 static constexpr int heavyLineWidth = 3;
 
 //==============================================================================
-RulersView::RulersView (TimelineViewport& timeline, const AudioPlayHead::CurrentPositionInfo* hostPosition)
-    : timeline (timeline),
+RulersView::RulersView (TimelineViewport& tv, const AudioPlayHead::CurrentPositionInfo* hostPosition)
+    : timeline (tv),
       timeMapper (static_cast<const ARASecondsPixelMapper&>(timeline.getPixelMapper())),
       optionalHostPosition (hostPosition),
       shouldShowLocators (true)
@@ -126,7 +126,6 @@ void RulersView::ARASecondsRuler::paint (juce::Graphics& g)
 {
     const auto bounds = getLocalBounds();
     const auto visibleRange = rulersView.timeline.getVisibleRange();
-    const auto& timeMapper = rulersView.timeMapper;
 
     // draw ruler -
     g.setColour (Colours::lightslategrey);
@@ -137,7 +136,7 @@ void RulersView::ARASecondsRuler::paint (juce::Graphics& g)
     {
         const int lineWidth = (time % 60 == 0) ? heavyLineWidth : lightLineWidth;
         const int lineHeight = (time % 10 == 0) ? secondsRulerHeight : secondsRulerHeight / 2;
-        const int x = rulersView.getRulerHeaderWidth() + timeMapper.getPixelForPosition (time);
+        const int x = rulersView.getRulerHeaderWidth() + rulersView.timeMapper.getPixelForPosition (time);
         rects.addWithoutMerging (Rectangle<int> (x - lineWidth / 2, bounds.getHeight() - lineHeight, lineWidth, lineHeight));
     }
     g.fillRectList (rects);
@@ -162,25 +161,25 @@ void RulersView::ARABeatsRuler::paint (juce::Graphics& g)
 {
     const auto bounds = getLocalBounds();
     const auto visibleRange = rulersView.timeline.getVisibleRange();
-    const auto& timeMapper = rulersView.timeMapper;
+    const auto& mapper = rulersView.timeMapper;
 
     String rulerName;
-    if (timeMapper.canTempoMap())
+    if (mapper.canTempoMap())
     {
         rulerName = " beats";
         g.setColour (Colours::lightslategrey);
         RectangleList<int> rects;
         const int beatsRulerHeight = bounds.getHeight();
-        const double beatStart = timeMapper.getBeatForQuarter (timeMapper.getQuarterForTime (visibleRange.getStart()));
-        const double beatEnd = timeMapper.getBeatForQuarter (timeMapper.getQuarterForTime (visibleRange.getEnd()));
+        const double beatStart = mapper.getBeatForQuarter (mapper.getQuarterForTime (visibleRange.getStart()));
+        const double beatEnd = mapper.getBeatForQuarter (mapper.getQuarterForTime (visibleRange.getEnd()));
         const int endBeat = roundToInt (floor (beatEnd));
         for (int beat = roundToInt (ceil (beatStart)); beat <= endBeat; ++beat)
         {
-            const auto quarterPos = timeMapper.getQuarterForBeat (beat);
-            const int x = rulersView.getRulerHeaderWidth() + timeMapper.getPixelForQuarter(quarterPos);
-            const auto barSignature = timeMapper.getBarSignatureForQuarter (quarterPos);
+            const auto quarterPos = mapper.getQuarterForBeat (beat);
+            const int x = rulersView.getRulerHeaderWidth() + mapper.getPixelForQuarter(quarterPos);
+            const auto barSignature = mapper.getBarSignatureForQuarter (quarterPos);
             const int lineWidth = (quarterPos == barSignature.position) ? heavyLineWidth : lightLineWidth;
-            const int beatsSinceBarStart = roundToInt( timeMapper.getBeatDistanceFromBarStartForQuarter (quarterPos));
+            const int beatsSinceBarStart = roundToInt( mapper.getBeatDistanceFromBarStartForQuarter (quarterPos));
             const int lineHeight = (beatsSinceBarStart == 0) ? beatsRulerHeight : beatsRulerHeight / 2;
             
             rects.addWithoutMerging (Rectangle<int> (x - lineWidth / 2, beatsRulerHeight - lineHeight, lineWidth, lineHeight));
@@ -211,14 +210,14 @@ void RulersView::ARAChordsRuler::paint (juce::Graphics& g)
     const auto bounds = getLocalBounds();
     const auto visibleRange = rulersView.timeline.getVisibleRange();
     const auto timelineRange = rulersView.timeline.getTimelineRange();
-    const auto& timeMapper = rulersView.timeMapper;
+    const auto& mapper = rulersView.timeMapper;
     String rulerName;
-    if (timeMapper.canTempoMap())
+    if (mapper.canTempoMap())
     {
         rulerName = " chords";
         RectangleList<int> rects;
         const ARA::ChordInterpreter interpreter;
-        const ARA::PlugIn::HostContentReader<ARA::kARAContentTypeSheetChords> chordsReader (timeMapper.getCurrentMusicalContext());
+        const ARA::PlugIn::HostContentReader<ARA::kARAContentTypeSheetChords> chordsReader (mapper.getCurrentMusicalContext());
         for (auto itChord = chordsReader.begin(); itChord != chordsReader.end(); ++itChord)
         {
             if (interpreter.isNoChord (*itChord))
@@ -229,18 +228,18 @@ void RulersView::ARAChordsRuler::paint (juce::Graphics& g)
 
             // find the starting position of the chord in pixels
             const auto chordStartTime = (itChord == chordsReader.begin()) ?
-            timelineRange.getStart() : timeMapper.getTimeForQuarter (itChord->position);
+            timelineRange.getStart() : mapper.getTimeForQuarter (itChord->position);
             if (chordStartTime >= visibleRange.getEnd())
                 break;
-            chordRect.setLeft (rulersView.getRulerHeaderWidth() + timeMapper.getPixelForPosition (chordStartTime));
+            chordRect.setLeft (rulersView.getRulerHeaderWidth() + mapper.getPixelForPosition (chordStartTime));
 
             // if we have a chord after this one, use its starting position to end our rect
             if (std::next(itChord) != chordsReader.end())
             {
-                const auto nextChordStartTime = timeMapper.getTimeForQuarter (std::next (itChord)->position);
+                const auto nextChordStartTime = mapper.getTimeForQuarter (std::next (itChord)->position);
                 if (nextChordStartTime < visibleRange.getStart())
                     continue;
-                chordRect.setRight (timeMapper.getPixelForPosition (nextChordStartTime));
+                chordRect.setRight (mapper.getPixelForPosition (nextChordStartTime));
             }
             // draw chord rect and name
             g.drawRect (chordRect);

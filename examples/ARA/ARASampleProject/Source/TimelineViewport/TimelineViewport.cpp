@@ -39,7 +39,7 @@ TimelineViewport::~TimelineViewport()
         contentComp->removeComponentListener (this);
 }
 
-void TimelineViewport::componentMovedOrResized (Component &component, bool wasMoved, bool wasResized)
+void TimelineViewport::componentMovedOrResized (Component&, bool /*wasMoved*/, bool /*wasResized*/)
 {
     // update vertical scrollBar
     const int startPos = vScrollBar->getCurrentRangeStart();

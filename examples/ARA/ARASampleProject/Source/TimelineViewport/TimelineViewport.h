@@ -63,7 +63,7 @@ public:
     /* Returns borders for viewed component.
      * This should be taken into juce::Components added directly to view!
      */
-    BorderSize<int> getViewedComponentBorders() const { return viewportBorders; };
+    BorderSize<int> getViewedComponentBorders() const { return viewportBorders; }
 
     /** Returns the component that's currently being used inside the Viewport.
 
