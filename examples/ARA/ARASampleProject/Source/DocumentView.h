@@ -14,15 +14,49 @@ class DocumentView;
 /**
  Resizable container of TrackHeadersView(s)
  */
-class TrackHeadersView    : public Component,
-public ComponentBoundsConstrainer
+class TrackHeadersView    : public Component
 {
 public:
-    TrackHeadersView ();
-    void setIsResizable (bool isResizable);
     void resized() override;
-private:
-    ResizableEdgeComponent resizeBorder;
+};
+
+// Utility to keep a responsive layout of the DocumentView
+struct DocumentLayout
+{
+    void invalidateLayout (DocumentView& view);
+
+    juce::Grid tracksLayout;
+
+    // visible values are calculated based on actual bounds
+
+    struct
+    {
+        int height {20};
+    } rulers;
+
+    struct
+    {
+        int height {80};
+        int visibleHeight = height;
+        int minHeight {36};
+    } track;
+
+    struct
+    {
+        int width {120};
+        int visibleWidth = width;
+        int minWidth {60};
+        int maxWidth {240};
+    } trackHeader;
+
+    struct
+    {
+        int invisibleWidth {6};
+        int visibleWidth {1};
+        int width = invisibleWidth + visibleWidth;
+        GridItem::JustifySelf justification = GridItem::JustifySelf::center;
+        GridItem::AlignSelf alignment = GridItem::AlignSelf::center;
+    } resizer;
 };
 
 //==============================================================================
@@ -81,7 +115,14 @@ public:
      Creates a new TrackHeaderView which will be owned.
      This allows customizing TrackHeaderView Component to desired behavior.
      */
-    virtual TrackHeaderView* createHeaderViewForRegionSequence (RegionSequenceView& ownerTrack);
+    virtual TrackHeaderView* createHeaderViewForRegionSequence (RegionSequenceView& owner);
+
+    /*
+     Creates a new TrackHeader resizer object.
+     This will handle resizing of track headers width.
+     Default implementation should usually be sufficient.
+     */
+    virtual Component* createTrackHeaderResizer (DocumentView& owner);
 
     /*
      Creates a new RulerView which will be owned.
@@ -163,6 +204,26 @@ private:
     private:
         DocumentView& documentView;
     };
+
+    // simple utility class to manage track headers resizing
+    class TrackHeadersResizer : public Component
+    {
+    public:
+        TrackHeadersResizer (DocumentView& documentView);
+
+        void paint (Graphics& g) override;
+
+        void mouseEnter (const MouseEvent &event) override;
+        void mouseExit (const MouseEvent &event) override;
+        void mouseDrag (const MouseEvent &event) override;
+
+        int getMouseXforResizableArea (const MouseEvent &event) const;
+        void setCursor();
+
+        Colour colour;
+    private:
+        DocumentView& documentView;
+    };
 };
 
 //==============================================================================
@@ -190,8 +251,7 @@ private:
 class DocumentView  : public Component,
                       private juce::Timer,
                       private AsyncUpdater,
-                      private ChangeListener,
-                      private ComponentListener
+                      private ChangeListener
 {
 public:
     /** Creation.
@@ -241,10 +301,10 @@ public:
     void setFitTrackWidth (bool shouldFit);
     void setTrackHeight (int newHeight);
     void setMinTrackHeight (int);
-    int getTrackHeight() const { return trackHeight; }
+    int getTrackHeight() const { return layout.track.height; }
 
     void setRulersHeight (int rulersHeight);
-    int getRulersHeight() const { return rulersHeight; }
+    int getRulersHeight() const { return layout.rulers.height; }
     RulersView& getRulersView() { return *rulersView; }
 
     /** Returns borders of "static" components within the viewport */
@@ -254,6 +314,7 @@ public:
 
     TimelineViewport& getViewport() { return viewport; }
     TrackHeadersView& getTrackHeadersView() { return *trackHeadersView; }
+    Component& getTrackHeadersResizer() { return *trackHeadersResizer; }
 
     const ARASecondsPixelMapper& getTimeMapper() const { return timeMapper; }
 
@@ -264,10 +325,6 @@ public:
     void paint (Graphics&) override;
     void resized() override;
 
-    // juce::ComponentListener overrides
-    void componentMovedOrResized (Component& component,
-                                          bool wasMoved,
-                                          bool wasResized) override;
     // juce::Timer overrides
     void timerCallback() override;
 
@@ -278,6 +335,7 @@ public:
     // update region bounds based on new range (if needed)
     void setRegionBounds (PlaybackRegionView*, Range<double>, BorderSize<int> regionSequenceBorders);
 
+    RegionSequenceView& getRegionSequenceView (int idx) { return *regionSequenceViews[idx]; }
     const RegionSequenceView& getRegionSequenceView (int idx) const { return *regionSequenceViews[idx]; }
     int getNumOfTracks() const { return regionSequenceViews.size(); }
     bool canVerticalZoomOutFurther() const;
@@ -329,6 +387,7 @@ public:
     /** Deregisters a previously-registered listener. */
     void removeListener (Listener* listener);
 
+    DocumentLayout layout;
 protected:
     /** Non-const protected getter to allow subclasses to modify or repaint specific region sequences views */
     RegionSequenceView& getRegionSequenceViewProtected (int idx) { return *regionSequenceViews[idx]; }
@@ -348,15 +407,12 @@ private:
     std::unique_ptr<Component> playHeadView;
     std::unique_ptr<Component> timeRangeSelectionView;
     std::unique_ptr<TrackHeadersView> trackHeadersView;
+    std::unique_ptr<Component> trackHeadersResizer;
 
     // Component View States
     bool scrollFollowsPlayHead = false;
     bool fitTrackHeight = true;
     bool fitTrackWidth = true;
-
-    int trackHeight = 80;
-    int rulersHeight = 20;
-    int minTrackHeight = 36;
 
     const AudioPlayHead::CurrentPositionInfo& positionInfo;
     juce::AudioPlayHead::CurrentPositionInfo lastReportedPosition;
