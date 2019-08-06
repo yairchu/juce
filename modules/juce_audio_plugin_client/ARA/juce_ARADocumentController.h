@@ -15,8 +15,6 @@ class ARADocumentController  : public ARA::PlugIn::DocumentController
 public:
     using ARA::PlugIn::DocumentController::DocumentController;
 
-    void notifyAudioSourceAnalysisProgress (ARAAudioSource* audioSource, ARA::ARAAnalysisProgressState state, float value);
-
     //==============================================================================
     // notify the host and any potential internal reader about content changes
     // Note that while the ARA API allows for specifying update ranges, this feature is not yet
@@ -244,12 +242,6 @@ private:
     // this flag is used automatically trigger content update if a property change implies this
     bool _currentPropertyUpdateAffectsContent = false;
 
-    struct ARAAnalysisProgressStateAndValue
-    {
-        ARA::ARAAnalysisProgressState state;
-        float value;
-    };
-    std::map<ARAAudioSource*, juce::Array<ARAAnalysisProgressStateAndValue>> analysisProgressUpdates;
     std::map<ARAAudioSource*, ARAContentUpdateScopes> audioSourceUpdates;
     std::map<ARAAudioModification*, ARAContentUpdateScopes> audioModificationUpdates;
     std::map<ARAPlaybackRegion*, ARAContentUpdateScopes> playbackRegionUpdates;
