@@ -201,7 +201,7 @@ DocumentView::DocumentView (DocumentViewController* ctrl, const AudioPlayHead::C
     trackHeadersView (new TrackHeadersView ()),
     positionInfo (posInfo)
 {
-    lastReportedPosition.resetToDefault();
+    lastReportedPosition = positionInfo;
     viewport.updateComponentsForRange = [&](Range<double> newVisibleRange)
     {
         for (auto regionSequenceView : regionSequenceViews)
