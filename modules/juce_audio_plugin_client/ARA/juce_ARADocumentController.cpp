@@ -85,45 +85,27 @@ namespace juce
 
 //==============================================================================
 
-#define notify_listeners(function, ModelObjectPtrType, modelObject,  ...) \
-    static_cast<ModelObjectPtrType> (modelObject)->notifyListeners ([&] (std::remove_pointer<ModelObjectPtrType>::type::Listener& l) { l.function (static_cast<ModelObjectPtrType> (modelObject), ##__VA_ARGS__); })
-
-//==============================================================================
-
-void ARADocumentController::notifyAudioSourceContentChanged (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags, bool notifyAllAudioModificationsAndPlaybackRegions)
+void ARADocumentController::notifyAudioSourceContentChanged (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags)
 {
     jassert (scopeFlags.affectEverything() || !scopeFlags.affectSamples());
 
     audioSourceUpdates[audioSource] += scopeFlags;
-
-    notify_listeners (doUpdateAudioSourceContent, ARAAudioSource*, audioSource, scopeFlags);
-
-    if (notifyAllAudioModificationsAndPlaybackRegions)
-    {
-        for (auto audioModification : audioSource->getAudioModifications<ARAAudioModification>())
-            notifyAudioModificationContentChanged (audioModification, scopeFlags, true);
-    }
 }
 
-void ARADocumentController::notifyAudioModificationContentChanged (ARAAudioModification* audioModification, ARAContentUpdateScopes scopeFlags, bool notifyAllPlaybackRegions)
+void ARADocumentController::notifyAudioModificationContentChanged (ARAAudioModification* audioModification, ARAContentUpdateScopes scopeFlags)
 {
     audioModificationUpdates[audioModification] += scopeFlags;
-
-    notify_listeners (doUpdateAudioModificationContent, ARAAudioModification*, audioModification, scopeFlags);
-
-    if (notifyAllPlaybackRegions)
-    {
-        for (auto playbackRegion : audioModification->getPlaybackRegions<ARAPlaybackRegion>())
-            notifyPlaybackRegionContentChanged (playbackRegion, scopeFlags);
-    }
 }
 
 void ARADocumentController::notifyPlaybackRegionContentChanged (ARAPlaybackRegion* playbackRegion, ARAContentUpdateScopes scopeFlags)
 {
     playbackRegionUpdates[playbackRegion] += scopeFlags;
-
-    notify_listeners (didUpdatePlaybackRegionContent, ARAPlaybackRegion*, playbackRegion, scopeFlags);
 }
+
+//==============================================================================
+
+#define notify_listeners(function, ModelObjectPtrType, modelObject,  ...) \
+    static_cast<ModelObjectPtrType> (modelObject)->notifyListeners ([&] (std::remove_pointer<ModelObjectPtrType>::type::Listener& l) { l.function (static_cast<ModelObjectPtrType> (modelObject), ##__VA_ARGS__); })
 
 //==============================================================================
 
@@ -193,6 +175,12 @@ ARA::PlugIn::MusicalContext* ARADocumentController::doCreateMusicalContext (ARA:
     return new ARAMusicalContext (static_cast<ARADocument*> (document), hostRef);
 }
 
+void ARADocumentController::doUpdateMusicalContextContent (ARA::PlugIn::MusicalContext* musicalContext, const ARA::ARAContentTimeRange* /*range*/, ARA::ContentUpdateScopes scopeFlags) noexcept
+{
+    auto araMusicalContext = static_cast<ARAMusicalContext*> (musicalContext);
+    araMusicalContext->notifyListeners ([&] (ARAMusicalContext::Listener& l) { l.didUpdateMusicalContextContent(araMusicalContext, scopeFlags); });
+}
+
 //==============================================================================
 
 ARA::PlugIn::RegionSequence* ARADocumentController::doCreateRegionSequence (ARA::PlugIn::Document* document, ARA::ARARegionSequenceHostRef hostRef) noexcept
@@ -205,6 +193,12 @@ ARA::PlugIn::RegionSequence* ARADocumentController::doCreateRegionSequence (ARA:
 ARA::PlugIn::AudioSource* ARADocumentController::doCreateAudioSource (ARA::PlugIn::Document* document, ARA::ARAAudioSourceHostRef hostRef) noexcept
 {
     return new ARAAudioSource (static_cast<ARADocument*> (document), hostRef);
+}
+
+void ARADocumentController::doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* AudioSource, const ARA::ARAContentTimeRange* /*range*/, ARA::ContentUpdateScopes scopeFlags) noexcept
+{
+    auto araAudioSource = static_cast<ARAAudioSource*> (AudioSource);
+    araAudioSource->notifyListeners ([&] (ARAAudioSource::Listener& l) { l.didUpdateAudioSourceContent(araAudioSource, scopeFlags); });
 }
 
 //==============================================================================

@@ -165,15 +165,11 @@ public:
         */
         virtual void didUpdateMusicalContextProperties (ARAMusicalContext* musicalContext) {}
 
-        /** Called when the musical context's content changes.
-
-            Use this notification to respond to changes in musical context content
-            (i.e tempo entries or chord changes). This notification is triggered by the ARA host.
-
-            @param musicalContext The musical context with updated content
+        /** Called when the musical context's content (i.e tempo entries or chords) changes.
+            @param musicalContext The musical context with updated content.
             @param scopeFlags The scope of the content update indicating what has changed.
         */
-        virtual void doUpdateMusicalContextContent (ARAMusicalContext* musicalContext, ARAContentUpdateScopes scopeFlags) {}
+        virtual void didUpdateMusicalContextContent (ARAMusicalContext* musicalContext, ARAContentUpdateScopes scopeFlags) {}
 
         /** Called before the musical context is destroyed.
             @param musicalContext The musical context that will be destoyed. 
@@ -283,14 +279,11 @@ public:
         */
         virtual void didUpdateAudioSourceProperties (ARAAudioSource* audioSource) {}
 
-        /** Called when the audio source's content changes.
-            @param audioSource The audio source with updated content
+        /** Called when the audio source's content (i.e. samples or notes) changes.
+            @param audioSource The audio source with updated content.
             @param scopeFlags The scope of the content update.
-
-            Note that this may be triggered internally by the plug-in, in which case it may be called
-            outside of a host edit cycle - see ARADocumentController::notifyAudioSourceContentChanged().
         */
-        virtual void doUpdateAudioSourceContent (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags) {}
+        virtual void didUpdateAudioSourceContent (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags) {}
 
         /** Called before access to an audio source's samples is enabled or disabled.
             @param audioSource The audio source whose sample access state will be changed.
@@ -331,13 +324,15 @@ public:
     };
 
     /** Notify the ARA host and any listeners of a content update. 
-
-        Audio source content changes should be triggered if, for example,
-        the user adjusts some analysis parameter and causes the analysis to yield new results.
+        This must be called by the plug-in model management code on the message thread whenever updating
+        the internal content representation, such as after successfully analyzing a new tempo map.
+        A notification to the host will be enqueued, and send out the next time it polls for updates.
+        This host notification should not be send if the update was triggered by the host via doUpdateAudioSourceContent().
+        Further, all listeners will be notified immediately.
 
         @param scopeFlags The scope of the content update.
-        @param notifyAllAudioModificationsAndPlaybackRegions A bool indicating whether all audio modifications and playback 
-                                                             regions associated with this audio source should be notified. 
+        @param notifyAllAudioModificationsAndPlaybackRegions A bool indicating whether all audio modifications and playback
+                                                             regions associated with this audio source should be notified too.
     */
     void notifyContentChanged (ARAContentUpdateScopes scopeFlags, bool notifyAllAudioModificationsAndPlaybackRegions = false);
 
@@ -377,14 +372,11 @@ public:
         */
         virtual void didUpdateAudioModificationProperties (ARAAudioModification* audioModification) {}
 
-        /** Called when the audio modification's content changes.
-            @param audioModification The audio modification with updated content
+        /** Called when the audio modification's content (i.e. samples or notes) changes.
+            @param audioModification The audio modification with updated content.
             @param scopeFlags The scope of the content update.
-
-            Note that this may be triggered internally by the plug-in, in which case it may be called
-            outside of a host edit cycle - see ARADocumentController::notifyAudioModificationContentChanged().
         */
-        virtual void doUpdateAudioModificationContent (ARAAudioModification* audioModification, ARAContentUpdateScopes scopeFlags) {}
+        virtual void didUpdateAudioModificationContent (ARAAudioModification* audioModification, ARAContentUpdateScopes scopeFlags) {}
 
         /** Called after an audio modification is activated or deactivated when being removed / added from the host's undo history.
             @param audioModification The audio modification that was activated or deactivated
@@ -415,11 +407,20 @@ public:
     /** Notify the ARA host and any listeners of a content update 
 
         Audio modification content changes should be triggered if, for example, 
-        the user adjusts some analysis parameter and causes the analysis to yield new results. 
+        the user changes the modification DSP settings, such as changing the pitch of a note. 
 
         @param scopeFlags The scope of the content update. 
-        @param notifyAllPlaybackRegions A bool indicating whether the audio modification's 
-                                        playback regions should be notified of the content change. 
+    */
+
+    /** Notify the ARA host and any listeners of a content update.
+        This must be called by the plug-in model management code on the message thread whenever updating
+        the internal content representation, such as after the user editing the pitch of a note.
+        A notification to the host will be enqueued, and send out the next time it polls for updates.
+        Further, all listeners will be notified immediately.
+
+        @param scopeFlags The scope of the content update.
+        @param notifyAllPlaybackRegions A bool indicating whether the audio modification's
+                                        playback regions should be notified of the content change.
     */
     void notifyContentChanged (ARAContentUpdateScopes scopeFlags, bool notifyAllPlaybackRegions = false);
 
@@ -458,12 +459,9 @@ public:
         */
         virtual void didUpdatePlaybackRegionProperties (ARAPlaybackRegion* playbackRegion) {}
 
-        /** Called when the playback region's content changes.
-            @param playbackRegion The playback region with updated content
+        /** Called when the playback region's content (i.e. samples or notes) changes.
+            @param playbackRegion The playback region with updated content.
             @param scopeFlags The scope of the content update.
-
-            Note that this may be triggered internally by the plug-in, in which case it may be called
-            outside of a host edit cycle - see ARADocumentController::notifyPlaybackRegionContentChanged().
         */
         virtual void didUpdatePlaybackRegionContent (ARAPlaybackRegion* playbackRegion, ARAContentUpdateScopes scopeFlags) {}
 
@@ -503,12 +501,14 @@ public:
     */
     Range<double> getTimeRange (bool includeHeadAndTail = false) const;
 
-    /** Notify the ARA host and any listeners of a content update 
+    /** Notify the ARA host and any listeners of a content update.
+        This must be called by the plug-in model management code on the message thread whenever updating
+        the internal content representation, such as after the user edited the pitch of a note in the
+        underlying audio modification.
+        A notification to the host will be enqueued, and send out the next time it polls for updates.
+        Further, all listeners will be notified immediately.
 
-        Playback region content changes should be triggered if, for example,
-        the user adjusts some analysis parameter and causes the analysis to yield new results.
-
-        @param scopeFlags The scope of the content update. 
+        @param scopeFlags The scope of the content update.
     */
     void notifyContentChanged (ARAContentUpdateScopes scopeFlags);
 
