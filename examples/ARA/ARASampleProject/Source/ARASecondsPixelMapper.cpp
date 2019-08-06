@@ -124,7 +124,7 @@ void ARASecondsPixelMapper::willDestroyDocument (ARADocument* doc)
     detachFromDocument();
 }
 
-void ARASecondsPixelMapper::doUpdateMusicalContextContent (ARAMusicalContext* context, ARAContentUpdateScopes /*scopeFlags*/)
+void ARASecondsPixelMapper::didUpdateMusicalContextContent (ARAMusicalContext* context, ARAContentUpdateScopes /*scopeFlags*/)
 {
     jassert (musicalContext == context);
     // TODO INVALIDATE

@@ -51,7 +51,7 @@ public:
     void willDestroyDocument (ARADocument* document) override;
 
     // ARAMusicalContext::Listener overrides
-    void doUpdateMusicalContextContent (ARAMusicalContext* context, ARAContentUpdateScopes scopeFlags) override;
+    void didUpdateMusicalContextContent (ARAMusicalContext* context, ARAContentUpdateScopes scopeFlags) override;
 private:
     void onZoomChanged() override;
     void detachFromDocument();
