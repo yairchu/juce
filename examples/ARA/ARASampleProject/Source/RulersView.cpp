@@ -13,6 +13,8 @@ RulersView::RulersView (TimelineViewport& tv, const AudioPlayHead::CurrentPositi
       shouldShowLocators (true)
 {
     setColour (rulersBackground, Colours::transparentBlack);
+    setColour (selectorsColours, Colours::white.withAlpha (0.3f));
+    setColour (loopSelectorsColours, Colours::skyblue.withAlpha (0.3f));
     lastPaintedPosition.resetToDefault();
     startTimerHz (10);
 }
@@ -38,8 +40,8 @@ void RulersView::paint (juce::Graphics& g)
         lastPaintedPosition = *optionalHostPosition;
         const int startX = getRulerHeaderWidth() + timeMapper.getPixelForQuarter(lastPaintedPosition.ppqLoopStart);
         const int endX = getRulerHeaderWidth() + timeMapper.getPixelForQuarter(lastPaintedPosition.ppqLoopEnd);
-        g.setColour (lastPaintedPosition.isLooping ? Colours::skyblue.withAlpha (0.3f) : Colours::white.withAlpha (0.3f));
-        g.fillRect (startX, bounds.getY(), endX - startX, bounds.getHeight());
+        g.setColour (lastPaintedPosition.isLooping ? findColour (loopSelectorsColours): findColour (selectorsColours));
+        g.fillRect (jmax (getRulerHeaderWidth(), startX), bounds.getY(), endX - startX, bounds.getHeight());
     }
 }
 

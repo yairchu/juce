@@ -18,7 +18,9 @@ public:
 
     enum ColourIds
     {
-        rulersBackground = 0x10A8A01
+        rulersBackground = 0x10A8A01,
+        selectorsColours = 0x10A8A02,
+        loopSelectorsColours = 0x10A8A03
     };
 
     void addRulerComponent (Component* rulerToOwn);
