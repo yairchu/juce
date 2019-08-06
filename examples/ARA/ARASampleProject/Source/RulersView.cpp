@@ -41,7 +41,7 @@ void RulersView::paint (juce::Graphics& g)
         const int startX = getRulerHeaderWidth() + timeMapper.getPixelForQuarter(lastPaintedPosition.ppqLoopStart);
         const int endX = getRulerHeaderWidth() + timeMapper.getPixelForQuarter(lastPaintedPosition.ppqLoopEnd);
         g.setColour (lastPaintedPosition.isLooping ? findColour (loopSelectorsColours): findColour (selectorsColours));
-        g.fillRect (startX, bounds.getY(), endX - startX, bounds.getHeight());
+        g.fillRect (jmax (getRulerHeaderWidth(), startX), bounds.getY(), endX - startX, bounds.getHeight());
     }
 }
 
