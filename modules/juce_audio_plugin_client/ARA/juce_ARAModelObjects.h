@@ -158,7 +158,7 @@ public:
             @param musicalContext The musical context whose properties will be updated. 
             @param newProperties The musical context properties that will be assigned to \p musicalContext. 
         */
-        virtual void willUpdateMusicalContextProperties (ARAMusicalContext* musicalContext, ARAMusicalContext::PropertiesPtr newProperties) {}
+        virtual void willUpdateMusicalContextProperties (ARAMusicalContext* musicalContext, PropertiesPtr newProperties) {}
 
         /** Called after the musical context's properties are updated by the host.
             @param musicalContext The musical context whose properties were updated.
@@ -207,7 +207,7 @@ public:
             @param regionSequence The region sequence whose properties will be updated. 
             @param newProperties The region sequence properties that will be assigned to \p regionSequence. 
         */
-        virtual void willUpdateRegionSequenceProperties (ARARegionSequence* regionSequence, ARARegionSequence::PropertiesPtr newProperties) {}
+        virtual void willUpdateRegionSequenceProperties (ARARegionSequence* regionSequence, PropertiesPtr newProperties) {}
 
         /** Called after the region sequence's properties are updated.
             @param regionSequence The region sequence whose properties were updated.
@@ -272,7 +272,7 @@ public:
             @param audioSource The audio source whose properties will be updated. 
             @param newProperties The audio source properties that will be assigned to \p audioSource.  
         */
-        virtual void willUpdateAudioSourceProperties (ARAAudioSource* audioSource, ARAAudioSource::PropertiesPtr newProperties) {}
+        virtual void willUpdateAudioSourceProperties (ARAAudioSource* audioSource, PropertiesPtr newProperties) {}
 
         /** Called after the audio source's properties are updated.
             @param audioSource The audio source whose properties were updated.
@@ -323,9 +323,10 @@ public:
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_END
     };
 
-    /** Notify the ARA host and any listeners of a content update. 
+    /** Notify the ARA host and any listeners of a content update initiated by the plug-in.
         This must be called by the plug-in model management code on the message thread whenever updating
-        the internal content representation, such as after successfully analyzing a new tempo map.
+        the internal content representation, such as after successfully analyzing a new tempo map,
+        but it must not be called if the change is made in response to a content update in the host.
         A notification to the host will be enqueued, and send out the next time it polls for updates.
         This host notification should not be send if the update was triggered by the host via doUpdateAudioSourceContent().
         Further, all listeners will be notified immediately.
@@ -404,15 +405,7 @@ public:
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_END
     };
 
-    /** Notify the ARA host and any listeners of a content update 
-
-        Audio modification content changes should be triggered if, for example, 
-        the user changes the modification DSP settings, such as changing the pitch of a note. 
-
-        @param scopeFlags The scope of the content update. 
-    */
-
-    /** Notify the ARA host and any listeners of a content update.
+    /** Notify the ARA host and any listeners of a content update initiated by the plug-in.
         This must be called by the plug-in model management code on the message thread whenever updating
         the internal content representation, such as after the user editing the pitch of a note.
         A notification to the host will be enqueued, and send out the next time it polls for updates.
@@ -501,7 +494,7 @@ public:
     */
     Range<double> getTimeRange (bool includeHeadAndTail = false) const;
 
-    /** Notify the ARA host and any listeners of a content update.
+    /** Notify the ARA host and any listeners of a content update initiated by the plug-in.
         This must be called by the plug-in model management code on the message thread whenever updating
         the internal content representation, such as after the user edited the pitch of a note in the
         underlying audio modification.
