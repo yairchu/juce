@@ -115,7 +115,9 @@ bool TimelineViewport::useMouseWheelMoveIfNeeded (const MouseEvent& e, const Mou
             else if (allowScrollH && (deltaX != 0 || e.mods.isShiftDown() || ! allowScrollV))
             {
                 newTimePos -= deltaX != 0 ? deltaX / factor : deltaY / factor;
-                newTimePos = getTimelineRange().clipValue (newTimePos);
+                // clip only if within boundaries
+                if (getTimelineRange().contains (getVisibleRange()))
+                    newTimePos = getTimelineRange().clipValue (newTimePos);
             }
             else if (allowScrollV && deltaY != 0)
             {
@@ -286,10 +288,10 @@ void TimelineViewport::setZoomFactor (double newFactor)
 
 void TimelineViewport::setZoomFactorAroundPosition (double newFactor, double position)
 {
-    setVisibleRange (
-        getTimelineRange().clipValue (
-            position - pixelMapper->getPixelForPosition (position) / newFactor),
-        newFactor);
+    const auto startPos = position - pixelMapper->getPixelForPosition (position) / newFactor;
+    // clip only if within timeline or greater
+    const auto shouldClip = getTimelineRange().contains (position) || (position > getTimelineRange().getEnd() && startPos <= getTimelineRange().getEnd());
+    setVisibleRange (shouldClip ? getTimelineRange().clipValue (startPos) : startPos, newFactor);
 }
 
 double TimelineViewport::getZoomFactor() const
@@ -334,10 +336,12 @@ void TimelineViewport::invalidateViewport (Range<double> newTimelineRange)
         // update components time range.
         componentsRange = newTimelineRange.isEmpty() ? Range<double>(pixelMapper->getStartPixelPosition(), (pixelMapper->getPositionForPixel (getWidthExcludingBorders()))) : newTimelineRange;
 
-        const auto newVisibleRange = componentsRange.constrainRange (getTimelineRange());
-        jassert (newVisibleRange.getLength() <= getTimelineRange().getLength());
-
-        hScrollBar->setCurrentRange (newVisibleRange, dontSendNotification);
+        // this supports 'out-of-timeline' ranges
+        // you'll might have playhead before/after known timeline.
+        const auto rangeStart = jmin (componentsRange.getStart(), getTimelineRange().getStart());
+        const auto rangeEnd = jmax (componentsRange.getEnd(), getTimelineRange().getEnd());
+        hScrollBar->setRangeLimits (rangeStart, rangeEnd);
+        hScrollBar->setCurrentRange (componentsRange, dontSendNotification);
         if (updateComponentsForRange != nullptr)
         {
             updateComponentsForRange (componentsRange);
