@@ -297,6 +297,9 @@ public:
     void setVisibleTimeRange (double startPos, double ratio) { viewport.setVisibleRange(startPos, ratio); }
     void zoomBy (double newValue, bool relativeToPlayhead = true);
 
+    void setMinRegionWidth (int minWidthInPixel) { minRegionSizeInPixels = minWidthInPixel; };
+    int getMinRegionWidth() const { return minRegionSizeInPixels; }
+
     void setFitTrackHeight (bool shouldFit);
     void setFitTrackWidth (bool shouldFit);
     void setTrackHeight (int newHeight);
@@ -417,6 +420,8 @@ private:
     const AudioPlayHead::CurrentPositionInfo& positionInfo;
     juce::AudioPlayHead::CurrentPositionInfo lastReportedPosition;
     ListenerList<Listener> listeners;
+
+    int minRegionSizeInPixels {2};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DocumentView)
 };
