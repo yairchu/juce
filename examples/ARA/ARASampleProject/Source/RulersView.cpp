@@ -16,7 +16,7 @@ RulersView::RulersView (TimelineViewport& tv, const AudioPlayHead::CurrentPositi
     setColour (selectorsColours, Colours::white.withAlpha (0.3f));
     setColour (loopSelectorsColours, Colours::skyblue.withAlpha (0.3f));
     lastPaintedPosition.resetToDefault();
-    startTimerHz (10);
+    startTimerHz (20);
 }
 
 void RulersView::timerCallback()

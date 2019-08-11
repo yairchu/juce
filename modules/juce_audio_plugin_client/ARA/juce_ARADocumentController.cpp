@@ -85,46 +85,27 @@ namespace juce
 
 //==============================================================================
 
-#define notify_listeners(function, ModelObjectPtrType, modelObject,  ...) \
-    static_cast<ModelObjectPtrType> (modelObject)->notifyListeners ([&] (std::remove_pointer<ModelObjectPtrType>::type::Listener& l) { l.function (static_cast<ModelObjectPtrType> (modelObject), ##__VA_ARGS__); })
-
-//==============================================================================
-
-void ARADocumentController::notifyAudioSourceContentChanged (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags, bool notifyHost, bool notifyAllAudioModificationsAndPlaybackRegions)
+void ARADocumentController::notifyAudioSourceContentChanged (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags)
 {
     jassert (scopeFlags.affectEverything() || !scopeFlags.affectSamples());
 
-    if (notifyHost)
-        audioSourceUpdates[audioSource] += scopeFlags;
-
-    notify_listeners (didUpdateAudioSourceContent, ARAAudioSource*, audioSource, scopeFlags);
-
-    if (notifyAllAudioModificationsAndPlaybackRegions)
-    {
-        for (auto audioModification : audioSource->getAudioModifications<ARAAudioModification>())
-            notifyAudioModificationContentChanged (audioModification, scopeFlags, true);
-    }
+    audioSourceUpdates[audioSource] += scopeFlags;
 }
 
-void ARADocumentController::notifyAudioModificationContentChanged (ARAAudioModification* audioModification, ARAContentUpdateScopes scopeFlags, bool notifyAllPlaybackRegions)
+void ARADocumentController::notifyAudioModificationContentChanged (ARAAudioModification* audioModification, ARAContentUpdateScopes scopeFlags)
 {
     audioModificationUpdates[audioModification] += scopeFlags;
-
-    notify_listeners (didUpdateAudioModificationContent, ARAAudioModification*, audioModification, scopeFlags);
-
-    if (notifyAllPlaybackRegions)
-    {
-        for (auto playbackRegion : audioModification->getPlaybackRegions<ARAPlaybackRegion>())
-            notifyPlaybackRegionContentChanged (playbackRegion, scopeFlags);
-    }
 }
 
 void ARADocumentController::notifyPlaybackRegionContentChanged (ARAPlaybackRegion* playbackRegion, ARAContentUpdateScopes scopeFlags)
 {
     playbackRegionUpdates[playbackRegion] += scopeFlags;
-
-    notify_listeners (didUpdatePlaybackRegionContent, ARAPlaybackRegion*, playbackRegion, scopeFlags);
 }
+
+//==============================================================================
+
+#define notify_listeners(function, ModelObjectPtrType, modelObject,  ...) \
+    static_cast<ModelObjectPtrType> (modelObject)->notifyListeners ([&] (std::remove_pointer<ModelObjectPtrType>::type::Listener& l) { l.function (static_cast<ModelObjectPtrType> (modelObject), ##__VA_ARGS__); })
 
 //==============================================================================
 
@@ -238,8 +219,8 @@ void ARADocumentController::willUpdatePlaybackRegionProperties (ARA::PlugIn::Pla
 {
     // if any playback region changes would affect the sample content, prepare to
     // post a sample content update to any of our playback region listeners
-    jassert(! _currentPropertyUpdateAffectsContent);
-    _currentPropertyUpdateAffectsContent =
+    jassert(! currentPropertyUpdateAffectsContent);
+    currentPropertyUpdateAffectsContent =
         ((playbackRegion->getStartInAudioModificationTime() != newProperties->startInModificationTime) ||
         (playbackRegion->getDurationInAudioModificationTime() != newProperties->durationInModificationTime) ||
         (playbackRegion->getStartInPlaybackTime() != newProperties->startInPlaybackTime) ||
@@ -259,9 +240,9 @@ void ARADocumentController::didUpdatePlaybackRegionProperties (ARA::PlugIn::Play
     araPlaybackRegion->notifyListeners ([araPlaybackRegion](ARAPlaybackRegion::Listener& l) { l.didUpdatePlaybackRegionProperties (araPlaybackRegion); });
 
     // post a content update if the updated properties affect the playback region sample content
-    if (_currentPropertyUpdateAffectsContent)
+    if (currentPropertyUpdateAffectsContent)
     {
-        _currentPropertyUpdateAffectsContent = false;
+        currentPropertyUpdateAffectsContent = false;
         auto scopes = ARAContentUpdateScopes::samplesAreAffected();
         JUCE_CONSTEXPR auto areNotesAnalyzable = (bool) (JucePlugin_ARAContentTypes & 1);
         if (areNotesAnalyzable)
