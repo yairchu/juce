@@ -59,13 +59,8 @@ ARAAudioSource::ARAAudioSource (ARADocument* document, ARA::ARAAudioSourceHostRe
 
 void ARAAudioSource::notifyContentChanged (ARAContentUpdateScopes scopeFlags, bool notifyAllAudioModificationsAndPlaybackRegions)
 {
-    getDocumentController<ARADocumentController>()->notifyAudioSourceContentChanged (this, scopeFlags);
-
-    notifyListeners ([&] (Listener& l) { l.didUpdateAudioSourceContent(this, scopeFlags); });
-
-    if (notifyAllAudioModificationsAndPlaybackRegions)
-        for (auto audioModification : getAudioModifications<ARAAudioModification>())
-            audioModification->notifyContentChanged (scopeFlags, true);
+    getDocument()->getDocumentController<ARADocumentController>()->
+                                notifyAudioSourceContentChanged (this, scopeFlags, notifyAllAudioModificationsAndPlaybackRegions);
 }
 
 //==============================================================================
@@ -76,13 +71,8 @@ ARAAudioModification::ARAAudioModification (ARAAudioSource* audioSource, ARA::AR
 
 void ARAAudioModification::notifyContentChanged (ARAContentUpdateScopes scopeFlags, bool notifyAllPlaybackRegions)
 {
-    getDocumentController<ARADocumentController>()->notifyAudioModificationContentChanged (this, scopeFlags);
-
-    notifyListeners ([&] (Listener& l) { l.didUpdateAudioModificationContent(this, scopeFlags); });
-
-    if (notifyAllPlaybackRegions)
-        for (auto playbackRegion : getPlaybackRegions<ARAPlaybackRegion>())
-            playbackRegion->notifyContentChanged (scopeFlags);
+    getAudioSource()->getDocument()->getDocumentController<ARADocumentController>()->
+                                notifyAudioModificationContentChanged (this, scopeFlags, notifyAllPlaybackRegions);
 }
 
 //==============================================================================
@@ -117,9 +107,8 @@ Range<double> ARAPlaybackRegion::getTimeRange (bool includeHeadAndTail) const
 
 void ARAPlaybackRegion::notifyContentChanged (ARAContentUpdateScopes scopeFlags)
 {
-    getDocumentController<ARADocumentController>()->notifyPlaybackRegionContentChanged (this, scopeFlags);
-
-    notifyListeners ([&] (Listener& l) { l.didUpdatePlaybackRegionContent(this, scopeFlags); });
+    getAudioModification()->getAudioSource()->getDocument()->getDocumentController<ARADocumentController>()->
+                            notifyPlaybackRegionContentChanged (this, scopeFlags);
 }
 
 } // namespace juce
