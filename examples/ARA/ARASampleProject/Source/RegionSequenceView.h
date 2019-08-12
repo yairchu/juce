@@ -41,7 +41,6 @@ public:
     void setTrackBorders (BorderSize<int>);
     BorderSize<int> getTrackBorders();
 
-protected:
     auto& getTrackHeaderView() { return *trackHeaderView; }
     const auto& getTrackHeaderView() const { return *trackHeaderView; }
 

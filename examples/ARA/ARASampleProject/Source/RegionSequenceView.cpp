@@ -12,7 +12,6 @@ RegionSequenceView::RegionSequenceView (DocumentView& ownerDocument, ARARegionSe
     setInterceptsMouseClicks (false, true);
     regionSequence->addListener (this);
 
-    owner.getTrackHeadersView().addAndMakeVisible (*trackHeaderView);
     for (auto playbackRegion : regionSequence->getPlaybackRegions<ARAPlaybackRegion>())
         addRegionSequenceViewAndMakeVisible (playbackRegion);
 }
@@ -55,8 +54,6 @@ void RegionSequenceView::updateRegionsBounds (Range<double> newVisibleRange)
 
 void RegionSequenceView::resized()
 {
-    // updates TrackHeader height, width is handled by the TrackHeaderView
-    trackHeaderView->setBounds (0, getBoundsInParent().getY(), trackHeaderView->getParentWidth(), getHeight());
     // updates all visible PlaybackRegions to new position.
     for (auto region : playbackRegionViews)
         if (region->isVisible())
