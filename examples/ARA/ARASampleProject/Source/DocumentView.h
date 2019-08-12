@@ -10,16 +10,6 @@ class TrackHeaderView;
 class PlaybackRegionView;
 class DocumentView;
 
-//==============================================================================
-/**
- Resizable container of TrackHeadersView(s)
- */
-class TrackHeadersView    : public Component
-{
-public:
-    void resized() override;
-};
-
 // Utility to keep a responsive layout of the DocumentView
 struct DocumentLayout
 {
@@ -316,7 +306,6 @@ public:
     Range<double> getVisibleTimeRange() { return viewport.getVisibleRange(); }
 
     TimelineViewport& getViewport() { return viewport; }
-    TrackHeadersView& getTrackHeadersView() { return *trackHeadersView; }
     Component& getTrackHeadersResizer() { return *trackHeadersResizer; }
 
     const ARASecondsPixelMapper& getTimeMapper() const { return timeMapper; }
@@ -409,7 +398,6 @@ private:
     std::unique_ptr<RulersView> rulersView;
     std::unique_ptr<Component> playHeadView;
     std::unique_ptr<Component> timeRangeSelectionView;
-    std::unique_ptr<TrackHeadersView> trackHeadersView;
     std::unique_ptr<Component> trackHeadersResizer;
 
     // Component View States

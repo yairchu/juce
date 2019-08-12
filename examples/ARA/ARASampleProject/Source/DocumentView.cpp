@@ -11,15 +11,6 @@ constexpr double kMinSecondDuration = 1.0;
 constexpr double kMinBorderSeconds = 1.0;
 
 //==============================================================================
-void TrackHeadersView::resized()
-{
-    for (auto header : getChildren())
-    {
-        header->setBounds (header->getBounds().withWidth (getWidth()));
-    }
-}
-
-//==============================================================================
 DocumentViewController::DocumentViewController (const AudioProcessorEditorARAExtension& extension)
 : araExtension (extension)
 {
@@ -197,7 +188,6 @@ DocumentView::DocumentView (DocumentViewController* ctrl, const AudioPlayHead::C
     : viewController (ctrl),
     viewport (new ARASecondsPixelMapper (viewController->getARAEditorExtension())),
     timeMapper (static_cast<const ARASecondsPixelMapper&>(viewport.getPixelMapper())),
-    trackHeadersView (new TrackHeadersView ()),
     positionInfo (posInfo)
 {
     lastReportedPosition = positionInfo;
@@ -225,7 +215,6 @@ DocumentView::DocumentView (DocumentViewController* ctrl, const AudioPlayHead::C
 
     timeRangeSelectionView.reset (viewController->createTimeRangeSelectionView(*this));
 
-    viewport.getViewedComponent()->addAndMakeVisible (getTrackHeadersView());
     timeRangeSelectionView->setAlwaysOnTop (true);
     viewport.getViewedComponent()->addAndMakeVisible (*timeRangeSelectionView);
 
@@ -417,8 +406,6 @@ void DocumentView::resized()
 
     layout.tracksLayout.performLayout (viewport.getViewedComponent()->getLocalBounds());
 
-    trackHeadersView->setBounds (0, 0, getTrackHeaderWidth(), viewport.getViewedComponent()->getHeight());
-
     if (playHeadView != nullptr)
     {
         playHeadView->setBounds (preContentWidth, 0, viewport.getWidthExcludingBorders(), viewport.getHeight() - viewport.getViewedComponentBorders().getBottom());
@@ -492,7 +479,6 @@ void DocumentView::handleAsyncUpdate()
     //               and preserve all views that can still be used. We could also try to build some
     //               sort of LRU cache for the audio thumbs if that is easier...
 
-    jassert (trackHeadersView.get());
     regionSequenceViews.clear();
 
     for (auto selectedSequence : viewController->getVisibleRegionSequences())
@@ -500,6 +486,7 @@ void DocumentView::handleAsyncUpdate()
         auto sequence = viewController->createViewForRegionSequence (*this, selectedSequence);
         regionSequenceViews.add (sequence);
         getViewport().getViewedComponent()->addAndMakeVisible (sequence);
+        getViewport().getViewedComponent()->addAndMakeVisible (sequence->getTrackHeaderView());
     }
 
     layout.invalidateLayout (*this);
@@ -691,9 +678,6 @@ void DocumentLayout::invalidateLayout (DocumentView& view)
     auto& items = tracksLayout.items;
     items.clear();
 
-    auto headers = GridItem (view.getTrackHeadersView());
-    headers.setArea (1, "headerColStart", "endOfTracks", "headerColEnd");
-    items.add (headers);
     auto resizerItem = GridItem (view.getTrackHeadersResizer());
     resizerItem.setArea (1, "resizerColStart", "endOfTracks", "resizerColEnd");
     resizerItem.alignSelf = resizer.alignment;
@@ -705,11 +689,16 @@ void DocumentLayout::invalidateLayout (DocumentView& view)
     for (auto i = 0; i < view.getNumOfTracks(); ++i)
     {
         auto& track = view.getRegionSequenceView (i);
-        auto trackToLayout = GridItem (track);
         // TODO - host provides track orders. (see getOrderIndex())
         // but if tracks are invisible or not within selection,
         // we must sort them to our current grid rows. (to avoid 1 row of track ordered 5 for example).
+        {
+            auto headerItem = GridItem (track.getTrackHeaderView());
+            headerItem.setArea (i+1, "headerColStart");
+            items.add (headerItem);
+        }
+        auto trackToLayout = GridItem (track);
         trackToLayout.setArea (i+1, "contentColStart");
-        tracksLayout.items.add (trackToLayout);
+        items.add (trackToLayout);
     }
 }
