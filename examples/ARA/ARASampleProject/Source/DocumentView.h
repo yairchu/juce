@@ -392,9 +392,9 @@ private:
     std::unique_ptr<Component> trackHeadersResizer;
 
     // Component View States
-    bool scrollFollowsPlayHead = false;
-    bool fitTrackHeight = true;
-    bool fitTrackWidth = true;
+    bool scrollFollowsPlayHead { false };
+    bool fitTrackHeight { true };
+    bool fitTrackWidth { true };
 
     const AudioPlayHead::CurrentPositionInfo& positionInfo;
     juce::AudioPlayHead::CurrentPositionInfo lastReportedPosition;
