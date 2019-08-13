@@ -110,11 +110,11 @@ String PlaybackRegionViewImpl::playbackRegionToString() const
 {
     const auto audioMod =
         "AudioMod: " +
-        String (playbackRegion->getAudioModification()->getEffectiveName()) +
+        convertOptionalARAString (playbackRegion->getAudioModification()->getEffectiveName()) +
         "(" +  String (playbackRegion->getAudioModification()->getPersistentID()) + ")";
     const auto audioSource =
         "AudioSource: " +
-        String (playbackRegion->getAudioModification()->getAudioSource()->getName()) +
+        convertOptionalARAString (playbackRegion->getAudioModification()->getAudioSource()->getName()) +
         "(" +
         String (playbackRegion->getAudioModification()->getAudioSource()->getPersistentID()) +
         ")\nDuration : " +
