@@ -210,7 +210,7 @@ void PlaybackRegionViewImpl::didUpdatePlaybackRegionContent (ARAPlaybackRegion* 
     // If the update is triggered inside the plug-in, we need to update the view from this call
     // (unless we're within a host edit already).
     if (scopeFlags.affectSamples() &&
-        ! playbackRegion->getAudioModification()->getAudioSource()->getDocument()->getDocumentController()->isHostEditingDocument())
+        ! playbackRegion->getDocumentController()->isHostEditingDocument())
     {
         ownerTrack->getParentDocumentView().setRegionBounds (
             this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange(),
