@@ -15,7 +15,11 @@ public:
     void paint (Graphics&) override;
     void resized() override;
 
-private:
+protected:
+    bool getPixelPosition (int*) const;
+
     const TimelineViewport& timelineViewport;
+
+private:
     double playHeadTimeInSec;
 };

@@ -26,18 +26,23 @@ void PlayHeadView::setPlayHeadTimeInSec (double x)
     updatePosition();
 }
 
-void PlayHeadView::updatePosition()
+bool PlayHeadView::getPixelPosition (int* resPos) const
 {
     const auto& mapper = timelineViewport.getPixelMapper();
     const int pos = mapper.getPixelForPosition (playHeadTimeInSec);
     if (! mapper.getRangeForPixels (pos-1, pos+1).contains (playHeadTimeInSec) ||
         0 > pos || pos >= timelineViewport.getWidthExcludingBorders())
-    {
-        setVisible (false);
-        return;
-    }
-    setVisible (true);
-    setBounds (
-        timelineViewport.getViewedComponentBorders().getLeft() + pos,
-        getY(), 1, getHeight());
+        return false;
+    *resPos = pos;
+    return true;
+}
+
+void PlayHeadView::updatePosition()
+{
+    int pos;
+    setVisible (getPixelPosition (&pos));
+    if (isVisible())
+        setBounds (
+            timelineViewport.getViewedComponentBorders().getLeft() + pos,
+            getY(), 1, getHeight());
 }
