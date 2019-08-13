@@ -5,6 +5,7 @@
 #include "TimelineViewport/TimelineViewport.h"
 #include "RulersView.h"
 #include "RegionSequenceView.h"
+#include "PlayHeadView.h"
 
 class TrackHeaderView;
 class PlaybackRegionView;
@@ -125,7 +126,7 @@ public:
      This allows customizing PlayheadView Component to desired behavior. If nullptr return this will use default component.
      Component will be owned.
      */
-    virtual Component* createPlayheadView (DocumentView& owner);
+    virtual PlayHeadView* createPlayheadView (DocumentView& owner);
 
     /*
      Creates a new component that will paint ARA SelectionView above all timeline viewport.
@@ -174,16 +175,6 @@ public:
 
 private:
     const AudioProcessorEditorARAExtension& araExtension;
-
-    // simple utility class to show playhead position
-    class PlayHeadView    : public Component
-    {
-    public:
-        PlayHeadView (DocumentView&);
-        void paint (Graphics&) override;
-    private:
-        DocumentView& documentView;
-    };
 
     // simple utility class to show selected time range
     class TimeRangeSelectionView  : public Component
@@ -396,7 +387,7 @@ private:
     OwnedArray<RegionSequenceView> regionSequenceViews;
 
     std::unique_ptr<RulersView> rulersView;
-    std::unique_ptr<Component> playHeadView;
+    std::unique_ptr<PlayHeadView> playHeadView;
     std::unique_ptr<Component> timeRangeSelectionView;
     std::unique_ptr<Component> trackHeadersResizer;
 

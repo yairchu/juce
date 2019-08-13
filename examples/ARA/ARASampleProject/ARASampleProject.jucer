@@ -19,6 +19,9 @@
                 file="Source/TimelineViewport/TimelineViewport.h"/>
         </GROUP>
         <GROUP id="{AB5A40A3-4E65-FDDE-AE8C-5258CF846BEA}" name="Views">
+          <FILE id="l7xQzz" name="PlayHeadView.cpp" compile="1" resource="0"
+                file="Source/PlayHeadView.cpp"/>
+          <FILE id="S9OPAB" name="PlayHeadView.h" compile="0" resource="0" file="Source/PlayHeadView.h"/>
           <FILE id="EQ23gh" name="RegionSequenceView.cpp" compile="1" resource="0"
                 file="Source/RegionSequenceView.cpp"/>
           <FILE id="bsc68x" name="RegionSequenceView.h" compile="0" resource="0"

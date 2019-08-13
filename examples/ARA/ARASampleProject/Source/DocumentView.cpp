@@ -67,9 +67,9 @@ RulersView* DocumentViewController::createRulersView (DocumentView &owner)
     return rulers;
 }
 
-Component* DocumentViewController::createPlayheadView (DocumentView &owner)
+PlayHeadView* DocumentViewController::createPlayheadView (DocumentView &owner)
 {
-    return new PlayHeadView (owner);
+    return new PlayHeadView (owner.getTimeMapper());
 }
 
 Component* DocumentViewController::createTimeRangeSelectionView (DocumentView &owner)
@@ -428,7 +428,7 @@ void DocumentView::timerCallback()
 
         if (playHeadView != nullptr)
         {
-            playHeadView->repaint();
+            playHeadView->setPlayHeadTimeInSec (positionInfo.timeInSeconds);
         }
     }
 }
@@ -540,26 +540,6 @@ void DocumentView::setMinTrackHeight (int newVal)
         return;
     layout.track.minHeight = newVal;
     setTrackHeight (layout.track.height); // Apply changes if necessary
-}
-
-//==============================================================================
-DocumentViewController::PlayHeadView::PlayHeadView (DocumentView& docView)
-    : documentView (docView)
-{
-    setInterceptsMouseClicks (false, true);
-    setWantsKeyboardFocus (false);
-}
-
-void DocumentViewController::PlayHeadView::paint (juce::Graphics &g)
-{
-    const auto& mapper = documentView.getTimeMapper();
-    const auto endPos = mapper.getPositionForPixel (g.getClipBounds().getRight());
-    const auto playheadPos = documentView.getPlayHeadPositionInfo().timeInSeconds;
-    if (playheadPos <= endPos)
-    {
-        g.setColour (findColour (ScrollBar::ColourIds::thumbColourId));
-        g.fillRect (mapper.getPixelForPosition (playheadPos), documentView.getRulersView().getBottom(), 1, getHeight());
-    }
 }
 
 //==============================================================================
