@@ -33,7 +33,7 @@ private:
 private:
     ARAEditorView* editorView;
     RegionSequenceView& owner;
-    bool isSelected = false;
+    bool isSelected { false };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TrackHeaderView)
 };

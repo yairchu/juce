@@ -23,12 +23,12 @@ DocumentViewController::DocumentViewController (const AudioProcessorEditorARAExt
         return;
     }
     getARAEditorView()->addListener (this);
-    getARADocumentController()->getDocument<ARADocument>()->addListener (this);
+    getDocument()->addListener (this);
 }
 
 DocumentViewController::~DocumentViewController()
 {
-    getARADocumentController()->getDocument<ARADocument>()->removeListener (this);
+    getDocument()->removeListener (this);
     getARAEditorView()->removeListener (this);
 }
 
@@ -67,9 +67,9 @@ RulersView* DocumentViewController::createRulersView (DocumentView &owner)
     return rulers;
 }
 
-Component* DocumentViewController::createPlayheadView (DocumentView &owner)
+PlayHeadView* DocumentViewController::createPlayheadView (DocumentView &owner)
 {
-    return new PlayHeadView (owner);
+    return new PlayHeadView (owner.getViewport());
 }
 
 Component* DocumentViewController::createTimeRangeSelectionView (DocumentView &owner)
@@ -81,7 +81,7 @@ Component* DocumentViewController::createTimeRangeSelectionView (DocumentView &o
 void DocumentViewController::invalidateRegionSequenceViews (NotificationType notificationType)
 {
     // TODO - add virtual to check if need to rebuildViews...
-    if (! getARADocumentController()->isHostEditingDocument())
+    if (! getDocumentController()->isHostEditingDocument())
     {
         //  dispatch views listening...
         switch (notificationType) {
@@ -109,7 +109,7 @@ Range<double> DocumentViewController::getDocumentTimeRange()
     // (session/project/timeline can be bigger than that)
     juce::Range<double> timeRange = { 0.0, 0.0 };
     bool isFirst = true;
-    for (auto regionSequence : getARADocumentController()->getDocument()->getRegionSequences<ARARegionSequence>())
+    for (auto regionSequence : getDocument()->getRegionSequences<ARARegionSequence>())
     {
         if (! ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
         {
@@ -166,19 +166,19 @@ void DocumentViewController::onHideRegionSequences (std::vector<ARARegionSequenc
 
 void DocumentViewController::didEndEditing (ARADocument* document)
 {
-    jassert (document == getARADocumentController()->getDocument());
+    jassert (document == getDocument());
     invalidateRegionSequenceViews();
 }
 
 void DocumentViewController::didAddRegionSequenceToDocument (ARADocument* document, ARARegionSequence* /*regionSequence*/)
 {
-    jassert (document == getARADocumentController()->getDocument());
+    jassert (document == getDocument());
     invalidateRegionSequenceViews();
 }
 
 void DocumentViewController::didReorderRegionSequencesInDocument (ARADocument* document)
 {
-    jassert (document == getARADocumentController()->getDocument());
+    jassert (document == getDocument());
 
     invalidateRegionSequenceViews();
 }
@@ -311,6 +311,8 @@ void DocumentView::zoomBy (double zoomMultiply, bool relativeToPlay)
     if (getParentComponent() != nullptr)
         resized();
 
+    if (playHeadView)
+        playHeadView->updatePosition();
     listeners.callExpectingUnregistration ([&] (Listener& l)
                                            {
                                                l.visibleTimeRangeChanged (getVisibleTimeRange(), newZoomFactor);
@@ -409,6 +411,7 @@ void DocumentView::resized()
     if (playHeadView != nullptr)
     {
         playHeadView->setBounds (preContentWidth, 0, viewport.getWidthExcludingBorders(), viewport.getHeight() - viewport.getViewedComponentBorders().getBottom());
+        playHeadView->updatePosition();
     }
     // apply needed borders
     auto timeRangeBounds = viewport.getViewedComponent()->getBounds();
@@ -428,7 +431,7 @@ void DocumentView::timerCallback()
 
         if (playHeadView != nullptr)
         {
-            playHeadView->repaint();
+            playHeadView->setPlayHeadTimeInSec (positionInfo.timeInSeconds);
         }
     }
 }
@@ -540,26 +543,6 @@ void DocumentView::setMinTrackHeight (int newVal)
         return;
     layout.track.minHeight = newVal;
     setTrackHeight (layout.track.height); // Apply changes if necessary
-}
-
-//==============================================================================
-DocumentViewController::PlayHeadView::PlayHeadView (DocumentView& docView)
-    : documentView (docView)
-{
-    setInterceptsMouseClicks (false, true);
-    setWantsKeyboardFocus (false);
-}
-
-void DocumentViewController::PlayHeadView::paint (juce::Graphics &g)
-{
-    const auto& mapper = documentView.getTimeMapper();
-    const auto endPos = mapper.getPositionForPixel (g.getClipBounds().getRight());
-    const auto playheadPos = documentView.getPlayHeadPositionInfo().timeInSeconds;
-    if (playheadPos <= endPos)
-    {
-        g.setColour (findColour (ScrollBar::ColourIds::thumbColourId));
-        g.fillRect (mapper.getPixelForPosition (playheadPos), documentView.getRulersView().getBottom(), 1, getHeight());
-    }
 }
 
 //==============================================================================

@@ -77,7 +77,7 @@ void RulersView::mouseDown (const MouseEvent& event)
     // use mouse click to set the playhead position in the host (if they provide a playback controller interface)
     if (auto* musicalCtx = timeMapper.getCurrentMusicalContext())
     {
-        auto hostPlaybackController = musicalCtx->getDocument()->getDocumentController()->getHostPlaybackController();
+        auto hostPlaybackController = musicalCtx->getDocumentController()->getHostPlaybackController();
         if (hostPlaybackController != nullptr)
             hostPlaybackController->requestSetPlaybackPosition (timeMapper.getPositionForPixel (roundToInt (jmax (0.0f ,pos - getRulerHeaderWidth()))));
     }
@@ -90,7 +90,7 @@ void RulersView::mouseDoubleClick (const MouseEvent& event)
     // use mouse double click to start host playback (if they provide a playback controller interface)
     if (auto* musicalCtx = timeMapper.getCurrentMusicalContext())
     {
-        auto hostPlaybackController = musicalCtx->getDocument()->getDocumentController()->getHostPlaybackController();
+        auto hostPlaybackController = musicalCtx->getDocumentController()->getHostPlaybackController();
         if (hostPlaybackController != nullptr)
             hostPlaybackController->requestStartPlayback();
     }

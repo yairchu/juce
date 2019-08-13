@@ -235,7 +235,7 @@ std::vector<ARARegionSequence *> ARASampleProjectAudioProcessorEditor::ARASample
     {
         std::vector<ARARegionSequence*> visibleSequences;
         visibleSequences.clear();
-        for (auto regionSequence : getARADocumentController()->getDocument()->getRegionSequences<ARARegionSequence>())
+        for (auto regionSequence : getDocument()->getRegionSequences<ARARegionSequence>())
         {
             if (! ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
             {

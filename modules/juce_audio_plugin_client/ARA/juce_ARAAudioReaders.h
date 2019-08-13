@@ -46,8 +46,8 @@ class AudioProcessor;
 
     @tags{ARA}
 */
-class ARAAudioSourceReader  : public AudioFormatReader,
-                              private ARAAudioSource::Listener
+class JUCE_API  ARAAudioSourceReader  : public AudioFormatReader,
+                                        private ARAAudioSource::Listener
 {
 public:
     /** Use an ARAAudioSource to construct an audio source reader that reads
@@ -94,9 +94,9 @@ private:
 
     @tags{ARA}
 */
-class ARAPlaybackRegionReader  : public AudioFormatReader,
-                                 private AudioPlayHead,
-                                 private ARAPlaybackRegion::Listener
+class JUCE_API  ARAPlaybackRegionReader  : public AudioFormatReader,
+                                           private AudioPlayHead,
+                                           private ARAPlaybackRegion::Listener
 {
 protected:
     ARAPlaybackRegionReader (ARADocumentController* documentController, AudioProcessor* audioProcessor,
@@ -136,7 +136,7 @@ public:
     void willDestroyPlaybackRegion (ARAPlaybackRegion* playbackRegion) override;
 
     /** The starting point of the reader in playback samples */
-    int64 startInSamples = 0;
+    int64 startInSamples { 0 };
 
 protected:
     bool getCurrentPosition (CurrentPositionInfo& result) override;
@@ -144,7 +144,7 @@ protected:
 private:
     std::unique_ptr<AudioProcessor> audioProcessor;
     AudioProcessorARAExtension* audioProcessorAraExtension; // cache of dynamic_cast<AudioProcessorARAExtension*> (audioProcessor)
-    int64 renderPosition = 0;
+    int64 renderPosition { 0 };
     static MidiBuffer dummyMidiBuffer;
     ReadWriteLock lock;
 
@@ -165,8 +165,8 @@ private:
 
     @tags{ARA}
 */
-class ARARegionSequenceReader  : public ARAPlaybackRegionReader,
-                                 private ARARegionSequence::Listener
+class JUCE_API  ARARegionSequenceReader  : public ARAPlaybackRegionReader,
+                                           private ARARegionSequence::Listener
 {
 public:
     /** Create an ARARegionSequenceReader instance to read all of \p regionSequence's playback regions

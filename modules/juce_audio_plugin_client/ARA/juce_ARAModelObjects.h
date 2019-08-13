@@ -33,14 +33,14 @@ class ARAPlaybackRegion;
 
     @tags{ARA}
 */
-class ARADocument: public ARA::PlugIn::Document
+class JUCE_API  ARADocument  : public ARA::PlugIn::Document
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARADocumentProperties>;
 
     ARADocument (ARADocumentController* documentController);
 
-    class Listener
+    class JUCE_API  Listener
     {
     public:
         virtual ~Listener() = default;
@@ -140,14 +140,14 @@ public:
 
     @tags{ARA}
 */
-class ARAMusicalContext  : public ARA::PlugIn::MusicalContext
+class JUCE_API  ARAMusicalContext  : public ARA::PlugIn::MusicalContext
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARAMusicalContextProperties>;
 
     ARAMusicalContext (ARADocument* document, ARA::ARAMusicalContextHostRef hostRef);
 
-    class Listener
+    class JUCE_API  Listener
     {
     public:
         virtual ~Listener() = default;
@@ -189,14 +189,14 @@ public:
 
     @tags{ARA}
 */
-class ARARegionSequence  : public ARA::PlugIn::RegionSequence
+class JUCE_API  ARARegionSequence  : public ARA::PlugIn::RegionSequence
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARARegionSequenceProperties>;
 
     ARARegionSequence (ARADocument* document, ARA::ARARegionSequenceHostRef hostRef);
 
-    class Listener
+    class JUCE_API  Listener
     {
     public:
         virtual ~Listener() = default;
@@ -254,14 +254,15 @@ public:
 
     @tags{ARA}
 */
-class ARAAudioSource  : public ARA::PlugIn::AudioSource
+class JUCE_API  ARAAudioSource  : public ARA::PlugIn::AudioSource
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARAAudioSourceProperties>;
+    using ARAAnalysisProgressState = ARA::ARAAnalysisProgressState;
 
     ARAAudioSource (ARADocument* document, ARA::ARAAudioSourceHostRef hostRef);
 
-    class Listener
+    class JUCE_API  Listener
     {
     public:
         virtual ~Listener() = default;
@@ -285,6 +286,13 @@ public:
         */
         virtual void didUpdateAudioSourceContent (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags) {}
 
+        /** Called to notify progress when an audio source is being analyzed.
+            @param audioSource The audio source being analyzed.
+            @param state Indicates start, intermediate update or completion of the analysis.
+            @param progress Progress normalized to the 0..1 range.
+        */
+        virtual void didUpdateAudioSourceAnalyisProgress (ARAAudioSource* audioSource, ARAAnalysisProgressState state, float progress) {}
+
         /** Called before access to an audio source's samples is enabled or disabled.
             @param audioSource The audio source whose sample access state will be changed.
             @param enable A bool indicating whether or not sample access will be enabled or disabled.
@@ -297,11 +305,17 @@ public:
         */
         virtual void didEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool enable) {}
 
+        /** Called before an audio source is activated or deactivated when being removed / added from the host's undo history.
+            @param audioSource The audio source that will be activated or deactivated
+            @param deactivate A bool indicating whether \p audioSource was deactivated or activated.
+        */
+        virtual void willDeactivateAudioSourceForUndoHistory (ARAAudioSource* audioSource, bool deactivate) {}
+
         /** Called after an audio source is activated or deactivated when being removed / added from the host's undo history.
             @param audioSource The audio source that was activated or deactivated
             @param deactivate A bool indicating whether \p audioSource was deactivated or activated.
         */
-        virtual void doDeactivateAudioSourceForUndoHistory (ARAAudioSource* audioSource, bool deactivate) {}
+        virtual void didDeactivateAudioSourceForUndoHistory (ARAAudioSource* audioSource, bool deactivate) {}
 
         /** Called after an audio modification is added to the audio source.
             @param audioSource The region sequence that \p audioModification was added to.
@@ -323,6 +337,21 @@ public:
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_END
     };
 
+    /** Notify the ARA host and any listeners of analysis progress.
+        Contrary to most ARA functions, this call can be made from any thread.
+        The implementation will enqueue these notifications and later post them from the message thread.
+        Calling code must ensure start and completion state are always balanced,
+        and must send updates in ascending order.
+    */
+    void notifyAnalysisProgressStarted();
+    /** \copydoc notifyAnalysisProgressStarted
+        @param progress Progress normalized to the 0..1 range.
+    */
+    void notifyAnalysisProgressUpdated (float progress);
+    /** \copydoc notifyAnalysisProgressStarted
+    */
+    void notifyAnalysisProgressCompleted();
+
     /** Notify the ARA host and any listeners of a content update initiated by the plug-in.
         This must be called by the plug-in model management code on the message thread whenever updating
         the internal content representation, such as after successfully analyzing a new tempo map,
@@ -338,6 +367,10 @@ public:
     void notifyContentChanged (ARAContentUpdateScopes scopeFlags, bool notifyAllAudioModificationsAndPlaybackRegions = false);
 
    ARA_LISTENABLE_MODEL
+
+private:
+    friend ARADocumentController;
+    ARA::PlugIn::AnalysisProgressTracker internalAnalysisProgressTracker;
 };
 
 
@@ -347,14 +380,14 @@ public:
 
     @tags{ARA}
 */
-class ARAAudioModification  : public ARA::PlugIn::AudioModification
+class JUCE_API  ARAAudioModification  : public ARA::PlugIn::AudioModification
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARAAudioModificationProperties>;
 
     ARAAudioModification (ARAAudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef, const ARAAudioModification* optionalModificationToClone);
 
-    class Listener
+    class JUCE_API  Listener
     {
     public:
         Listener() = default;
@@ -379,11 +412,17 @@ public:
         */
         virtual void didUpdateAudioModificationContent (ARAAudioModification* audioModification, ARAContentUpdateScopes scopeFlags) {}
 
+        /** Called before an audio modification is activated or deactivated when being removed / added from the host's undo history.
+            @param audioModification The audio modification that was activated or deactivated
+            @param deactivate A bool indicating whether \p audioModification was deactivated or activated.
+        */
+        virtual void willDeactivateAudioModificationForUndoHistory (ARAAudioModification* audioModification, bool deactivate) {}
+
         /** Called after an audio modification is activated or deactivated when being removed / added from the host's undo history.
             @param audioModification The audio modification that was activated or deactivated
             @param deactivate A bool indicating whether \p audioModification was deactivated or activated.
         */
-        virtual void doDeactivateAudioModificationForUndoHistory (ARAAudioModification* audioModification, bool deactivate) {}
+        virtual void didDeactivateAudioModificationForUndoHistory (ARAAudioModification* audioModification, bool deactivate) {}
 
         /** Called after a playback region is added to the audio modification.
             @param audioModification The audio modification that \p playbackRegion was added to.
@@ -427,14 +466,14 @@ public:
 
     @tags{ARA}
 */
-class ARAPlaybackRegion  : public ARA::PlugIn::PlaybackRegion
+class JUCE_API  ARAPlaybackRegion  : public ARA::PlugIn::PlaybackRegion
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARAPlaybackRegionProperties>;
 
     ARAPlaybackRegion (ARAAudioModification* audioModification, ARA::ARAPlaybackRegionHostRef hostRef);
 
-    class Listener
+    class JUCE_API  Listener
     {
     public:
         virtual ~Listener() = default;
@@ -466,28 +505,6 @@ public:
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_END
     };
 
-    /** Get the head time (in seconds) before the stat of the playback region */
-    double getHeadTime() const { return headTime; }
-
-    /** Get the tail time (in seconds) after the end of the playback region */
-    double getTailTime() const { return tailTime; }
-
-    /** Set the head time (in seconds) before the stat of the playback region
-        @param newHeadTime The new head time. 
-    */
-    void setHeadTime (double newHeadTime);
-
-    /** Set the tail time (in seconds) after the end of the playback region
-        @param newTailTime The new tail time.
-    */
-    void setTailTime (double newTailTime);
-
-    /** Set both the head and tail time of the playback region
-        @param newHeadTime The new head time. 
-        @param newTailTime The new tail time.
-    */
-    void setHeadAndTailTime (double newHeadTime, double newTailTime);
-
     /** Returns time range covered by all playback regions in the region sequence
         @param includeHeadAndTail Whether or not the range includes the head and tail 
                                   time of all playback regions in the sequence. 
@@ -506,10 +523,6 @@ public:
     void notifyContentChanged (ARAContentUpdateScopes scopeFlags);
 
    ARA_LISTENABLE_MODEL
-
-private:
-    double headTime = 0.0;
-    double tailTime = 0.0;
 };
 
 

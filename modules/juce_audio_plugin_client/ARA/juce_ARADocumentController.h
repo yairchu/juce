@@ -1,7 +1,6 @@
 #pragma once
 
 #include "JuceHeader.h"
-#include "juce_ARAModelObjects.h"
 
 namespace juce
 {
@@ -10,153 +9,128 @@ class ARAAudioSourceReader;
 class ARAPlaybackRegionReader;
 class ARARegionSequenceReader;
 
-class ARADocumentController  : public ARA::PlugIn::DocumentController
+class JUCE_API  ARADocumentController  : public ARA::PlugIn::DocumentController,
+                                         private juce::Timer
 {
 public:
-    using ARA::PlugIn::DocumentController::DocumentController;
+    explicit ARADocumentController (const ARA::ARADocumentControllerHostInstance* instance);
 
     //==============================================================================
-    // notify the host about content changes
-    // Note that while the ARA API allows for specifying update time ranges, this feature is not yet
-    // supported in our current plug-in implementation, since most hosts do not evaluate it anyways.
-    // Typically, instead of calling these functions directly, rather use the respective model object's
-    // notifyContentChanged() which will forward here as appropriate.
-    void notifyAudioSourceContentChanged (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags);
-    void notifyAudioModificationContentChanged (ARAAudioModification* audioModification, ARAContentUpdateScopes scopeFlags);
-    void notifyPlaybackRegionContentChanged (ARAPlaybackRegion* playbackRegion, ARAContentUpdateScopes scopeFlags);
-
-    //==============================================================================
-    // Override document controller methods here
-    // If you are subclassing ARADocumentController, make sure to call the base class
-    // implementations of any overridden function, except for any doCreate...()
-    // or where explicitly specified otherwise. Be careful whether you place the call to the
-    // base class implementation before or after your additions, this depends on context!
-
-private:
-    // some helper macros to ease repeated declaration & implementation of notification functions below:
-
-    // no notification arguments
-   #define OVERRIDE_TO_NOTIFY_1(function, ModelObjectPtrType, modelObject) \
-    void function (ARA::PlugIn::ModelObjectPtrType modelObject) noexcept override \
-    { \
-        auto object = static_cast<ARA##ModelObjectPtrType> (modelObject); \
-        object->notifyListeners ([&] (std::remove_pointer<ARA##ModelObjectPtrType>::type::Listener& l) { l.function (object); }); \
-    }
-
-    // single notification argument, model object version
-   #define OVERRIDE_TO_NOTIFY_2(function, ModelObjectPtrType, modelObject, ArgumentType, argument) \
-    void function (ARA::PlugIn::ModelObjectPtrType modelObject, ARA::PlugIn::ArgumentType argument) noexcept override \
-    { \
-        auto object = static_cast<ARA##ModelObjectPtrType> (modelObject); \
-        object->notifyListeners ([&] (std::remove_pointer<ARA##ModelObjectPtrType>::type::Listener& l) { l.function (object, static_cast<ARA##ArgumentType> (argument)); }); \
-    }
-
-    // single notification argument, non-model object version
-   #define OVERRIDE_TO_NOTIFY_3(function, ModelObjectPtrType, modelObject, ArgumentType, argument) \
-    void function (ARA::PlugIn::ModelObjectPtrType modelObject, ArgumentType argument) noexcept override \
-    { \
-        auto object = static_cast<ARA##ModelObjectPtrType> (modelObject); \
-        object->notifyListeners ([&] (std::remove_pointer<ARA##ModelObjectPtrType>::type::Listener& l) { l.function (object, argument); }); \
-    }
+    // Analysis progress notifications
+    // Internal helper - instead of calling these functions directly, rather use
+    // ARAAudioSource::notifyAnalysisProgress() which will forward here as appropriate.
+    
+    void notifyAudioSourceAnalysisProgressStarted (ARAAudioSource* audioSource);
+    void notifyAudioSourceAnalysisProgressUpdated (ARAAudioSource* audioSource, float progress);
+    void notifyAudioSourceAnalysisProgressCompleted (ARAAudioSource* audioSource);
 
 protected:
-    // Model Update Management
-    void willBeginEditing() noexcept override;
-    void didEndEditing() noexcept override;
-    void doNotifyModelContentUpdates() noexcept override final;
+    //==============================================================================
+    // Override document controller methods here
+    // These functions are called by the host through the ARA API.
+    // If you are subclassing ARADocumentController, make sure to call the base class
+    // implementations for any will/did method overridden here you're overriding again.
+    // For do methods or for methods inherited directly from ARA::PlugIn::DocumentController
+    // you do not need to call the ingerited when overriding.
 
     /** Read an ARADocument archive from a juce::InputStream.
     @param input Data stream containing previously persisted data to be used when restoring the ARADocument
-    @param filter An optional filter to be applied to the stream; nullptr if no filtering is required
-
-    The optional \p filter parameter can be used to restore a subsection of the document, in which case
-    it will not be nullptr. 
-
-    Overriding this method is the preferred way of handling ARA document persistence, but you can also
-    override ARA::PlugIn::DocumentController::doRestoreObjectsFromArchive to deal with an ARA archive 
-    ARA::PlugIn::HostArchiveReader directly. 
+    @param filter A filter to be applied to the stream
     */
     virtual bool doRestoreObjectsFromStream (InputStream& input, const ARA::PlugIn::RestoreObjectsFilter* filter) noexcept;
 
     /** Write an ARADocument archive to a juce::OutputStream.
     @param output Data stream that should be used to write the persistent ARADocument data
-    @param filter An optional filter to be applied to the stream; nullptr if no filtering is required
-
-    The optional \p filter parameter can be used to store a subsection of the document, in which case
-    it will not be nullptr. 
-
-    Overriding this method is the preferred way of handling ARA document persistence, but you can also
-    override ARA::PlugIn::DocumentController::doStoreObjectsToArchive to deal with an ARA archive 
-    ARA::PlugIn::HostArchiveWriter directly. 
+    @param filter A filter to be applied to the stream
     */
     virtual bool doStoreObjectsToStream (OutputStream& output, const ARA::PlugIn::StoreObjectsFilter* filter) noexcept;
 
-    bool doRestoreObjectsFromArchive (ARA::PlugIn::HostArchiveReader* archiveReader, const ARA::PlugIn::RestoreObjectsFilter* filter) noexcept override;
-    bool doStoreObjectsToArchive (ARA::PlugIn::HostArchiveWriter* archiveWriter, const ARA::PlugIn::StoreObjectsFilter* filter) noexcept override;
-
-    // Document callbacks
+    // Model object creation
+    // these can be overridden with custom types so long as
+    // they inherit from our ARA model classes
     ARA::PlugIn::Document* doCreateDocument (ARA::PlugIn::DocumentController* documentController) noexcept override;
-    OVERRIDE_TO_NOTIFY_3 (willUpdateDocumentProperties, Document*, document, ARADocument::PropertiesPtr, newProperties)
-    OVERRIDE_TO_NOTIFY_1 (didUpdateDocumentProperties, Document*, document)
-    OVERRIDE_TO_NOTIFY_2 (didAddMusicalContextToDocument, Document*, document, MusicalContext*, musicalContext)
-    OVERRIDE_TO_NOTIFY_2 (willRemoveMusicalContextFromDocument, Document*, document, MusicalContext*, musicalContext)
-    OVERRIDE_TO_NOTIFY_1 (didReorderMusicalContextsInDocument, Document*, document)
-    OVERRIDE_TO_NOTIFY_2 (didAddRegionSequenceToDocument, Document*, document, RegionSequence*, regionSequence)
-    OVERRIDE_TO_NOTIFY_2 (willRemoveRegionSequenceFromDocument, Document*, document, RegionSequence*, regionSequence)
-    OVERRIDE_TO_NOTIFY_1 (didReorderRegionSequencesInDocument, Document*, document)
-    OVERRIDE_TO_NOTIFY_2 (didAddAudioSourceToDocument, Document*, document, AudioSource*, audioSource)
-    OVERRIDE_TO_NOTIFY_2 (willRemoveAudioSourceFromDocument, Document*, document, AudioSource*, audioSource)
-    OVERRIDE_TO_NOTIFY_1 (willDestroyDocument, Document*, document)
-
-    // MusicalContext callbacks
     ARA::PlugIn::MusicalContext* doCreateMusicalContext (ARA::PlugIn::Document* document, ARA::ARAMusicalContextHostRef hostRef) noexcept override;
-    OVERRIDE_TO_NOTIFY_3 (willUpdateMusicalContextProperties, MusicalContext*, musicalContext, ARAMusicalContext::PropertiesPtr, newProperties)
-    OVERRIDE_TO_NOTIFY_1 (didUpdateMusicalContextProperties, MusicalContext*, musicalContext)
-    /*OVERRIDE_TO_NOTIFY_3*/ void doUpdateMusicalContextContent (ARA::PlugIn::MusicalContext* musicalContext, const ARA::ARAContentTimeRange* range, ARA::ContentUpdateScopes scopeFlags) noexcept override;
-    OVERRIDE_TO_NOTIFY_1 (willDestroyMusicalContext, MusicalContext*, musicalContext)
-
-    // RegionSequence callbacks
     ARA::PlugIn::RegionSequence* doCreateRegionSequence (ARA::PlugIn::Document* document, ARA::ARARegionSequenceHostRef hostRef) noexcept override;
-    OVERRIDE_TO_NOTIFY_3 (willUpdateRegionSequenceProperties, RegionSequence*, regionSequence, ARARegionSequence::PropertiesPtr, newProperties)
-    OVERRIDE_TO_NOTIFY_1 (didUpdateRegionSequenceProperties, RegionSequence*, regionSequence)
-    OVERRIDE_TO_NOTIFY_2 (didAddPlaybackRegionToRegionSequence, RegionSequence*, regionSequence, PlaybackRegion*, playbackRegion)
-    OVERRIDE_TO_NOTIFY_2 (willRemovePlaybackRegionFromRegionSequence, RegionSequence*, regionSequence, PlaybackRegion*, playbackRegion)
-    OVERRIDE_TO_NOTIFY_1 (willDestroyRegionSequence, RegionSequence*, regionSequence)
-
-    // AudioSource callbacks
     ARA::PlugIn::AudioSource* doCreateAudioSource (ARA::PlugIn::Document* document, ARA::ARAAudioSourceHostRef hostRef) noexcept override;
-    OVERRIDE_TO_NOTIFY_3 (willUpdateAudioSourceProperties, AudioSource*, audioSource, ARAAudioSource::PropertiesPtr, newProperties)
-    OVERRIDE_TO_NOTIFY_1 (didUpdateAudioSourceProperties, AudioSource*, audioSource)
-    /*OVERRIDE_TO_NOTIFY_3*/ void doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* audioSource, const ARA::ARAContentTimeRange* range, ARA::ContentUpdateScopes scopeFlags) noexcept override;
-    OVERRIDE_TO_NOTIFY_3 (willEnableAudioSourceSamplesAccess, AudioSource*, audioSource, bool, enable)
-    OVERRIDE_TO_NOTIFY_3 (didEnableAudioSourceSamplesAccess, AudioSource*, audioSource, bool, enable)
-    OVERRIDE_TO_NOTIFY_2 (didAddAudioModificationToAudioSource, AudioSource*, audioSource, AudioModification*, audioModification)
-    OVERRIDE_TO_NOTIFY_2 (willRemoveAudioModificationFromAudioSource, AudioSource*, audioSource, AudioModification*, audioModification)
-    OVERRIDE_TO_NOTIFY_3 (doDeactivateAudioSourceForUndoHistory, AudioSource*, audioSource, bool, deactivate)
-    OVERRIDE_TO_NOTIFY_1 (willDestroyAudioSource, AudioSource*, audioSource)
-
-    // AudioModification callbacks
     ARA::PlugIn::AudioModification* doCreateAudioModification (ARA::PlugIn::AudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef, const ARA::PlugIn::AudioModification* optionalModificationToClone) noexcept override;
-    OVERRIDE_TO_NOTIFY_3 (willUpdateAudioModificationProperties, AudioModification*, audioModification, ARAAudioModification::PropertiesPtr, newProperties)
-    OVERRIDE_TO_NOTIFY_1 (didUpdateAudioModificationProperties, AudioModification*, audioModification)
-    OVERRIDE_TO_NOTIFY_2 (didAddPlaybackRegionToAudioModification, AudioModification*, audioModification, PlaybackRegion*, playbackRegion)
-    OVERRIDE_TO_NOTIFY_2 (willRemovePlaybackRegionFromAudioModification, AudioModification*, audioModification, PlaybackRegion*, playbackRegion)
-    OVERRIDE_TO_NOTIFY_3 (doDeactivateAudioModificationForUndoHistory, AudioModification*, audioModification, bool, deactivate)
-    OVERRIDE_TO_NOTIFY_1 (willDestroyAudioModification, AudioModification*, audioModification)
-
-    // PlaybackRegion callbacks
     ARA::PlugIn::PlaybackRegion* doCreatePlaybackRegion (ARA::PlugIn::AudioModification* modification, ARA::ARAPlaybackRegionHostRef hostRef) noexcept override;
-    /*OVERRIDE_TO_NOTIFY_2*/ void willUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion, ARAPlaybackRegion::PropertiesPtr newProperties) noexcept override;
-    /*OVERRIDE_TO_NOTIFY_1*/ void didUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept override;
-    void doGetPlaybackRegionHeadAndTailTime (const ARA::PlugIn::PlaybackRegion* playbackRegion, ARA::ARATimeDuration* headTime, ARA::ARATimeDuration* tailTime) noexcept override;
-    OVERRIDE_TO_NOTIFY_1 (willDestroyPlaybackRegion, PlaybackRegion*, playbackRegion)
 
     // PlugIn instance role creation
     // these can be overridden with custom types so long as
     // they inherit from our ARA instance role classes
-    ARA::PlugIn::PlaybackRenderer* doCreatePlaybackRenderer() noexcept override;
-    ARA::PlugIn::EditorRenderer* doCreateEditorRenderer() noexcept override;
-    ARA::PlugIn::EditorView* doCreateEditorView() noexcept override;
+    ARA::PlugIn::PlaybackRenderer* doCreatePlaybackRenderer () noexcept override;
+    ARA::PlugIn::EditorRenderer* doCreateEditorRenderer () noexcept override;
+    ARA::PlugIn::EditorView* doCreateEditorView () noexcept override;
+
+#ifndef DOXYGEN
+
+    // overridden to forward doRestoreObjectsFromStream()/doStoreObjectsToStream()
+    bool doRestoreObjectsFromArchive (ARA::PlugIn::HostArchiveReader* archiveReader, const ARA::PlugIn::RestoreObjectsFilter* filter) noexcept override;
+    bool doStoreObjectsToArchive (ARA::PlugIn::HostArchiveWriter* archiveWriter, const ARA::PlugIn::StoreObjectsFilter* filter) noexcept override;
+
+    // overridden to invoke the ARA::PlugIn::DocumentController base implementations and forward content changes to listeners
+    void updateMusicalContextContent (ARA::ARAMusicalContextRef musicalContextRef, const ARA::ARAContentTimeRange* range, ARA::ContentUpdateScopes flags) noexcept override;
+    void updateAudioSourceContent (ARA::ARAAudioSourceRef audioSourceRef, const ARA::ARAContentTimeRange* range, ARA::ContentUpdateScopes flags) noexcept override;
+
+    // Model Update Management
+    void willBeginEditing () noexcept override;
+    void didEndEditing () noexcept override;
+
+    // Document notifications
+    void willUpdateDocumentProperties (ARA::PlugIn::Document* document, ARADocument::PropertiesPtr newProperties) noexcept override;
+    void didUpdateDocumentProperties (ARA::PlugIn::Document* document) noexcept override;
+    void didAddMusicalContextToDocument (ARA::PlugIn::Document* document, ARA::PlugIn::MusicalContext* musicalContext) noexcept override;
+    void willRemoveMusicalContextFromDocument (ARA::PlugIn::Document* document, ARA::PlugIn::MusicalContext* musicalContext) noexcept override;
+    void didReorderMusicalContextsInDocument (ARA::PlugIn::Document* document) noexcept override;
+    void didAddRegionSequenceToDocument (ARA::PlugIn::Document* document, ARA::PlugIn::RegionSequence* regionSequence) noexcept override;
+    void willRemoveRegionSequenceFromDocument (ARA::PlugIn::Document* document, ARA::PlugIn::RegionSequence* regionSequence) noexcept override;
+    void didReorderRegionSequencesInDocument (ARA::PlugIn::Document* document) noexcept override;
+    void didAddAudioSourceToDocument (ARA::PlugIn::Document* document, ARA::PlugIn::AudioSource* audioSource) noexcept override;
+    void willRemoveAudioSourceFromDocument (ARA::PlugIn::Document* document, ARA::PlugIn::AudioSource* audioSource) noexcept override;
+    void willDestroyDocument (ARA::PlugIn::Document* document) noexcept override;
+
+    // MusicalContext notifications
+    void willUpdateMusicalContextProperties (ARA::PlugIn::MusicalContext* musicalContext, ARAMusicalContext::PropertiesPtr newProperties) noexcept override;
+    void didUpdateMusicalContextProperties (ARA::PlugIn::MusicalContext* musicalContext) noexcept override;
+    void willDestroyMusicalContext (ARA::PlugIn::MusicalContext* musicalContext) noexcept override;
+
+    // RegionSequence notifications
+    void willUpdateRegionSequenceProperties (ARA::PlugIn::RegionSequence* regionSequence, ARARegionSequence::PropertiesPtr newProperties) noexcept override;
+    void didUpdateRegionSequenceProperties (ARA::PlugIn::RegionSequence* regionSequence) noexcept override;
+    void didAddPlaybackRegionToRegionSequence (ARA::PlugIn::RegionSequence* regionSequence, ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept override;
+    void willRemovePlaybackRegionFromRegionSequence (ARA::PlugIn::RegionSequence* regionSequence, ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept override;
+    void willDestroyRegionSequence (ARA::PlugIn::RegionSequence* regionSequence) noexcept override;
+
+    // AudioSource notifications
+    void willUpdateAudioSourceProperties (ARA::PlugIn::AudioSource* audioSource, ARAAudioSource::PropertiesPtr newProperties) noexcept override;
+    void didUpdateAudioSourceProperties (ARA::PlugIn::AudioSource* audioSource) noexcept override;
+    void willEnableAudioSourceSamplesAccess (ARA::PlugIn::AudioSource* audioSource, bool enable) noexcept override;
+    void didEnableAudioSourceSamplesAccess (ARA::PlugIn::AudioSource* audioSource, bool enable) noexcept override;
+    void didAddAudioModificationToAudioSource (ARA::PlugIn::AudioSource* audioSource, ARA::PlugIn::AudioModification* audioModification) noexcept override;
+    void willRemoveAudioModificationFromAudioSource (ARA::PlugIn::AudioSource* audioSource, ARA::PlugIn::AudioModification* audioModification) noexcept override;
+    void willDeactivateAudioSourceForUndoHistory (ARA::PlugIn::AudioSource* audioSource, bool deactivate) noexcept override;
+    void didDeactivateAudioSourceForUndoHistory (ARA::PlugIn::AudioSource* audioSource, bool deactivate) noexcept override;
+    void willDestroyAudioSource (ARA::PlugIn::AudioSource* audioSource) noexcept override;
+
+    // AudioModification notifications
+    void willUpdateAudioModificationProperties (ARA::PlugIn::AudioModification* audioModification, ARAAudioModification::PropertiesPtr newProperties) noexcept override;
+    void didUpdateAudioModificationProperties (ARA::PlugIn::AudioModification* audioModification) noexcept override;
+    void didAddPlaybackRegionToAudioModification (ARA::PlugIn::AudioModification* audioModification, ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept override;
+    void willRemovePlaybackRegionFromAudioModification (ARA::PlugIn::AudioModification* audioModification, ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept override;
+    void willDeactivateAudioModificationForUndoHistory (ARA::PlugIn::AudioModification* audioModification, bool deactivate) noexcept override;
+    void didDeactivateAudioModificationForUndoHistory (ARA::PlugIn::AudioModification* audioModification, bool deactivate) noexcept override;
+    void willDestroyAudioModification (ARA::PlugIn::AudioModification* audioModification) noexcept override;
+
+    // PlaybackRegion notifications
+    void willUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion, ARAPlaybackRegion::PropertiesPtr newProperties) noexcept override;
+    void didUpdatePlaybackRegionProperties (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept override;
+    void willDestroyPlaybackRegion (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept override;
+
+    //==============================================================================
+    // juce::Timer overrides
+    void timerCallback() override;
+
+#endif
 
 protected:
 
@@ -175,7 +149,8 @@ protected:
 
     private:
         ARA::PlugIn::HostArchiveReader* archiveReader;
-        size_t position, size;
+        size_t position { 0 };
+        size_t size;
     };
 
     //==============================================================================
@@ -192,22 +167,14 @@ protected:
 
     private:
         ARA::PlugIn::HostArchiveWriter* archiveWriter;
-        size_t position;
+        size_t position { 0 };
     };
-
-private:
-   #undef OVERRIDE_TO_NOTIFY_1
-   #undef OVERRIDE_TO_NOTIFY_2
-   #undef OVERRIDE_TO_NOTIFY_3
 
 private:
     // this flag is used automatically trigger content update if a property change implies this
     bool currentPropertyUpdateAffectsContent { false };
 
-
-    std::map<ARAAudioSource*, ARAContentUpdateScopes> audioSourceUpdates;
-    std::map<ARAAudioModification*, ARAContentUpdateScopes> audioModificationUpdates;
-    std::map<ARAPlaybackRegion*, ARAContentUpdateScopes> playbackRegionUpdates;
+    std::atomic_flag internalAnalysisProgressIsSynced { true };
 
     ScopedJuceInitialiser_GUI libraryInitialiser;
 
