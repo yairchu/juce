@@ -108,14 +108,26 @@ void PlaybackRegionViewImpl::resized()
 //==============================================================================
 String PlaybackRegionViewImpl::playbackRegionToString() const
 {
-    const auto audioMod = "AudioMod: " + String (playbackRegion->getAudioModification()->getEffectiveName()) + "(" +  String (playbackRegion->getAudioModification()->getPersistentID()) + ")";
-    const auto audioSource = "AudioSource: " + String (playbackRegion->getAudioModification()->getAudioSource()->getName()) + "(" +  String (playbackRegion->getAudioModification()->getAudioSource()->getPersistentID()) + ")" +
-    "\nDuration : " + String (playbackRegion->getAudioModification()->getAudioSource()->getDuration(), 3);
-    const auto region = String ("PlaybackRegion: \n") +
-    "Head: " + String (playbackRegion->getHeadTime(), 2) +
-    "\nTail: " + String (playbackRegion->getTailTime(), 2) +
-    "\nStart (within mod): " + String (playbackRegion->getStartInAudioModificationTime(), 2) +
-    "\nEnd (within mod): " + String (playbackRegion->getEndInAudioModificationTime());
+    const auto audioMod =
+        "AudioMod: " +
+        String (playbackRegion->getAudioModification()->getEffectiveName()) +
+        "(" +  String (playbackRegion->getAudioModification()->getPersistentID()) + ")";
+    const auto audioSource =
+        "AudioSource: " +
+        String (playbackRegion->getAudioModification()->getAudioSource()->getName()) +
+        "(" +
+        String (playbackRegion->getAudioModification()->getAudioSource()->getPersistentID()) +
+        ")\nDuration : " +
+        String (playbackRegion->getAudioModification()->getAudioSource()->getDuration(), 3);
+    const auto region =
+        String ("PlaybackRegion: \nHead: ") +
+        String (playbackRegion->getHeadTime(), 2) +
+        "\nTail: " +
+        String (playbackRegion->getTailTime(), 2) +
+        "\nStart (within mod): " +
+        String (playbackRegion->getStartInAudioModificationTime(), 2) +
+        "\nEnd (within mod): " +
+        String (playbackRegion->getEndInAudioModificationTime());
 
     return region + "\n" + audioMod + "\n" + audioSource;
 }
