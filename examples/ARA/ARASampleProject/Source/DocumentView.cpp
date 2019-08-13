@@ -23,12 +23,12 @@ DocumentViewController::DocumentViewController (const AudioProcessorEditorARAExt
         return;
     }
     getARAEditorView()->addListener (this);
-    getARADocumentController()->getDocument<ARADocument>()->addListener (this);
+    getDocument()->addListener (this);
 }
 
 DocumentViewController::~DocumentViewController()
 {
-    getARADocumentController()->getDocument<ARADocument>()->removeListener (this);
+    getDocument()->removeListener (this);
     getARAEditorView()->removeListener (this);
 }
 
@@ -81,7 +81,7 @@ Component* DocumentViewController::createTimeRangeSelectionView (DocumentView &o
 void DocumentViewController::invalidateRegionSequenceViews (NotificationType notificationType)
 {
     // TODO - add virtual to check if need to rebuildViews...
-    if (! getARADocumentController()->isHostEditingDocument())
+    if (! getDocumentController()->isHostEditingDocument())
     {
         //  dispatch views listening...
         switch (notificationType) {
@@ -109,7 +109,7 @@ Range<double> DocumentViewController::getDocumentTimeRange()
     // (session/project/timeline can be bigger than that)
     juce::Range<double> timeRange = { 0.0, 0.0 };
     bool isFirst = true;
-    for (auto regionSequence : getARADocumentController()->getDocument()->getRegionSequences<ARARegionSequence>())
+    for (auto regionSequence : getDocument()->getRegionSequences<ARARegionSequence>())
     {
         if (! ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
         {
@@ -166,19 +166,19 @@ void DocumentViewController::onHideRegionSequences (std::vector<ARARegionSequenc
 
 void DocumentViewController::didEndEditing (ARADocument* document)
 {
-    jassert (document == getARADocumentController()->getDocument());
+    jassert (document == getDocument());
     invalidateRegionSequenceViews();
 }
 
 void DocumentViewController::didAddRegionSequenceToDocument (ARADocument* document, ARARegionSequence* /*regionSequence*/)
 {
-    jassert (document == getARADocumentController()->getDocument());
+    jassert (document == getDocument());
     invalidateRegionSequenceViews();
 }
 
 void DocumentViewController::didReorderRegionSequencesInDocument (ARADocument* document)
 {
-    jassert (document == getARADocumentController()->getDocument());
+    jassert (document == getDocument());
 
     invalidateRegionSequenceViews();
 }
