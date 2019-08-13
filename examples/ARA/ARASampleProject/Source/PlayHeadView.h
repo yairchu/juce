@@ -2,18 +2,20 @@
 
 #include "JuceHeader.h"
 
-class ARASecondsPixelMapper;
+class TimelineViewport;
 
 class PlayHeadView  : public Component
 {
 public:
-    PlayHeadView (const ARASecondsPixelMapper&);
+    PlayHeadView (const TimelineViewport&);
 
     void setPlayHeadTimeInSec (double);
+    virtual void updatePosition();
 
     void paint (Graphics&) override;
+    void resized() override;
 
 private:
-    const ARASecondsPixelMapper& pixelMapper;
-    double playHeadTimeInSec { 0 };
+    const TimelineViewport& timelineViewport;
+    double playHeadTimeInSec;
 };

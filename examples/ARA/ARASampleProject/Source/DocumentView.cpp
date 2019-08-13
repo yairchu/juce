@@ -69,7 +69,7 @@ RulersView* DocumentViewController::createRulersView (DocumentView &owner)
 
 PlayHeadView* DocumentViewController::createPlayheadView (DocumentView &owner)
 {
-    return new PlayHeadView (owner.getTimeMapper());
+    return new PlayHeadView (owner.getViewport());
 }
 
 Component* DocumentViewController::createTimeRangeSelectionView (DocumentView &owner)
@@ -311,6 +311,8 @@ void DocumentView::zoomBy (double zoomMultiply, bool relativeToPlay)
     if (getParentComponent() != nullptr)
         resized();
 
+    if (playHeadView)
+        playHeadView->updatePosition();
     listeners.callExpectingUnregistration ([&] (Listener& l)
                                            {
                                                l.visibleTimeRangeChanged (getVisibleTimeRange(), newZoomFactor);
@@ -409,6 +411,7 @@ void DocumentView::resized()
     if (playHeadView != nullptr)
     {
         playHeadView->setBounds (preContentWidth, 0, viewport.getWidthExcludingBorders(), viewport.getHeight() - viewport.getViewedComponentBorders().getBottom());
+        playHeadView->updatePosition();
     }
     // apply needed borders
     auto timeRangeBounds = viewport.getViewedComponent()->getBounds();
