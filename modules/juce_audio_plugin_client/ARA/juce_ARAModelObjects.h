@@ -14,7 +14,7 @@ class ARAAudioModification;
 class ARAPlaybackRegion;
 
 template<class ModelClassType>
-class ARAListenableModelClass
+class JUCE_API  ARAListenableModelClass
 {
 public:
     class Listener
@@ -57,15 +57,15 @@ private:
 
     @tags{ARA}
 */
-class ARADocument: public ARA::PlugIn::Document,
-                   public ARAListenableModelClass<ARADocument>
+class JUCE_API  ARADocument  : public ARA::PlugIn::Document,
+                               public ARAListenableModelClass<ARADocument>
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARADocumentProperties>;
 
     ARADocument (ARADocumentController* documentController);
 
-    class Listener  : public ARAListenableModelClass<ARADocument>::Listener
+    class JUCE_API  Listener  : public ARAListenableModelClass<ARADocument>::Listener
     {
     public:
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_BEGIN
@@ -161,15 +161,15 @@ public:
 
     @tags{ARA}
 */
-class ARAMusicalContext  : public ARA::PlugIn::MusicalContext,
-                           public ARAListenableModelClass<ARAMusicalContext>
+class JUCE_API  ARAMusicalContext  : public ARA::PlugIn::MusicalContext,
+                                     public ARAListenableModelClass<ARAMusicalContext>
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARAMusicalContextProperties>;
 
     ARAMusicalContext (ARADocument* document, ARA::ARAMusicalContextHostRef hostRef);
 
-    class Listener  : public ARAListenableModelClass<ARAMusicalContext>::Listener
+    class JUCE_API  Listener  : public ARAListenableModelClass<ARAMusicalContext>::Listener
     {
     public:
         Listener() = default;
@@ -210,15 +210,15 @@ public:
 
     @tags{ARA}
 */
-class ARARegionSequence  : public ARA::PlugIn::RegionSequence,
-                           public ARAListenableModelClass<ARARegionSequence>
+class JUCE_API  ARARegionSequence  : public ARA::PlugIn::RegionSequence,
+                                     public ARAListenableModelClass<ARARegionSequence>
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARARegionSequenceProperties>;
 
     ARARegionSequence (ARADocument* document, ARA::ARARegionSequenceHostRef hostRef);
 
-    class Listener  : public ARAListenableModelClass<ARARegionSequence>::Listener
+    class JUCE_API  Listener  : public ARAListenableModelClass<ARARegionSequence>::Listener
     {
     public:
         Listener() = default;
@@ -275,8 +275,8 @@ public:
 
     @tags{ARA}
 */
-class ARAAudioSource  : public ARA::PlugIn::AudioSource,
-                        public ARAListenableModelClass<ARAAudioSource>
+class JUCE_API  ARAAudioSource  : public ARA::PlugIn::AudioSource,
+                                  public ARAListenableModelClass<ARAAudioSource>
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARAAudioSourceProperties>;
@@ -284,7 +284,7 @@ public:
 
     ARAAudioSource (ARADocument* document, ARA::ARAAudioSourceHostRef hostRef);
 
-    class Listener  : public ARAListenableModelClass<ARAAudioSource>::Listener
+    class JUCE_API  Listener  : public ARAListenableModelClass<ARAAudioSource>::Listener
     {
     public:
         Listener() = default;
@@ -364,12 +364,16 @@ public:
         Contrary to most ARA functions, this call can be made from any thread.
         The implementation will enqueue these notifications and later post them from the message thread.
         Calling code must ensure start and completion state are always balanced,
-        and must send the updates in ascending order.
-
-        @param state Indicates start, intermediate update or completion of the analysis.
+        and must send updates in ascending order.
+    */
+    void notifyAnalysisProgressStarted();
+    /** \copydoc notifyAnalysisProgressStarted
         @param progress Progress normalized to the 0..1 range.
     */
-    void notifyAnalysisProgress (ARAAnalysisProgressState state, float progress);
+    void notifyAnalysisProgressUpdated (float progress);
+    /** \copydoc notifyAnalysisProgressStarted
+    */
+    void notifyAnalysisProgressCompleted();
 
     /** Notify the ARA host and any listeners of a content update initiated by the plug-in.
         This must be called by the plug-in model management code on the message thread whenever updating
@@ -397,15 +401,15 @@ private:
 
     @tags{ARA}
 */
-class ARAAudioModification  : public ARA::PlugIn::AudioModification,
-                              public ARAListenableModelClass<ARAAudioModification>
+class JUCE_API  ARAAudioModification  : public ARA::PlugIn::AudioModification,
+                                        public ARAListenableModelClass<ARAAudioModification>
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARAAudioModificationProperties>;
 
     ARAAudioModification (ARAAudioSource* audioSource, ARA::ARAAudioModificationHostRef hostRef, const ARAAudioModification* optionalModificationToClone);
 
-    class Listener  : public ARAListenableModelClass<ARAAudioModification>::Listener
+    class JUCE_API  Listener  : public ARAListenableModelClass<ARAAudioModification>::Listener
     {
     public:
         Listener() = default;
@@ -482,15 +486,15 @@ public:
 
     @tags{ARA}
 */
-class ARAPlaybackRegion  : public ARA::PlugIn::PlaybackRegion,
-                           public ARAListenableModelClass<ARAPlaybackRegion>
+class JUCE_API  ARAPlaybackRegion  : public ARA::PlugIn::PlaybackRegion,
+                                     public ARAListenableModelClass<ARAPlaybackRegion>
 {
 public:
     using PropertiesPtr = ARA::PlugIn::PropertiesPtr<ARA::ARAPlaybackRegionProperties>;
 
     ARAPlaybackRegion (ARAAudioModification* audioModification, ARA::ARAPlaybackRegionHostRef hostRef);
 
-    class Listener  : public ARAListenableModelClass<ARAPlaybackRegion>::Listener
+    class JUCE_API  Listener  : public ARAListenableModelClass<ARAPlaybackRegion>::Listener
     {
     public:
         Listener() = default;
@@ -523,28 +527,6 @@ public:
        ARA_DISABLE_UNREFERENCED_PARAMETER_WARNING_END
     };
 
-    /** Get the head time (in seconds) before the stat of the playback region */
-    double getHeadTime() const { return headTime; }
-
-    /** Get the tail time (in seconds) after the end of the playback region */
-    double getTailTime() const { return tailTime; }
-
-    /** Set the head time (in seconds) before the stat of the playback region
-        @param newHeadTime The new head time. 
-    */
-    void setHeadTime (double newHeadTime);
-
-    /** Set the tail time (in seconds) after the end of the playback region
-        @param newTailTime The new tail time.
-    */
-    void setTailTime (double newTailTime);
-
-    /** Set both the head and tail time of the playback region
-        @param newHeadTime The new head time. 
-        @param newTailTime The new tail time.
-    */
-    void setHeadAndTailTime (double newHeadTime, double newTailTime);
-
     /** Returns time range covered by all playback regions in the region sequence
         @param includeHeadAndTail Whether or not the range includes the head and tail 
                                   time of all playback regions in the sequence. 
@@ -561,10 +543,6 @@ public:
         @param scopeFlags The scope of the content update.
     */
     void notifyContentChanged (ARAContentUpdateScopes scopeFlags);
-
-private:
-    double headTime { 0.0 };
-    double tailTime { 0.0 };
 };
 
 

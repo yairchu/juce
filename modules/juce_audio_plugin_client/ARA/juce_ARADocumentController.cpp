@@ -93,33 +93,28 @@ ARADocumentController::ARADocumentController (const ARA::ARADocumentControllerHo
 
 //==============================================================================
 
-void ARADocumentController::notifyAudioSourceContentChanged (ARAAudioSource* audioSource, ARAContentUpdateScopes scopeFlags)
+void ARADocumentController::notifyAudioSourceAnalysisProgressStarted (ARAAudioSource* audioSource)
 {
-    jassert (scopeFlags.affectEverything() || !scopeFlags.affectSamples());
-
-    audioSourceUpdates[audioSource] += scopeFlags;
-}
-
-void ARADocumentController::notifyAudioModificationContentChanged (ARAAudioModification* audioModification, ARAContentUpdateScopes scopeFlags)
-{
-    audioModificationUpdates[audioModification] += scopeFlags;
-}
-
-void ARADocumentController::notifyPlaybackRegionContentChanged (ARAPlaybackRegion* playbackRegion, ARAContentUpdateScopes scopeFlags)
-{
-    playbackRegionUpdates[playbackRegion] += scopeFlags;
-}
-
-//==============================================================================
-
-void ARADocumentController::notifyAudioSourceAnalysisProgress (ARAAudioSource* audioSource, ARA::ARAAnalysisProgressState state, float progress)
-{
-    // internal listeners updates
-    if (audioSource->internalAnalysisProgressTracker.updateProgress (state,  progress))
+    if (audioSource->internalAnalysisProgressTracker.updateProgress (ARA::kARAAnalysisProgressStarted, 0.0f))
         internalAnalysisProgressIsSynced.clear (std::memory_order_release);
 
-    // host update
-    DocumentController::notifyAudioSourceAnalysisProgress(audioSource, state, progress);
+    DocumentController::notifyAudioSourceAnalysisProgressStarted (audioSource);
+}
+
+void ARADocumentController::notifyAudioSourceAnalysisProgressUpdated (ARAAudioSource* audioSource, float progress)
+{
+    if (audioSource->internalAnalysisProgressTracker.updateProgress (ARA::kARAAnalysisProgressUpdated,  progress))
+        internalAnalysisProgressIsSynced.clear (std::memory_order_release);
+
+    DocumentController::notifyAudioSourceAnalysisProgressUpdated (audioSource, progress);
+}
+
+void ARADocumentController::notifyAudioSourceAnalysisProgressCompleted (ARAAudioSource* audioSource)
+{
+    if (audioSource->internalAnalysisProgressTracker.updateProgress (ARA::kARAAnalysisProgressCompleted, 1.0f))
+        internalAnalysisProgressIsSynced.clear (std::memory_order_release);
+
+    DocumentController::notifyAudioSourceAnalysisProgressCompleted (audioSource);
 }
 
 //==============================================================================
@@ -167,26 +162,6 @@ void ARADocumentController::didEndEditing() noexcept
     notify_listeners (didEndEditing, ARADocument*, getDocument());
 }
 
-void ARADocumentController::doNotifyModelContentUpdates() noexcept
-{
-    auto hostModelUpdateController = getHostModelUpdateController();
-    if (hostModelUpdateController != nullptr)
-    {
-        for (auto& audioSourceUpdate : audioSourceUpdates)
-            hostModelUpdateController->notifyAudioSourceContentChanged (audioSourceUpdate.first->getHostRef(), nullptr, audioSourceUpdate.second);
-
-        for (auto& audioModificationUpdate : audioModificationUpdates)
-            hostModelUpdateController->notifyAudioModificationContentChanged (audioModificationUpdate.first->getHostRef(), nullptr, audioModificationUpdate.second);
-
-        for (auto& playbackRegionUpdate : playbackRegionUpdates)
-            hostModelUpdateController->notifyPlaybackRegionContentChanged (playbackRegionUpdate.first->getHostRef(), nullptr, playbackRegionUpdate.second);
-    }
-
-    audioSourceUpdates.clear();
-    audioModificationUpdates.clear();
-    playbackRegionUpdates.clear();
-}
-
 //==============================================================================
 
 bool ARADocumentController::doRestoreObjectsFromStream (InputStream& /*input*/, const ARA::PlugIn::RestoreObjectsFilter* /*filter*/) noexcept
@@ -232,10 +207,13 @@ ARA::PlugIn::MusicalContext* ARADocumentController::doCreateMusicalContext (ARA:
     return new ARAMusicalContext (static_cast<ARADocument*> (document), hostRef);
 }
 
-void ARADocumentController::doUpdateMusicalContextContent (ARA::PlugIn::MusicalContext* musicalContext, const ARA::ARAContentTimeRange* /*range*/, ARA::ContentUpdateScopes scopeFlags) noexcept
+void ARADocumentController::updateMusicalContextContent (ARA::ARAMusicalContextRef musicalContextRef, const ARA::ARAContentTimeRange* range, ARA::ContentUpdateScopes flags) noexcept
 {
+    DocumentController::updateMusicalContextContent (musicalContextRef, range, flags);
+
+    ARA::PlugIn::MusicalContext* musicalContext = ARA::PlugIn::fromRef (musicalContextRef);
     auto araMusicalContext = static_cast<ARAMusicalContext*> (musicalContext);
-    araMusicalContext->notifyListeners ([&] (ARAMusicalContext::Listener& l) { l.didUpdateMusicalContextContent(araMusicalContext, scopeFlags); });
+    araMusicalContext->notifyListeners ([&] (ARAMusicalContext::Listener& l) { l.didUpdateMusicalContextContent(araMusicalContext, flags); });
 }
 
 OVERRIDE_TO_NOTIFY_3 (willUpdateMusicalContextProperties, MusicalContext*, musicalContext, ARAMusicalContext::PropertiesPtr, newProperties)
@@ -262,10 +240,13 @@ ARA::PlugIn::AudioSource* ARADocumentController::doCreateAudioSource (ARA::PlugI
     return new ARAAudioSource (static_cast<ARADocument*> (document), hostRef);
 }
 
-void ARADocumentController::doUpdateAudioSourceContent (ARA::PlugIn::AudioSource* AudioSource, const ARA::ARAContentTimeRange* /*range*/, ARA::ContentUpdateScopes scopeFlags) noexcept
+void ARADocumentController::updateAudioSourceContent (ARA::ARAAudioSourceRef audioSourceRef, const ARA::ARAContentTimeRange* range, ARA::ContentUpdateScopes flags) noexcept
 {
-    auto araAudioSource = static_cast<ARAAudioSource*> (AudioSource);
-    araAudioSource->notifyListeners ([&] (ARAAudioSource::Listener& l) { l.didUpdateAudioSourceContent(araAudioSource, scopeFlags); });
+    DocumentController::updateAudioSourceContent (audioSourceRef, range, flags);
+
+    ARA::PlugIn::AudioSource* audioSource = ARA::PlugIn::fromRef (audioSourceRef);
+    auto araAudioSource = static_cast<ARAAudioSource*> (audioSource);
+    araAudioSource->notifyListeners ([&] (ARAAudioSource::Listener& l) { l.didUpdateAudioSourceContent(araAudioSource, flags); });
 }
 
 OVERRIDE_TO_NOTIFY_3 (willUpdateAudioSourceProperties, AudioSource*, audioSource, ARAAudioSource::PropertiesPtr, newProperties)
@@ -336,13 +317,6 @@ void ARADocumentController::didUpdatePlaybackRegionProperties (ARA::PlugIn::Play
         // because this would simply mirror the musical context content.
         notifyPlaybackRegionContentChanged (araPlaybackRegion, scopes);
     }
-}
-
-void ARADocumentController::doGetPlaybackRegionHeadAndTailTime (const ARA::PlugIn::PlaybackRegion* playbackRegion, ARA::ARATimeDuration* headTime, ARA::ARATimeDuration* tailTime) noexcept
-{
-    auto araPlaybackRegion = static_cast<const ARAPlaybackRegion*> (playbackRegion);
-    *headTime = araPlaybackRegion->getHeadTime();
-    *tailTime = araPlaybackRegion->getTailTime();
 }
 
 OVERRIDE_TO_NOTIFY_1 (willDestroyPlaybackRegion, PlaybackRegion*, playbackRegion)

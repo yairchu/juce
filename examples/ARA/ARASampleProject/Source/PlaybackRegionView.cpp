@@ -120,11 +120,7 @@ String PlaybackRegionViewImpl::playbackRegionToString() const
         ")\nDuration : " +
         String (playbackRegion->getAudioModification()->getAudioSource()->getDuration(), 3);
     const auto region =
-        String ("PlaybackRegion: \nHead: ") +
-        String (playbackRegion->getHeadTime(), 2) +
-        "\nTail: " +
-        String (playbackRegion->getTailTime(), 2) +
-        "\nStart (within mod): " +
+        String ("PlaybackRegion: \nStart (within mod): ") +
         String (playbackRegion->getStartInAudioModificationTime(), 2) +
         "\nEnd (within mod): " +
         String (playbackRegion->getEndInAudioModificationTime());
