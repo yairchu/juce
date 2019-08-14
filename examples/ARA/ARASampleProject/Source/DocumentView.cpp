@@ -216,6 +216,8 @@ DocumentView::DocumentView (DocumentViewController* ctrl, const AudioPlayHead::C
     playHeadView.reset (viewController->createPlayheadView (*this));
     viewport.addAndMakeVisible (playHeadView.get());
     playHeadView->setAlwaysOnTop (true);
+    if (playHeadView)
+        playHeadView->setPlayHeadTimeInSec (lastReportedPosition.timeInSeconds);
 
     timeRangeSelectionView.reset (viewController->createTimeRangeSelectionView(*this));
 
