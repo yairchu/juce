@@ -39,13 +39,9 @@ TimelineViewport::~TimelineViewport()
         contentComp->removeComponentListener (this);
 }
 
-void TimelineViewport::componentMovedOrResized (Component&, bool /*wasMoved*/, bool wasResized)
+void TimelineViewport::componentMovedOrResized (Component&, bool /*wasMoved*/, bool /*wasResized*/)
 {
-    if (! wasResized)
-        return;
-
-    // update vertical scrollBar range for new size
-
+    // update vertical scrollBar
     const int startPos = vScrollBar->getCurrentRangeStart();
     const int viewportHeight = getHeightExcludingBorders();
     const int contentHeight = jmax (contentComp.get() ? contentComp->getHeight() : 0, viewportHeight);
@@ -383,7 +379,8 @@ void TimelineViewport::invalidateViewport (Range<double> newTimelineRange)
         Point<int> newPos (0, roundToInt (-vScrollBar->getCurrentRangeStart()));
         if (contentComp->getBounds().getPosition() != newPos)
         {
-            contentComp->setTopLeftPosition (newPos);
+            contentComp->setTopLeftPosition (newPos);  // (this will re-entrantly call invalidateViewport again)
+            return;
         }
         repaint();
     }
