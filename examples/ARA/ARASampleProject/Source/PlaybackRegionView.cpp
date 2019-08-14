@@ -82,7 +82,9 @@ void PlaybackRegionViewImpl::paint (Graphics& g)
         {
             const auto& mapper = ownerTrack->getParentDocumentView().getTimeMapper();
             const auto regionTimeRange = getTimeRange();
-            const auto visibleRange = mapper.getRangeForPixels (getX(), getRight());
+            // this is clipped range that considered dirty
+            // (it might be only part of entire bounds
+            const auto visibleRange = mapper.getRangeForPixels (clipBounds.getX(), clipBounds.getRight());
 
             auto drawBounds = getBounds() - getPosition();
             drawBounds.setHorizontalRange (clipBounds.getHorizontalRange());

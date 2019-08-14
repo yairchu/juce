@@ -10,6 +10,7 @@ constexpr int kHeight = 600;
 static const Identifier zoomFactorId = "zoom_factor";
 static const Identifier trackHeightId = "track_height";
 static const Identifier trackHeaderWidthId = "track_header_width";
+static const Identifier fitTrackWidthId = "fit_track_width";
 static const Identifier trackHeadersVisibleId = "track_headers_visible";
 static const Identifier showOnlySelectedId = "show_only_selected";
 static const Identifier scrollFollowsPlayHeadId = "scroll_follows_playhead";
@@ -25,7 +26,7 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
     {
         documentViewController = new ARASampleProjectDocumentViewController (*this);
         documentView.reset (new DocumentView (documentViewController,  p.getLastKnownPositionInfo()));
-        documentView->setFitTrackWidth (false);
+
         addAndMakeVisible (documentView->getScrollBar (true));
         addAndMakeVisible (documentView->getScrollBar (false));
 
@@ -33,10 +34,9 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
         documentView->setTrackHeight (editorDefaultSettings.getProperty (trackHeightId, documentView->getTrackHeight()));
         documentView->setTrackHeaderWidth (editorDefaultSettings.getProperty (trackHeaderWidthId, documentView->getTrackHeaderWidth()));
         documentView->setIsTrackHeadersVisible (editorDefaultSettings.getProperty (trackHeadersVisibleId, documentView->isTrackHeadersVisible()));
-        if (editorDefaultSettings.getProperty (showOnlySelectedId, false))
-            setSelectedTrackOnly (true);
-        else
-            setSelectedTrackOnly (false);
+
+        setSelectedTrackOnly (editorDefaultSettings.getProperty (showOnlySelectedId, false));
+        documentView->setFitTrackWidth (editorDefaultSettings.getProperty (fitTrackWidthId, true));
 
         documentView->setScrollFollowsPlayHead (editorDefaultSettings.getProperty (scrollFollowsPlayHeadId, documentView->isScrollFollowingPlayHead()));
         documentView->zoomBy (editorDefaultSettings.getProperty (zoomFactorId, documentView->getTimeMapper().getZoomFactor()));
@@ -65,6 +65,26 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
         };
         addAndMakeVisible (onlySelectedTracksButton);
 
+        onlySelectedTracksButton.setButtonText ("Selected Tracks Only");
+        onlySelectedTracksButton.setClickingTogglesState (true);
+        onlySelectedTracksButton.setToggleState (editorDefaultSettings.getProperty (showOnlySelectedId, false), dontSendNotification);
+        onlySelectedTracksButton.onClick = [this]
+        {
+            setSelectedTrackOnly (onlySelectedTracksButton.getToggleState());
+        };
+        addAndMakeVisible (onlySelectedTracksButton);
+
+        fitTrackWidthButton.setButtonText ("Fit Track Width");
+        fitTrackWidthButton.setClickingTogglesState (true);
+        fitTrackWidthButton.setToggleState (editorDefaultSettings.getProperty (fitTrackWidthId, false), dontSendNotification);
+        fitTrackWidthButton.onClick = [this]
+        {
+            const auto val = fitTrackWidthButton.getToggleState();
+            editorDefaultSettings.setProperty (fitTrackWidthId, val, nullptr);
+            documentView->setFitTrackWidth (val);
+        };
+        addAndMakeVisible (fitTrackWidthButton);
+
         followPlayHeadButton.setButtonText ("Follow Play-Head");
         followPlayHeadButton.setClickingTogglesState (true);
         followPlayHeadButton.setToggleState (documentView->isScrollFollowingPlayHead(), dontSendNotification);
@@ -86,10 +106,12 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
         constexpr double zoomStepFactor = 1.5;
         horizontalZoomInButton.onClick = [this, zoomStepFactor]
         {
+            fitTrackWidthButton.setToggleState (false, sendNotification);
             documentView->zoomBy (zoomStepFactor);
         };
         horizontalZoomOutButton.onClick = [this, zoomStepFactor]
         {
+            fitTrackWidthButton.setToggleState (false, sendNotification);
             documentView->zoomBy (1.0 / zoomStepFactor);
         };
         verticalZoomInButton.onClick = [this, zoomStepFactor]
@@ -149,7 +171,8 @@ void ARASampleProjectAudioProcessorEditor::resized()
         documentView->getScrollBar (false).setBounds (documentView->getX(), documentView->getBottom(), documentView->getWidth(), kScrollBarSize);
         hideTrackHeaderButton.setBounds (0, getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
         onlySelectedTracksButton.setBounds (hideTrackHeaderButton.getRight(), getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
-        followPlayHeadButton.setBounds (onlySelectedTracksButton.getRight(), getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
+        fitTrackWidthButton.setBounds (onlySelectedTracksButton.getRight(), getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
+        followPlayHeadButton.setBounds (fitTrackWidthButton.getRight(), getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
         verticalZoomInButton.setBounds (getWidth() - kStatusBarHeight, getHeight() - kStatusBarHeight, kStatusBarHeight, kStatusBarHeight);
         verticalZoomOutButton.setBounds (verticalZoomInButton.getBounds().translated (-kStatusBarHeight, 0));
         verticalZoomLabel.setBounds (verticalZoomOutButton.getBounds().translated (-kStatusBarHeight, 0));
