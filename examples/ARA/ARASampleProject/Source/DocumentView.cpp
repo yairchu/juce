@@ -197,6 +197,10 @@ DocumentView::DocumentView (DocumentViewController* ctrl, const AudioPlayHead::C
         {
             regionSequenceView->updateRegionsBounds (newVisibleRange);
         }
+
+        if (playHeadView)
+            playHeadView->updatePosition();
+
         viewport.repaint();
     };
 
