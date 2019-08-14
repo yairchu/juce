@@ -47,6 +47,7 @@ private:
     TextButton hideTrackHeaderButton;
     TextButton followPlayHeadButton;
     TextButton onlySelectedTracksButton;
+    TextButton fitTrackWidthButton;
     Label horizontalZoomLabel, verticalZoomLabel;
     Label playheadLinearPositionLabel, playheadMusicalPositionLabel;
     TextButton horizontalZoomInButton, horizontalZoomOutButton;
