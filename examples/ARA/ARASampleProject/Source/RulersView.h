@@ -85,7 +85,17 @@ public:
      */
     int getRulerHeaderWidth() const { return timeline.getViewedComponentBorders().getLeft(); }
 
+    void invalidateLocators();
 private:
+    class Locators : public Component
+    {
+    public:
+        Locators();
+
+        void paint (Graphics&) override;
+        bool isLooping;
+    } locators;
+
     TimelineViewport& timeline;
     const ARASecondsPixelMapper& timeMapper;
     ARADocument* document;
