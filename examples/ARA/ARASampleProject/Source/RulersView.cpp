@@ -16,33 +16,52 @@ RulersView::RulersView (TimelineViewport& tv, const AudioPlayHead::CurrentPositi
     setColour (selectorsColours, Colours::white.withAlpha (0.3f));
     setColour (loopSelectorsColours, Colours::skyblue.withAlpha (0.3f));
     lastPaintedPosition.resetToDefault();
+
+    addChildComponent (locators);
+    locators.setVisible (shouldShowLocators);
+
     startTimerHz (20);
 }
 
 void RulersView::timerCallback()
 {
-    if (isLocatorsVisible() && optionalHostPosition != nullptr && (lastPaintedPosition.ppqLoopStart != optionalHostPosition->ppqLoopStart ||
-        lastPaintedPosition.ppqLoopEnd != optionalHostPosition->ppqLoopEnd ||
-        lastPaintedPosition.isLooping  != optionalHostPosition->isLooping))
-    {
-        repaint();
-    }
+    invalidateLocators();
 }
 
 //==============================================================================
 void RulersView::paint (juce::Graphics& g)
 {
     g.fillAll (findColour (rulersBackground));
-    // locators
+}
+
+void RulersView::invalidateLocators()
+{
     if (isLocatorsVisible() && optionalHostPosition != nullptr)
     {
-        const auto bounds = g.getClipBounds();
         lastPaintedPosition = *optionalHostPosition;
-        const int startX = getRulerHeaderWidth() + timeMapper.getPixelForQuarter(lastPaintedPosition.ppqLoopStart);
-        const int endX = getRulerHeaderWidth() + timeMapper.getPixelForQuarter(lastPaintedPosition.ppqLoopEnd);
-        g.setColour (lastPaintedPosition.isLooping ? findColour (loopSelectorsColours): findColour (selectorsColours));
-        g.fillRect (jmax (getRulerHeaderWidth(), startX), bounds.getY(), endX - startX, bounds.getHeight());
+        const auto startInSecs = timeMapper.getTimeForQuarter (lastPaintedPosition.ppqLoopStart);
+        const auto endInSecs = timeMapper.getTimeForQuarter (lastPaintedPosition.ppqLoopEnd);
+        const int startX = timeMapper.getPixelForPosition (jmax (startInSecs, timeMapper.getStartPixelPosition()));
+        const int endX = timeMapper.getPixelForPosition (jmin (endInSecs, timeMapper.getPositionForPixel (getWidth() - getRulerHeaderWidth())));
+        const int length = endX - startX;
+        if (locators.isLooping != lastPaintedPosition.isLooping)
+            locators.repaint();
+        locators.isLooping = lastPaintedPosition.isLooping;
+        locators.setBounds (getRulerHeaderWidth() + startX, 0, length, getHeight());
     }
+}
+
+RulersView::Locators::Locators()
+{
+    setInterceptsMouseClicks (false, true);
+    setWantsKeyboardFocus (false);
+    setAlwaysOnTop (true);
+}
+
+void RulersView::Locators::paint (Graphics &g)
+{
+    auto* p = getParentComponent();
+    g.fillAll (isLooping ? p->findColour (loopSelectorsColours): p->findColour (selectorsColours));
 }
 
 void RulersView::resized()
@@ -60,6 +79,7 @@ void RulersView::resized()
         ruler->setBounds (0, y, getLocalBounds().getWidth(), rulerHeight);
         y += rulerHeight;
     }
+    invalidateLocators();
 }
 
 //==============================================================================

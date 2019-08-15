@@ -200,6 +200,8 @@ DocumentView::DocumentView (DocumentViewController* ctrl, const AudioPlayHead::C
 
         if (playHeadView)
             playHeadView->updatePosition();
+        if (rulersView)
+            rulersView->invalidateLocators();
 
         viewport.repaint();
     };
