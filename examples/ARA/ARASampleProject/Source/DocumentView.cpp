@@ -692,4 +692,9 @@ void DocumentLayout::invalidateLayout (DocumentView& view)
         trackToLayout.setArea (i+1, "contentColStart");
         items.add (trackToLayout);
     }
+
+    if (onInvalidateLayout != nullptr)
+    {
+        onInvalidateLayout (tracksLayout);
+    }
 }

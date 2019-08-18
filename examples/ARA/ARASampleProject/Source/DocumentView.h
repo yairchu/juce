@@ -15,6 +15,7 @@ class DocumentView;
 struct DocumentLayout
 {
     void invalidateLayout (DocumentView& view);
+    std::function<void (juce::Grid&)> onInvalidateLayout {nullptr};
 
     juce::Grid tracksLayout;
 
