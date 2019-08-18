@@ -98,7 +98,6 @@ private:
 
     TimelineViewport& timeline;
     const ARASecondsPixelMapper& timeMapper;
-    ARADocument* document;
     AudioPlayHead::CurrentPositionInfo lastPaintedPosition;
     const AudioPlayHead::CurrentPositionInfo* optionalHostPosition;
     bool shouldShowLocators;
