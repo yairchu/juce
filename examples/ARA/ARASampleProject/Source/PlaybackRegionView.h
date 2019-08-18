@@ -77,9 +77,9 @@ private:
     bool isSelected { false };
     Label regionName;
 
+    AudioFormatManager formatManager;
     AudioThumbnailCache audioThumbCache;
     AudioThumbnail audioThumb;
-    AudioFormatManager formatManager;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PlaybackRegionViewImpl)
 };
