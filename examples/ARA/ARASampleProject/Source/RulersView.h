@@ -93,7 +93,7 @@ private:
         Locators();
 
         void paint (Graphics&) override;
-        bool isLooping;
+        bool isLooping {false};
     } locators;
 
     TimelineViewport& timeline;
