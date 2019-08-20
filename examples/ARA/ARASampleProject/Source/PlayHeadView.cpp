@@ -40,8 +40,9 @@ bool PlayHeadView::getPixelPosition (int* resPos) const
 void PlayHeadView::updatePosition()
 {
     int pos;
-    setVisible (getPixelPosition (&pos));
-    if (isVisible())
+    const bool newVisible = getPixelPosition (&pos);
+    setVisible (newVisible);
+    if (newVisible)
         setBounds (
             timelineViewport.getViewedComponentBorders().getLeft() + pos,
             getY(), 1, getHeight());
