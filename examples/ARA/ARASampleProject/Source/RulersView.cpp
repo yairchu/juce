@@ -10,7 +10,8 @@ RulersView::RulersView (TimelineViewport& tv, const AudioPlayHead::CurrentPositi
     : timeline (tv),
       timeMapper (static_cast<const ARASecondsPixelMapper&>(timeline.getPixelMapper())),
       optionalHostPosition (hostPosition),
-      shouldShowLocators (true)
+      shouldShowLocators (true),
+      canDragPlayhead (false)
 {
     setColour (rulersBackground, Colours::transparentBlack);
     setColour (selectorsColours, Colours::white.withAlpha (0.3f));
@@ -91,10 +92,24 @@ void RulersView::resized()
 
 void RulersView::mouseDown (const MouseEvent& event)
 {
+
+    // use mouse click to set the playhead position in the host (if they provide a playback controller interface)
+    if (!canDragPlayhead)
+        requestToMovePlayheadForPos (event);
+}
+
+void RulersView::mouseDrag (const MouseEvent& event)
+{
+    if (canDragPlayhead)
+        requestToMovePlayheadForPos (event);
+}
+
+void RulersView::requestToMovePlayheadForPos (const MouseEvent& event)
+{
     const auto pos = event.position.x;
     if (pos < getRulerHeaderWidth())
         return;
-    // use mouse click to set the playhead position in the host (if they provide a playback controller interface)
+
     if (auto* musicalCtx = timeMapper.getCurrentMusicalContext())
     {
         auto playbackController = musicalCtx->getDocumentController()->getHostPlaybackController();
