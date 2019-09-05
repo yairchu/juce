@@ -37,8 +37,12 @@ public:
     void setIsLocatorsVisible (bool isVisible) { shouldShowLocators = isVisible; }
     bool isLocatorsVisible() { return shouldShowLocators; }
 
+    void setIsPlayheadDraggable (bool isDraggable) { canDragPlayhead = isDraggable; }
+    bool isPlayheadDraggable() { return canDragPlayhead; }
+
     // MouseListener overrides
     void mouseDown (const MouseEvent& event) override;
+    void mouseDrag (const MouseEvent& event) override;
     void mouseDoubleClick (const MouseEvent& event) override;
 
     // juce::Timer overrides
@@ -87,6 +91,8 @@ public:
 
     void invalidateLocators();
 private:
+    void requestToMovePlayheadForPos (const MouseEvent& event);
+
     class Locators : public Component
     {
     public:
@@ -101,6 +107,7 @@ private:
     AudioPlayHead::CurrentPositionInfo lastPaintedPosition;
     const AudioPlayHead::CurrentPositionInfo* optionalHostPosition;
     bool shouldShowLocators;
+    bool canDragPlayhead;
     OwnedArray<Component> rulers;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RulersView)
