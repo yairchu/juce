@@ -147,9 +147,9 @@ void ARADocumentController::notifyAudioSourceAnalysisProgressCompleted (ARAAudio
 
 //==============================================================================
 
-ARA::PlugIn::Document* ARADocumentController::doCreateDocument (ARA::PlugIn::DocumentController* documentController) noexcept
+ARA::PlugIn::Document* ARADocumentController::doCreateDocument () noexcept
 {
-    return new ARADocument (static_cast<ARADocumentController*> (documentController));
+    return new ARADocument (static_cast<ARADocumentController*> (this));
 }
 
 void ARADocumentController::willBeginEditing() noexcept
@@ -350,7 +350,7 @@ namespace ModelUpdateControllerProgressAdapter
 {
     using namespace ARA;
 
-    static void ARA_CALL notifyAudioSourceAnalysisProgress (ARAModelUpdateControllerHostRef controllerHostRef,
+    static void ARA_CALL notifyAudioSourceAnalysisProgress (ARAModelUpdateControllerHostRef /*controllerHostRef*/,
                                                             ARAAudioSourceHostRef audioSourceHostRef, ARAAnalysisProgressState state, float value) noexcept
     {
         auto audioSource = reinterpret_cast<ARAAudioSource*> (audioSourceHostRef);
