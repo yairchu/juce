@@ -366,6 +366,14 @@ public:
          @param newRulersHeight           new rulersHeight in pixels.
          */
         virtual void rulersHeightChanged (int /*newRulersHeight*/) {}
+
+        /** Called when a track header is changed.
+
+         @param newTrackHeight           new trackHeaderWidth in pixels.
+         @param isVisible                      if trackHeader is visible or not
+         */
+        virtual void trackHeaderChanged (int /*newTrackHeaderWidth*/, bool /*isVisible*/) {}
+
     };
 
     /** Registers a listener that will be called for changes of the DocumentView. */
