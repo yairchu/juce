@@ -282,6 +282,11 @@ void DocumentView::setTrackHeaderWidth (int newWidth)
     layout.invalidateLayout (*this);
     if (getParentComponent() != nullptr)
         resized();
+
+    listeners.callExpectingUnregistration ([&] (Listener& l)
+                                           {
+                                               l.trackHeaderChanged (layout.trackHeader.width, layout.trackHeader.visibleWidth > 0);
+                                           });
 }
 
 void DocumentView::setTrackHeaderMaximumWidth (int newWidth)
@@ -384,6 +389,11 @@ void DocumentView::setTrackHeight (int newHeight)
 void DocumentView::setRulersHeight (const int newHeight)
 {
     layout.rulers.height = newHeight;
+    listeners.callExpectingUnregistration ([&] (Listener& l)
+                                           {
+                                               // should we notify the visible height or expected height?
+                                               l.rulersHeightChanged (layout.rulers.height);
+                                           });
 }
 
 bool DocumentView::canVerticalZoomOutFurther() const
