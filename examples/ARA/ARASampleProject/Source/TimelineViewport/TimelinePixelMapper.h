@@ -95,7 +95,7 @@ public:
      * - if timeline end < mapped position from bounds, returns last valid pixel position.
      * - if timeline end >= mapped position from bounds, returns currentBounds.getRight()
      */
-    int getEndPixelForBoundsWithinTimeline (Rectangle<int> currentBounds) const
+    int getEndPixelForBoundsWithinTimeline (juce::Rectangle<int> currentBounds) const
     {
         int timelineEnd = getPixelForPosition (timelineRange.getEnd());
         return timelineEnd < currentBounds.getRight() ? timelineEnd : currentBounds.getRight();
