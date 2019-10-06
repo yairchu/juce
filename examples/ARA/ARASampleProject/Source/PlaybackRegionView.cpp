@@ -1,6 +1,5 @@
 #include "PlaybackRegionView.h"
 #include "DocumentView.h"
-#include <juce_audio_plugin_client/utility/juce_IncludeModuleHeaders.h>
 #include "ARASampleProjectAudioProcessor.h"
 
 PlaybackRegionView::PlaybackRegionView (RegionSequenceView* track, ARAPlaybackRegion* region)
@@ -29,8 +28,7 @@ PlaybackRegionViewImpl::PlaybackRegionViewImpl (RegionSequenceView* track, ARAPl
     : PlaybackRegionView (track, region),
       ownerTrack (track),
       playbackRegion (region),
-      audioThumbCache (1),
-      audioThumb (128, formatManager, audioThumbCache)
+      audioThumb (128, formatManager, *sharedAudioThumbnailCache)
 {
     audioThumb.addChangeListener (this);
 
@@ -59,6 +57,7 @@ PlaybackRegionViewImpl::~PlaybackRegionViewImpl()
     playbackRegion->getAudioModification()->getAudioSource<ARAAudioSource>()->removeListener (this);
     playbackRegion->getRegionSequence()->getDocument<ARADocument>()->removeListener (this);
 
+    destroyPlaybackRegionReader();
     audioThumb.removeChangeListener (this);
 }
 
@@ -168,10 +167,7 @@ void PlaybackRegionViewImpl::willEnableAudioSourceSamplesAccess (ARAAudioSource*
 
     // AudioThumbnail does not handle "pausing" access, so we clear it if any data is still pending, and recreate it when access is reenabled
     if (! enable && ! audioThumb.isFullyLoaded())
-    {
-        playbackRegionReader = nullptr; // reset our "weak" pointer, since audioThumb will delete the object upon clear
-        audioThumb.clear();
-    }
+        destroyPlaybackRegionReader();
 }
 
 void PlaybackRegionViewImpl::didEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool enable)
@@ -236,10 +232,23 @@ void PlaybackRegionViewImpl::didUpdatePlaybackRegionContent (ARAPlaybackRegion* 
 }
 
 //==============================================================================
+void PlaybackRegionViewImpl::destroyPlaybackRegionReader()
+{
+    if (playbackRegionReader == nullptr)
+        return;
+
+    sharedAudioThumbnailCache->removeThumb (reinterpret_cast<intptr_t> (playbackRegionReader));
+    audioThumb.clear();
+    playbackRegionReader = nullptr;
+}
+
 void PlaybackRegionViewImpl::recreatePlaybackRegionReader()
 {
-    // create an audio processor for renderering our region
-    std::unique_ptr<AudioProcessor> audioProcessor { createPluginFilterOfType (PluginHostType::getPluginLoadedAs()) };
+    destroyPlaybackRegionReader();
+
+    // Create an audio processor for rendering our region
+    // We're disabling buffered audio source reading because the thumb nail cache will do buffering.
+    auto audioProcessor = std::make_unique<ARASampleProjectAudioProcessor> (false);
     const auto sampleRate = playbackRegion->getAudioModification()->getAudioSource()->getSampleRate();
     const auto numChannels = playbackRegion->getAudioModification()->getAudioSource()->getChannelCount();
     const auto channelSet = AudioChannelSet::canonicalChannelSet (numChannels);
@@ -249,12 +258,9 @@ void PlaybackRegionViewImpl::recreatePlaybackRegionReader()
     audioProcessor->setRateAndBufferSizeDetails (sampleRate, 4*1024);
     audioProcessor->setNonRealtime (true);
 
-    static_cast<ARASampleProjectAudioProcessor*> (audioProcessor.get())->setAlwaysNonRealtime (true);
-
-    // create a playback region reader using this processor for our audio thumb
+    // Create a playback region reader using this processor for our audio thumb
     playbackRegionReader = new ARAPlaybackRegionReader (std::move (audioProcessor), { playbackRegion });
-    audioThumbCache.clear();                        // flush cache to make sure cache will update with new reader
-    audioThumb.setReader (playbackRegionReader, 0); // since our cache only contains 1 reader, we can use a dummy hash
+    audioThumb.setReader (playbackRegionReader, reinterpret_cast<intptr_t> (playbackRegionReader));
 
     // TODO JUCE_ARA see juce_AudioThumbnail.cpp, line 122: AudioThumbnail handles zero-length sources
     // by deleting the reader, therefore we must clear our "weak" pointer to the reader in this case.
