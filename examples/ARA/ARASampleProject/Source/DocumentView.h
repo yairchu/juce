@@ -336,7 +336,7 @@ public:
         virtual ~Listener() {}
 
         virtual void visibleTimeRangeChanged (Range<double> newVisibleTimeRange, double zoomFactor) = 0;
-        virtual void trackHeightChanged (int newTrackHeight) = 0;
+        virtual void trackHeightChanged (int /*newTrackHeight*/) {}
         virtual void rulersHeightChanged (int /*newRulersHeight*/) {}
         virtual void trackHeaderChanged (int /*newTrackHeaderWidth*/, bool /*isVisible*/) {}
     };
