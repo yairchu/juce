@@ -752,7 +752,7 @@ namespace AAXClasses
                 // GetSideChainInputNum would produce 0 when Side-Chain isn't connected (tested with PT 12.8).
                 const auto numOfMainInputs = inputChannelList.size() + (GetSideChainInputNum() > 0 ? -1 : 0);
                 const auto channels = inputChannelList.getRawDataPointer();
-                const AudioBuffer<const float> buffer (channels, inputChannelList.size(), *ioWindowSize);
+                const AudioBuffer<float> buffer (const_cast<float**> (channels), inputChannelList.size(), *ioWindowSize);
                 if (mIsFirstPass)
                 {
                     UpdateBusLayout(numOfMainInputs, -1, GetSideChainInputNum() > 0);
@@ -760,8 +760,8 @@ namespace AAXClasses
                     mIsFirstPass = false;
                 }
 
-                jassert(getAAXProcessor().getPluginInstance().getMainBusNumInputChannels() == numOfMainInputs);
-                getAAXProcessor().getPluginInstance().analyseBlock(buffer);
+                jassert (getAAXProcessor().getPluginInstance().getMainBusNumInputChannels() == numOfMainInputs);
+                getAAXProcessor().getPluginInstance().analyseBlock (buffer);
 
                 return AAX_SUCCESS;
             }
@@ -1840,7 +1840,7 @@ namespace AAXClasses
                                                   : juceParameters.getParamID (audioProcessor, parameterIndex);
 
                 aaxParamIDs.add (paramID);
-                auto aaxParamID = aaxParamIDs.getReference (parameterIndex++).getCharPointer();
+                auto* aaxParamID = aaxParamIDs.getReference (parameterIndex++).toRawUTF8();
 
                 paramMap.set (AAXClasses::getAAXParamHash (aaxParamID), juceParam);
 
@@ -2249,7 +2249,7 @@ namespace AAXClasses
         inline AAX_CParamID getAAXParamIDFromJuceIndex (int index) const noexcept
         {
             if (isPositiveAndBelow (index, aaxParamIDs.size()))
-                return aaxParamIDs.getReference (index).getCharPointer();
+                return aaxParamIDs.getReference (index).toRawUTF8();
 
             return nullptr;
         }
