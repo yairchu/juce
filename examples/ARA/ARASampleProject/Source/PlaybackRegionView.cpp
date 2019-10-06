@@ -1,5 +1,6 @@
 #include "PlaybackRegionView.h"
 #include "DocumentView.h"
+#include <juce_audio_plugin_client/utility/juce_IncludeModuleHeaders.h>
 #include "ARASampleProjectAudioProcessor.h"
 
 PlaybackRegionView::PlaybackRegionView (RegionSequenceView* track, ARAPlaybackRegion* region)
@@ -246,9 +247,8 @@ void PlaybackRegionViewImpl::recreatePlaybackRegionReader()
 {
     destroyPlaybackRegionReader();
 
-    // Create an audio processor for rendering our region
-    // We're disabling buffered audio source reading because the thumb nail cache will do buffering.
-    auto audioProcessor = std::make_unique<ARASampleProjectAudioProcessor> (false);
+    // create an audio processor for renderering our region
+    std::unique_ptr<AudioProcessor> audioProcessor { createPluginFilterOfType (PluginHostType::getPluginLoadedAs()) };
     const auto sampleRate = playbackRegion->getAudioModification()->getAudioSource()->getSampleRate();
     const auto numChannels = playbackRegion->getAudioModification()->getAudioSource()->getChannelCount();
     const auto channelSet = AudioChannelSet::canonicalChannelSet (numChannels);
@@ -258,7 +258,9 @@ void PlaybackRegionViewImpl::recreatePlaybackRegionReader()
     audioProcessor->setRateAndBufferSizeDetails (sampleRate, 4*1024);
     audioProcessor->setNonRealtime (true);
 
-    // Create a playback region reader using this processor for our audio thumb
+    static_cast<ARASampleProjectAudioProcessor*> (audioProcessor.get())->setAlwaysNonRealtime (true);
+
+    // create a playback region reader using this processor for our audio thumb
     playbackRegionReader = new ARAPlaybackRegionReader (std::move (audioProcessor), { playbackRegion });
     audioThumb.setReader (playbackRegionReader, reinterpret_cast<intptr_t> (playbackRegionReader));
 
