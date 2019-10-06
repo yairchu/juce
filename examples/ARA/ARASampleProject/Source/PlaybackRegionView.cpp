@@ -151,7 +151,7 @@ void PlaybackRegionViewImpl::didEndEditing (ARADocument* document)
     jassert (document == playbackRegion->getRegionSequence()->getDocument());
 
     // our reader will pick up any changes in audio samples or region time range
-    if ((playbackRegionReader ==  nullptr) || ! playbackRegionReader->isValid())
+    if (playbackRegionReader ==  nullptr || ! playbackRegionReader->isValid())
     {
         recreatePlaybackRegionReader();
         ownerTrack->getParentDocumentView().setRegionBounds (
@@ -187,6 +187,7 @@ void PlaybackRegionViewImpl::didEnableAudioSourceSamplesAccess (ARAAudioSource* 
 void PlaybackRegionViewImpl::willUpdateAudioSourceProperties (ARAAudioSource* audioSource, ARAAudioSource::PropertiesPtr newProperties)
 {
     jassert (audioSource == playbackRegion->getAudioModification()->getAudioSource());
+
     if (playbackRegion->getName() == nullptr && playbackRegion->getAudioModification()->getName() == nullptr && newProperties->name != audioSource->getName())
     {
         updateRegionName();
@@ -196,6 +197,7 @@ void PlaybackRegionViewImpl::willUpdateAudioSourceProperties (ARAAudioSource* au
 void PlaybackRegionViewImpl::willUpdateAudioModificationProperties (ARAAudioModification* audioModification, ARAAudioModification::PropertiesPtr newProperties)
 {
     jassert (audioModification == playbackRegion->getAudioModification());
+
     if (playbackRegion->getName() == nullptr && newProperties->name != audioModification->getName())
     {
         updateRegionName();
@@ -206,8 +208,7 @@ void PlaybackRegionViewImpl::willUpdatePlaybackRegionProperties (ARAPlaybackRegi
 {
     jassert (playbackRegion == region);
 
-    if ((playbackRegion->getName() != newProperties->name) ||
-        (playbackRegion->getColor() != newProperties->color))
+    if (playbackRegion->getName() != newProperties->name || playbackRegion->getColor() != newProperties->color)
     {
         updateRegionName();
         ownerTrack->getParentDocumentView().setRegionBounds (
@@ -223,13 +224,10 @@ void PlaybackRegionViewImpl::didUpdatePlaybackRegionContent (ARAPlaybackRegion* 
     // Our reader catches this too, but we only check for its validity after host edits.
     // If the update is triggered inside the plug-in, we need to update the view from this call
     // (unless we're within a host edit already).
-    if (scopeFlags.affectSamples() &&
-        ! playbackRegion->getDocumentController()->isHostEditingDocument())
-    {
+    if (scopeFlags.affectSamples() && ! playbackRegion->getDocumentController()->isHostEditingDocument())
         ownerTrack->getParentDocumentView().setRegionBounds (
             this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange(),
             ownerTrack->getTrackBorders());
-    }
 }
 
 //==============================================================================
