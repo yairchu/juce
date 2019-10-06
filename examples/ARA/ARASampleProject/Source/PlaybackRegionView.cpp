@@ -1,7 +1,6 @@
 #include "PlaybackRegionView.h"
 #include "DocumentView.h"
 #include <juce_audio_plugin_client/utility/juce_IncludeModuleHeaders.h>
-#include "ARASampleProjectAudioProcessor.h"
 
 PlaybackRegionView::PlaybackRegionView (RegionSequenceView* track, ARAPlaybackRegion* region)
     : playbackRegion (region), ownerTrack (track)
@@ -258,9 +257,7 @@ void PlaybackRegionViewImpl::recreatePlaybackRegionReader()
     audioProcessor->setRateAndBufferSizeDetails (sampleRate, 4*1024);
     audioProcessor->setNonRealtime (true);
 
-    static_cast<ARASampleProjectAudioProcessor*> (audioProcessor.get())->setAlwaysNonRealtime (true);
-
-    // create a playback region reader using this processor for our audio thumb
+    // create a non-realtime playback region reader for our audio thumb
     playbackRegionReader = new ARAPlaybackRegionReader (std::move (audioProcessor), { playbackRegion });
     audioThumb.setReader (playbackRegionReader, reinterpret_cast<intptr_t> (playbackRegionReader));
 
