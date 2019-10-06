@@ -1,5 +1,6 @@
 #include "PlaybackRegionView.h"
 #include "DocumentView.h"
+#include <juce_audio_plugin_client/utility/juce_IncludeModuleHeaders.h>
 
 PlaybackRegionView::PlaybackRegionView (RegionSequenceView* track, ARAPlaybackRegion* region)
     : playbackRegion (region), ownerTrack (track)
@@ -27,8 +28,7 @@ PlaybackRegionViewImpl::PlaybackRegionViewImpl (RegionSequenceView* track, ARAPl
     : PlaybackRegionView (track, region),
       ownerTrack (track),
       playbackRegion (region),
-      audioThumbCache (1),
-      audioThumb (128, formatManager, audioThumbCache)
+      audioThumb (128, formatManager, *sharedAudioThumbnailCache)
 {
     audioThumb.addChangeListener (this);
 
@@ -57,8 +57,8 @@ PlaybackRegionViewImpl::~PlaybackRegionViewImpl()
     playbackRegion->getAudioModification()->getAudioSource<ARAAudioSource>()->removeListener (this);
     playbackRegion->getRegionSequence()->getDocument<ARADocument>()->removeListener (this);
 
+    destroyPlaybackRegionReader();
     audioThumb.removeChangeListener (this);
-    audioThumb.clear();
 }
 
 //==============================================================================
@@ -152,7 +152,7 @@ void PlaybackRegionViewImpl::didEndEditing (ARADocument* document)
     jassert (document == playbackRegion->getRegionSequence()->getDocument());
 
     // our reader will pick up any changes in audio samples or region time range
-    if ((playbackRegionReader ==  nullptr) || ! playbackRegionReader->isValid())
+    if (playbackRegionReader ==  nullptr || ! playbackRegionReader->isValid())
     {
         recreatePlaybackRegionReader();
         ownerTrack->getParentDocumentView().setRegionBounds (
@@ -161,9 +161,23 @@ void PlaybackRegionViewImpl::didEndEditing (ARADocument* document)
     }
 }
 
-void PlaybackRegionViewImpl::didEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool /*enable*/)
+void PlaybackRegionViewImpl::willEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool enable)
 {
     jassert (audioSource == playbackRegion->getAudioModification()->getAudioSource());
+
+    // AudioThumbnail does not handle "pausing" access, so we clear it if any data is still pending, and recreate it when access is reenabled
+    if (! enable && ! audioThumb.isFullyLoaded())
+        destroyPlaybackRegionReader();
+}
+
+void PlaybackRegionViewImpl::didEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool enable)
+{
+    jassert (audioSource == playbackRegion->getAudioModification()->getAudioSource());
+
+    // check whether we need to recreate the thumb data because it hadn't been loaded completely when access was disabled
+    // (if we're inside a host edit cycle, we'll wait until it has completed to catch all changes in one update)
+    if (enable && playbackRegionReader == nullptr && ! playbackRegion->getDocumentController()->isHostEditingDocument())
+        recreatePlaybackRegionReader();
 
     repaint();
 }
@@ -171,6 +185,7 @@ void PlaybackRegionViewImpl::didEnableAudioSourceSamplesAccess (ARAAudioSource* 
 void PlaybackRegionViewImpl::willUpdateAudioSourceProperties (ARAAudioSource* audioSource, ARAAudioSource::PropertiesPtr newProperties)
 {
     jassert (audioSource == playbackRegion->getAudioModification()->getAudioSource());
+
     if (playbackRegion->getName() == nullptr && playbackRegion->getAudioModification()->getName() == nullptr && newProperties->name != audioSource->getName())
     {
         updateRegionName();
@@ -180,6 +195,7 @@ void PlaybackRegionViewImpl::willUpdateAudioSourceProperties (ARAAudioSource* au
 void PlaybackRegionViewImpl::willUpdateAudioModificationProperties (ARAAudioModification* audioModification, ARAAudioModification::PropertiesPtr newProperties)
 {
     jassert (audioModification == playbackRegion->getAudioModification());
+
     if (playbackRegion->getName() == nullptr && newProperties->name != audioModification->getName())
     {
         updateRegionName();
@@ -190,8 +206,7 @@ void PlaybackRegionViewImpl::willUpdatePlaybackRegionProperties (ARAPlaybackRegi
 {
     jassert (playbackRegion == region);
 
-    if ((playbackRegion->getName() != newProperties->name) ||
-        (playbackRegion->getColor() != newProperties->color))
+    if (playbackRegion->getName() != newProperties->name || playbackRegion->getColor() != newProperties->color)
     {
         updateRegionName();
         ownerTrack->getParentDocumentView().setRegionBounds (
@@ -207,9 +222,9 @@ void PlaybackRegionViewImpl::didUpdatePlaybackRegionContent (ARAPlaybackRegion* 
     // Our reader catches this too, but we only check for its validity after host edits.
     // If the update is triggered inside the plug-in, we need to update the view from this call
     // (unless we're within a host edit already).
-    if (scopeFlags.affectSamples() &&
-        ! playbackRegion->getDocumentController()->isHostEditingDocument())
+    if (scopeFlags.affectSamples() && ! playbackRegion->getDocumentController()->isHostEditingDocument())
     {
+        recreatePlaybackRegionReader();
         ownerTrack->getParentDocumentView().setRegionBounds (
             this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange(),
             ownerTrack->getTrackBorders());
@@ -217,13 +232,35 @@ void PlaybackRegionViewImpl::didUpdatePlaybackRegionContent (ARAPlaybackRegion* 
 }
 
 //==============================================================================
+void PlaybackRegionViewImpl::destroyPlaybackRegionReader()
+{
+    if (playbackRegionReader == nullptr)
+        return;
+
+    sharedAudioThumbnailCache->removeThumb (reinterpret_cast<intptr_t> (playbackRegionReader));
+    audioThumb.clear();
+    playbackRegionReader = nullptr;
+}
+
 void PlaybackRegionViewImpl::recreatePlaybackRegionReader()
 {
-    audioThumbCache.clear();
+    destroyPlaybackRegionReader();
+
+    // create an audio processor for renderering our region
+    std::unique_ptr<AudioProcessor> audioProcessor { createPluginFilterOfType (PluginHostType::getPluginLoadedAs()) };
+    const auto sampleRate = playbackRegion->getAudioModification()->getAudioSource()->getSampleRate();
+    const auto numChannels = playbackRegion->getAudioModification()->getAudioSource()->getChannelCount();
+    const auto channelSet = AudioChannelSet::canonicalChannelSet (numChannels);
+    for (int i = 0; i < audioProcessor->getBusCount (false); i++)
+        audioProcessor->setChannelLayoutOfBus (false, i, channelSet);
+    audioProcessor->setProcessingPrecision (AudioProcessor::singlePrecision);
+    audioProcessor->setRateAndBufferSizeDetails (sampleRate, 4*1024);
+    audioProcessor->setNonRealtime (true);
 
     // create a non-realtime playback region reader for our audio thumb
-    playbackRegionReader = new ARAPlaybackRegionReader ({playbackRegion}, true);
-    audioThumb.setReader (playbackRegionReader, reinterpret_cast<intptr_t> (playbackRegion));   // TODO JUCE_ARA better hash?
+    playbackRegionReader = new ARAPlaybackRegionReader (std::move (audioProcessor), { playbackRegion });
+    audioThumb.setReader (playbackRegionReader, reinterpret_cast<intptr_t> (playbackRegionReader));
+
     // TODO JUCE_ARA see juce_AudioThumbnail.cpp, line 122: AudioThumbnail handles zero-length sources
     // by deleting the reader, therefore we must clear our "weak" pointer to the reader in this case.
     if (playbackRegionReader->lengthInSamples <= 0)

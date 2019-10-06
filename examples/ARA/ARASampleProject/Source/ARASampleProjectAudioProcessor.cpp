@@ -1,6 +1,5 @@
 #include "ARASampleProjectAudioProcessor.h"
 #include "ARASampleProjectAudioProcessorEditor.h"
-#include "ARASampleProjectDocumentController.h"
 
 //==============================================================================
 ARASampleProjectAudioProcessor::ARASampleProjectAudioProcessor()
@@ -16,10 +15,6 @@ ARASampleProjectAudioProcessor::ARASampleProjectAudioProcessor()
 #endif
 {
     lastPositionInfo.resetToDefault();
-}
-
-ARASampleProjectAudioProcessor::~ARASampleProjectAudioProcessor()
-{
 }
 
 //==============================================================================
@@ -97,13 +92,11 @@ void ARASampleProjectAudioProcessor::changeProgramName (int /*index*/, const Str
 }
 
 //==============================================================================
-void ARASampleProjectAudioProcessor::prepareToPlay (double newSampleRate, int samplesPerBlock)
+void ARASampleProjectAudioProcessor::prepareToPlay (double newSampleRate, int /*samplesPerBlock*/)
 {
     if (isARAPlaybackRenderer())
     {
         audioSourceReaders.clear();
-
-        const auto documentController = getARAPlaybackRenderer()->getDocumentController<ARASampleProjectDocumentController>();
 
         for (auto playbackRegion : getARAPlaybackRenderer()->getPlaybackRegions())
         {
@@ -114,13 +107,10 @@ void ARASampleProjectAudioProcessor::prepareToPlay (double newSampleRate, int sa
 
                 if (! isAlwaysNonRealtime())
                 {
-                    // if we're being used in real-time, wrap our source reader in buffering
-                    // reader  to avoid blocking while reading samples in processBlock
-                    const int readAheadSizeBySampleRate = roundToInt (2.0 * newSampleRate);
-                    const int readAheadSizeByBlockSize = 8 * samplesPerBlock;
-                    const int readAheadSize = jmax (readAheadSizeBySampleRate, readAheadSizeByBlockSize);
-
-                    sourceReader = new BufferingAudioReader (sourceReader, documentController->getAudioSourceReadingThread(), readAheadSize);
+                    // if we're being used in real-time, wrap our source reader in a buffering
+                    // reader to avoid blocking while reading samples in processBlock
+                    const int readAheadSize = roundToInt (2.0 * newSampleRate);
+                    sourceReader = new BufferingAudioReader (sourceReader, *sharedTimesliceThread, readAheadSize);
                 }
 
                 audioSourceReaders.emplace (audioSource, sourceReader);
@@ -167,7 +157,7 @@ bool ARASampleProjectAudioProcessor::isBusesLayoutSupported (const BusesLayout& 
 }
 #endif
 
-void ARASampleProjectAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& /*midiMessages*/)
+void ARASampleProjectAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages)
 {
     ScopedNoDenormals noDenormals;
 
@@ -210,14 +200,6 @@ void ARASampleProjectAudioProcessor::processBlock (AudioBuffer<float>& buffer, M
                         continue;
                     }
                     auto& reader = readerIt->second;
-
-                    // render silence if access is currently disabled
-                    // (the audio reader deals with this internally too, checking it here is merely an optimization)
-                    if (! audioSource->isSampleAccessEnabled())
-                    {
-                        success = false;
-                        continue;
-                    }
 
                     // this simplified test code "rendering" only produces audio if sample rate and channel count match
                     if ((audioSource->getChannelCount() != getTotalNumOutputChannels()) || (audioSource->getSampleRate() != getSampleRate()))
@@ -311,9 +293,9 @@ void ARASampleProjectAudioProcessor::processBlock (AudioBuffer<float>& buffer, M
     }
     else
     {
-        // this sample plug-in requires to be used with ARA.
-        // otherwise, proper non-ARA rendering would be invoked here
-        buffer.clear();
+        // this sample plug-in requires to be used with ARA - we just pass through otherwise.
+        // in an actual plug-in, proper non-ARA rendering would be invoked here
+        processBlockBypassed(buffer, midiMessages);
     }
 
     lastProcessBlockSucceeded = success;

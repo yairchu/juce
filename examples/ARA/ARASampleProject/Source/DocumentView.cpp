@@ -470,17 +470,6 @@ void DocumentView::followPlayheadIfNeeded()
     }
 }
 
-//==============================================================================
-void DocumentView::addListener (Listener* const listener)
-{
-    listeners.add (listener);
-}
-
-void DocumentView::removeListener (Listener* const listener)
-{
-    listeners.remove (listener);
-}
-
 void DocumentView::changeListenerCallback (juce::ChangeBroadcaster* source)
 {
     // TODO JUCE_ARA -
@@ -596,9 +585,9 @@ void DocumentViewController::TimeRangeSelectionView::paint (juce::Graphics& g)
 }
 
 //==============================================================================
-DocumentViewController::TrackHeadersResizer::TrackHeadersResizer (DocumentView& documentView)
+DocumentViewController::TrackHeadersResizer::TrackHeadersResizer (DocumentView& docView)
     : colour (Colours::grey.withAlpha (0.2f)),
-      documentView (documentView) {}
+      documentView (docView) {}
 void DocumentViewController::TrackHeadersResizer::paint (Graphics& g)
 {
     g.setColour (colour);

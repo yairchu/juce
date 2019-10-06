@@ -20,7 +20,17 @@ class ARASampleProjectAudioProcessor    : public AudioProcessor,
 public:
     //==============================================================================
     ARASampleProjectAudioProcessor();
-    ~ARASampleProjectAudioProcessor();
+
+    /** Additional configuration for the AudioProcessor if used for internal rendering (waveform display).
+        Like bus layout or other crucial renderer configuration, this may not be changed between
+        prepareToPlay() and releaseResources().
+        If \p isAlwaysNonRealtime is true, the plug-in skips the internal multi-threaded buffering
+        of any non-realtime ressources needed for rendering, such as audio source samples.
+    */
+    void setAlwaysNonRealtime (bool isAlwaysNonRealtime) noexcept   { alwaysNonRealtime = isAlwaysNonRealtime; }
+    bool isAlwaysNonRealtime() const noexcept                       { return alwaysNonRealtime; }
+
+    const AudioPlayHead::CurrentPositionInfo& getLastKnownPositionInfo() { return lastPositionInfo; }
 
     //==============================================================================
     void prepareToPlay (double newSampleRate, int samplesPerBlock) override;
@@ -56,10 +66,19 @@ public:
     void getStateInformation (MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    const AudioPlayHead::CurrentPositionInfo& getLastKnownPositionInfo() { return lastPositionInfo; }
-
 private:
-    AudioPlayHead::CurrentPositionInfo lastPositionInfo;
+
+    // We're subclassing here only to provide a proper default c'tor for our shared ressource
+    class SharedTimeSliceThread : public TimeSliceThread
+    {
+        public:
+            SharedTimeSliceThread()
+                : TimeSliceThread (String (JucePlugin_Name) + " ARA Sample Reading Thread")
+            {
+                startThread (7);   // above "default" priority so playback is fluent, but below realtime
+            }
+    };
+    SharedResourcePointer<SharedTimeSliceThread> sharedTimesliceThread;
 
     // map of audio sources to buffering audio source readers
     // we'll use them to pull ARA samples from the host as we render
@@ -68,7 +87,11 @@ private:
     // temp buffers to use for summing signals if rendering multiple regions
     std::unique_ptr<AudioBuffer<float>> tempBuffer;
 
+    bool alwaysNonRealtime { false };
+
     bool lastProcessBlockSucceeded { true };
+
+    AudioPlayHead::CurrentPositionInfo lastPositionInfo;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARASampleProjectAudioProcessor)
 };
