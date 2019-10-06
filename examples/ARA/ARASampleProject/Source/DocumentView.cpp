@@ -596,9 +596,9 @@ void DocumentViewController::TimeRangeSelectionView::paint (juce::Graphics& g)
 }
 
 //==============================================================================
-DocumentViewController::TrackHeadersResizer::TrackHeadersResizer (DocumentView& documentView)
+DocumentViewController::TrackHeadersResizer::TrackHeadersResizer (DocumentView& docView)
     : colour (Colours::grey.withAlpha (0.2f)),
-      documentView (documentView) {}
+      documentView (docView) {}
 void DocumentViewController::TrackHeadersResizer::paint (Graphics& g)
 {
     g.setColour (colour);

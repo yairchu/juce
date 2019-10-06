@@ -184,7 +184,7 @@ private:
     class TimeRangeSelectionView  : public Component
     {
     public:
-        TimeRangeSelectionView (DocumentView& documentView);
+        TimeRangeSelectionView (DocumentView& docView);
         void paint (Graphics&) override;
     private:
         DocumentView& documentView;
@@ -194,7 +194,7 @@ private:
     class TrackHeadersResizer : public Component
     {
     public:
-        TrackHeadersResizer (DocumentView& documentView);
+        TrackHeadersResizer (DocumentView& docView);
 
         void paint (Graphics& g) override;
 
