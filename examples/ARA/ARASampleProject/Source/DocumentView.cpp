@@ -470,17 +470,6 @@ void DocumentView::followPlayheadIfNeeded()
     }
 }
 
-//==============================================================================
-void DocumentView::addListener (Listener* const listener)
-{
-    listeners.add (listener);
-}
-
-void DocumentView::removeListener (Listener* const listener)
-{
-    listeners.remove (listener);
-}
-
 void DocumentView::changeListenerCallback (juce::ChangeBroadcaster* source)
 {
     // TODO JUCE_ARA -
