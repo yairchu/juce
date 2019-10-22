@@ -69,7 +69,7 @@ public:
      */
     void setZoomFactor (double newZoomFactor)
     {
-        jassert (newZoomFactor > 0.0);
+        jassert (newZoomFactor > 0.0 && std::isfinite (newZoomFactor));
         if (zoomFactor == newZoomFactor)
             return;
 
