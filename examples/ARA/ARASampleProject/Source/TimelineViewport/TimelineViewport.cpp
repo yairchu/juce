@@ -349,10 +349,7 @@ void TimelineViewport::setViewedComponent (juce::Component *newViewedComponentTo
 
     contentComp->addComponentListener (this);
     viewportClip.addAndMakeVisible (*contentComp);
-    if (shouldClipBorders)
-    {
-        viewportClip.toFront (false);
-    }
+
     // init on attach
     vScrollBar->setRangeLimits (0, jmax (contentComp->getHeight(), getHeightExcludingBorders()), dontSendNotification);
     vScrollBar->setCurrentRange (0, getHeightExcludingBorders(), dontSendNotification);

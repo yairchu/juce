@@ -178,7 +178,7 @@ private:
     Component viewportClip;
     // range of components currently visible
     Range<double> componentsRange;
-    bool shouldClipBorders;
+
     int singleStepX = 16, singleStepY = 16;
     bool allowScrollH, allowScrollV;
 
