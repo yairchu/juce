@@ -421,7 +421,7 @@ void DocumentView::resized()
     viewport.getViewedComponent()->setBounds (0, 0, getWidth(), jmax (layout.track.visibleHeight * getNumOfTracks(), viewport.getHeightExcludingBorders()));
 
     // should be calculated after viewport borders have been updated.
-    if (getWidth() > 0 && fitTrackWidth)
+    if (viewport.getWidthExcludingBorders() > 0 && fitTrackWidth)
         setVisibleTimeRange (viewController->padTimeRange (viewController->getDocumentTimeRange()));
 
     layout.tracksLayout.performLayout (viewport.getViewedComponent()->getLocalBounds());
