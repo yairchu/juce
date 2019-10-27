@@ -304,7 +304,7 @@ double TimelineViewport::getZoomFactor() const
 void TimelineViewport::paint (juce::Graphics &g)
 {
     // end of timeline...
-    const int endPixel = pixelMapper->getEndPixelForBoundsWithinTimeline (g.getClipBounds().withTrimmedLeft (viewportBorders.getLeft()));
+    int endPixel = pixelMapper->getEndPixelForBoundsWithinTimeline (g.getClipBounds().withTrimmedLeft (viewportBorders.getLeft()));
     double rightMostPixel;
     if (endPixel == pixelMapper->getTimelineEndPixel())
     {
@@ -314,7 +314,7 @@ void TimelineViewport::paint (juce::Graphics &g)
     }
     else
     {
-        const auto endPixel = getLocalBounds().getWidth();
+        endPixel = getLocalBounds().getWidth();
         rightMostPixel = pixelMapper->isPixelPositionWithinBounds (endPixel) ? pixelMapper->getPositionForPixel (endPixel): -1;
     }
 

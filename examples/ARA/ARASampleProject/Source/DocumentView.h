@@ -279,7 +279,7 @@ public:
     void setVisibleTimeRange (double startPos, double ratio) { viewport.setVisibleRange(startPos, ratio); }
     void zoomBy (double newValue, bool relativeToPlayhead = true);
 
-    void setMinRegionWidth (int minWidthInPixel) { minRegionSizeInPixels = minWidthInPixel; };
+    void setMinRegionWidth (int minWidthInPixel) { minRegionSizeInPixels = minWidthInPixel; }
     int getMinRegionWidth() const { return minRegionSizeInPixels; }
 
     void setFitTrackHeight (bool shouldFit);
