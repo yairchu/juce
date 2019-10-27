@@ -609,12 +609,12 @@ void DocumentViewController::TrackHeadersResizer::setCursor()
         setMouseCursor (MouseCursor::LeftRightResizeCursor);
 }
 
-void DocumentViewController::TrackHeadersResizer::mouseEnter (const MouseEvent &event)
+void DocumentViewController::TrackHeadersResizer::mouseEnter (const MouseEvent&)
 {
     setCursor();
 }
 
-void DocumentViewController::TrackHeadersResizer::mouseExit (const MouseEvent &event)
+void DocumentViewController::TrackHeadersResizer::mouseExit (const MouseEvent&)
 {
     setMouseCursor (MouseCursor::ParentCursor);
 }
@@ -678,16 +678,16 @@ void DocumentLayout::invalidateLayout (DocumentView& view)
     // add track items
     for (auto i = 0; i < view.getNumOfTracks(); ++i)
     {
-        auto& track = view.getRegionSequenceView (i);
+        auto& trackView = view.getRegionSequenceView (i);
         // TODO - host provides track orders. (see getOrderIndex())
         // but if tracks are invisible or not within selection,
         // we must sort them to our current grid rows. (to avoid 1 row of track ordered 5 for example).
         {
-            auto headerItem = GridItem (track.getTrackHeaderView());
+            auto headerItem = GridItem (trackView.getTrackHeaderView());
             headerItem.setArea (i+1, "headerColStart");
             items.add (headerItem);
         }
-        auto trackToLayout = GridItem (track);
+        auto trackToLayout = GridItem (trackView);
         trackToLayout.setArea (i+1, "contentColStart");
         items.add (trackToLayout);
     }
