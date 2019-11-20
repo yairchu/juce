@@ -468,34 +468,39 @@ void TimelineViewport::setIsScrollWheelAllowed (const bool isHorizontalAllowed, 
     allowScrollH = isHorizontalAllowed;
 }
 
-bool TimelineViewport::autoScroll (const int mouseX, const int mouseY, const int activeBorderThickness, const int maximumSpeed)
+bool TimelineViewport::autoScroll (const int mouseX, const int mouseY, const int distanceFromEdge, const int maximumSpeed, const bool shouldScrollOutsideBorders)
 {
     if (contentComp != nullptr)
     {
         int dx = 0, dy = 0;
+        auto newStartPos = 0.0;
+        // we mind borders!
+        auto relMouseX =  mouseX - getViewedComponentBorders().getLeft();
+        auto relMouseY =  mouseY - (shouldScrollOutsideBorders ? 0 : getViewedComponentBorders().getTop());
 
         if (getScrollBar (false).isVisible() || allowScrollH)
         {
-            if (mouseX < activeBorderThickness)
-                dx = activeBorderThickness - mouseX;
-            else if (mouseX >= viewportClip.getWidth() - activeBorderThickness)
-                dx = (viewportClip.getWidth() - activeBorderThickness) - mouseX;
-            double pixelRatio = getZoomFactor();
+            if (relMouseX < distanceFromEdge)
+                dx = distanceFromEdge - relMouseX;
+            else if (relMouseX >= getWidthExcludingBorders() - distanceFromEdge)
+                dx = (getWidthExcludingBorders() - distanceFromEdge) - relMouseX;
+
             if (dx < 0)
-                dx = jmax (dx * pixelRatio, -maximumSpeed * pixelRatio, (getPixelMapper().getStartPixelPosition() + viewportClip.getWidth() * pixelRatio)  - getPixelMapper().getTimelineRange().getEnd());
+                dx = jmax(-dx, -maximumSpeed);
             else
-                dx = jmin (dx * pixelRatio, maximumSpeed * pixelRatio, -getPixelMapper().getTimelineRange().getStart());
+                dx = jmin (-dx, maximumSpeed);
+            newStartPos = jmin (getTimelineRange().clipValue (getPixelMapper().getPositionForPixel (dx)), getTimelineRange().getEnd() - getVisibleRange().getLength());
         }
 
         if (getScrollBar (true).isVisible() || allowScrollV)
         {
-            if (mouseY < activeBorderThickness)
-                dy = activeBorderThickness - mouseY;
-            else if (mouseY >= viewportClip.getHeight() - activeBorderThickness)
-                dy = (viewportClip.getHeight() - activeBorderThickness) - mouseY;
+            if (relMouseY < distanceFromEdge)
+                dy = distanceFromEdge - relMouseY;
+            else if (relMouseY >= (shouldScrollOutsideBorders ? viewportClip.getBottom() : getHeightExcludingBorders()) - distanceFromEdge)
+                dy = (viewportClip.getHeight() - distanceFromEdge) - relMouseY;
 
             if (dy < 0)
-                dy = jmax (dy, -maximumSpeed, viewportClip.getHeight() - contentComp->getBottom());
+                dy = jmax (dy, -maximumSpeed, viewportClip.getBottom() - contentComp->getHeight());
             else
                 dy = jmin (dy, maximumSpeed, -contentComp->getY());
         }
@@ -505,8 +510,11 @@ bool TimelineViewport::autoScroll (const int mouseX, const int mouseY, const int
         {
             auto& hScroll = getScrollBar (false);
             auto& vScroll = getScrollBar (true);
-            hScroll.setCurrentRangeStart (hScroll.getCurrentRangeStart() + dx);
-            vScroll.setCurrentRangeStart (contentComp->getY() + dy);
+
+            if (dx != 0)
+                setVisibleRange ({newStartPos, newStartPos + hScroll.getCurrentRangeSize()});
+
+            vScroll.setCurrentRangeStart (vScroll.getCurrentRangeStart() - dy);
             invalidateViewport();
             return true;
         }

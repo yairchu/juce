@@ -108,15 +108,20 @@ public:
      when the user approaches an edge. You might also find Component::beginDragAutoRepeat()
      useful when auto-scrolling.
 
+     Scrolling top/bottom optionally can apply to viewed borders while left/right,
+     Always keep scrolling within borders.
+
      @param mouseX       the x position, relative to the Viewport's top-left
      @param mouseY       the y position, relative to the Viewport's top-left
      @param distanceFromEdge     specifies how close to an edge the position needs to be
      before the viewport should scroll in that direction
      @param maximumSpeed the maximum number of pixels that the viewport is allowed
      to scroll by.
+     @param shouldScrollOutsideBorders if true, constrains the scrolling within border,
+     so it would limit scrolling above (or below)  elements within borders.
      @returns            true if the viewport was scrolled
      */
-    bool autoScroll (int mouseX, int mouseY, int distanceFromEdge, int maximumSpeed);
+    bool autoScroll (int mouseX, int mouseY, int distanceFromEdge, int maximumSpeed, bool shouldScrollOutsideBorders = false);
 
     void setZoomFactor (double newFactor);
     void setZoomFactorAroundPosition (double newFactor, double position);
