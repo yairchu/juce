@@ -85,7 +85,7 @@ public:
      Creates a new Component that will be used to hold all DocumentView components.
      (this might be useful if you need finer control of the parent viewed component).
      */
-    virtual Component* createCanvasComponent();
+    virtual Component* createCanvasComponent (DocumentView& owner);
     /*
      Creates a new PlaybackRegionView which will be owned.
      This allows customizing PlaybackRegionView Component to desired behavior.

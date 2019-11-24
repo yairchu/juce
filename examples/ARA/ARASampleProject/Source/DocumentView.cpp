@@ -32,7 +32,7 @@ DocumentViewController::~DocumentViewController()
     getARAEditorView()->removeListener (this);
 }
 
-Component* DocumentViewController::createCanvasComponent()
+Component* DocumentViewController::createCanvasComponent (DocumentView& owner)
 {
     return new Component ("DocumentView Canvas");
 }
@@ -206,7 +206,7 @@ DocumentView::DocumentView (DocumentViewController* ctrl, const AudioPlayHead::C
         viewport.repaint();
     };
 
-    viewport.setViewedComponent (viewController->createCanvasComponent());
+    viewport.setViewedComponent (viewController->createCanvasComponent (*this));
 
     trackHeadersResizer.reset (viewController->createTrackHeaderResizer (*this));
     viewport.getViewedComponent()->addAndMakeVisible (trackHeadersResizer.get());
