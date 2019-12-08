@@ -484,9 +484,7 @@ public:
             info.id = vstParamID;
             info.unitId = vstUnitID;
 
-            toString128 (info.title,      param.getName (128));
-            toString128 (info.shortTitle, param.getName (8));
-            toString128 (info.units,      param.getLabel());
+            updateParameterInfo();
 
             info.stepCount = (Steinberg::int32) 0;
 
@@ -514,6 +512,13 @@ public:
         }
 
         virtual ~Param() override = default;
+
+        void updateParameterInfo()
+        {
+            toString128 (info.title,      param.getName (128));
+            toString128 (info.shortTitle, param.getName (8));
+            toString128 (info.units,      param.getLabel());
+        }
 
         bool setNormalized (Vst::ParamValue v) override
         {
@@ -960,6 +965,12 @@ public:
 
     void audioProcessorChanged (AudioProcessor*) override
     {
+        auto numParameters = parameters.getParameterCount();
+
+        for (int32 i = 0; i < numParameters; ++i)
+            if (auto* param = dynamic_cast<Param*> (parameters.getParameterByIndex (i)))
+                param->updateParameterInfo();
+
         if (auto* pluginInstance = getPluginInstance())
         {
             if (pluginInstance->getNumPrograms() > 1)
@@ -968,7 +979,7 @@ public:
         }
 
         if (componentHandler != nullptr && ! inSetupProcessing)
-            componentHandler->restartComponent (Vst::kLatencyChanged | Vst::kParamValuesChanged);
+            componentHandler->restartComponent (Vst::kLatencyChanged | Vst::kParamValuesChanged | Vst::kParamTitlesChanged);
     }
 
     void parameterValueChanged (int, float newValue) override
@@ -2720,6 +2731,10 @@ private:
 
             for (int bus = 0; bus < n && totalOutputChans < plugInOutputChannels; ++bus)
             {
+                if (auto* busObject = pluginInstance->getBus (false, bus))
+                    if (! busObject->isEnabled())
+                        continue;
+
                 if (bus < vstOutputs)
                 {
                     if (auto** const busChannels = getPointerForAudioBus<FloatType> (data.outputs[bus]))
@@ -2761,6 +2776,10 @@ private:
 
             for (int bus = 0; bus < n && totalInputChans < plugInInputChannels; ++bus)
             {
+                if (auto* busObject = pluginInstance->getBus (true, bus))
+                    if (! busObject->isEnabled())
+                        continue;
+
                 if (bus < vstInputs)
                 {
                     if (auto** const busChannels = getPointerForAudioBus<FloatType> (data.inputs[bus]))
