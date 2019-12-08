@@ -349,7 +349,6 @@ protected:
     RegionSequenceView& getRegionSequenceViewProtected (int idx) { return *regionSequenceViews[idx]; }
 
 private:
-    void updatePlayHeadBounds();
     int calcSingleTrackFitHeight() const;
 private:
     std::unique_ptr<DocumentViewController> viewController;
