@@ -1,9 +1,9 @@
 #pragma once
 
 #include "JuceHeader.h"
+#include "TrackHeaderView.h"
 
 class DocumentView;
-class TrackHeaderView;
 class PlaybackRegionView;
 
 //==============================================================================
@@ -26,9 +26,9 @@ public:
     void setRegionsViewBoundsByYRange (int y, int height);
 
     // ARARegionSequence::Listener overrides
-    void willRemovePlaybackRegionFromRegionSequence (ARARegionSequence* sequence, ARAPlaybackRegion* playbackRegion) override;
-    void didAddPlaybackRegionToRegionSequence (ARARegionSequence* sequence, ARAPlaybackRegion* playbackRegion) override;
-    void willDestroyRegionSequence (ARARegionSequence* sequence) override;
+    void willRemovePlaybackRegionFromRegionSequence (ARARegionSequence* regionSequence, ARAPlaybackRegion* playbackRegion) override;
+    void didAddPlaybackRegionToRegionSequence (ARARegionSequence* regionSequence, ARAPlaybackRegion* playbackRegion) override;
+    void willDestroyRegionSequence (ARARegionSequence* regionSequence) override;
     void willUpdateRegionSequenceProperties (ARARegionSequence* regionSequence, ARARegionSequence::PropertiesPtr newProperties) override;
 
 private:
@@ -39,7 +39,7 @@ private:
     DocumentView& documentView;
     ARARegionSequence* regionSequence;
 
-    std::unique_ptr<TrackHeaderView> trackHeaderView;
+    TrackHeaderView trackHeaderView;
     OwnedArray<PlaybackRegionView> playbackRegionViews;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RegionSequenceView)

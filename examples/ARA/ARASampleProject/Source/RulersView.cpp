@@ -191,7 +191,7 @@ void RulersView::paint (juce::Graphics& g)
         const auto endInSeconds = tempoConverter.getTimeForQuarter (lastPaintedPosition.ppqLoopEnd);
         const int startX = documentView.getPlaybackRegionsViewsXForTime (startInSeconds);
         const int endX = documentView.getPlaybackRegionsViewsXForTime (endInSeconds);
-        g.setColour (lastPaintedPosition.isLooping ? Colours::skyblue.withAlpha (0.3f) : Colours::white.withAlpha (0.3f));
+        g.setColour (lastPaintedPosition.isLooping ? Colours::skyblue.withAlpha (0.3f) : Colours::grey.withAlpha (0.3f));
         g.fillRect (startX, bounds.getY(), endX - startX, bounds.getHeight());
     }
 
@@ -235,31 +235,23 @@ void RulersView::didEndEditing (ARADocument* /*doc*/)
         findMusicalContext();
 }
 
-void RulersView::willRemoveMusicalContextFromDocument (ARADocument* doc, ARAMusicalContext* context)
+void RulersView::willRemoveMusicalContextFromDocument (ARADocument* /*document*/, ARAMusicalContext* context)
 {
-    jassert (document == doc);
-
     if (musicalContext == context)
         detachFromMusicalContext();     // will restore in didEndEditing()
 }
 
-void RulersView::didReorderMusicalContextsInDocument (ARADocument* doc)
+void RulersView::didReorderMusicalContextsInDocument (ARADocument* /*document*/)
 {
-    jassert (document == doc);
-
     if (musicalContext != document->getMusicalContexts().front())
         detachFromMusicalContext();     // will restore in didEndEditing()
 }
- void RulersView::willDestroyDocument (ARADocument* doc)
+ void RulersView::willDestroyDocument (ARADocument* /*document*/)
 {
-    jassert (document == doc);
-
     detachFromDocument();
 }
 
-void RulersView::didUpdateMusicalContextContent (ARAMusicalContext* context, ARAContentUpdateScopes /*scopeFlags*/)
+void RulersView::didUpdateMusicalContextContent (ARAMusicalContext* /*musicalContext*/, ARAContentUpdateScopes /*scopeFlags*/)
 {
-    jassert (musicalContext == context);
-
     repaint();
 }
