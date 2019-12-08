@@ -251,9 +251,6 @@ public:
 
     const AudioPlayHead::CurrentPositionInfo& getPlayHeadPositionInfo() const { return lastReportedPosition; }
 
-    void setIsTrackHeadersVisible (bool shouldBeVisible);
-    bool isTrackHeadersVisible() const;
-
     /* Sets if DocumentView should show ARAEditor ViewSelection */
     void setIsViewSelectionVisible (bool isVisible) { timeRangeSelectionView->setVisible (isVisible); }
     /* @return true if DocumentView is showing ARAEditor ViewSelection */

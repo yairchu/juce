@@ -33,7 +33,6 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
         // if no defaults yet, construct defaults based on hard-coded defaults from DocumentView
         documentView->setTrackHeight (editorDefaultSettings.getProperty (trackHeightId, documentView->getTrackHeight()));
         documentView->setTrackHeaderWidth (editorDefaultSettings.getProperty (trackHeaderWidthId, documentView->getTrackHeaderWidth()));
-        documentView->setIsTrackHeadersVisible (editorDefaultSettings.getProperty (trackHeadersVisibleId, documentView->isTrackHeadersVisible()));
 
         setSelectedTrackOnly (editorDefaultSettings.getProperty (showOnlySelectedId, false));
         documentView->setFitTrackWidth (editorDefaultSettings.getProperty (fitTrackWidthId, true));
@@ -44,17 +43,6 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
         documentView->getLookAndFeel().setDefaultSansSerifTypefaceName("Arial Unicode MS");
         documentView->addListener (this);
         addAndMakeVisible (documentView.get());
-
-        hideTrackHeaderButton.setButtonText ("Hide Track Headers");
-        hideTrackHeaderButton.setClickingTogglesState (true);
-        hideTrackHeaderButton.setToggleState(! documentView->isTrackHeadersVisible(), dontSendNotification);
-        hideTrackHeaderButton.onClick = [this]
-        {
-            documentView->setIsTrackHeadersVisible (! hideTrackHeaderButton.getToggleState());
-            editorDefaultSettings.setProperty (trackHeadersVisibleId,
-                                               ! hideTrackHeaderButton.getToggleState(), nullptr);
-        };
-        addAndMakeVisible (hideTrackHeaderButton);
 
         onlySelectedTracksButton.setButtonText ("Selected Tracks Only");
         onlySelectedTracksButton.setClickingTogglesState (true);
@@ -169,8 +157,7 @@ void ARASampleProjectAudioProcessorEditor::resized()
         // ScrollBar is fully customizable.
         documentView->getScrollBar (true).setBounds (documentView->getRight(), 0, kScrollBarSize, documentView->getHeight());
         documentView->getScrollBar (false).setBounds (documentView->getX(), documentView->getBottom(), documentView->getWidth(), kScrollBarSize);
-        hideTrackHeaderButton.setBounds (0, getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
-        onlySelectedTracksButton.setBounds (hideTrackHeaderButton.getRight(), getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
+        onlySelectedTracksButton.setBounds (0, getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
         fitTrackWidthButton.setBounds (onlySelectedTracksButton.getRight(), getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
         followPlayHeadButton.setBounds (fitTrackWidthButton.getRight(), getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
         verticalZoomInButton.setBounds (getWidth() - kStatusBarHeight, getHeight() - kStatusBarHeight, kStatusBarHeight, kStatusBarHeight);

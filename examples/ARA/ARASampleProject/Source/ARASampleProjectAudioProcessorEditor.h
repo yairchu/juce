@@ -44,7 +44,6 @@ private:
     std::unique_ptr<DocumentView> documentView;
     ARASampleProjectDocumentViewController* documentViewController; // owned by documentView
 
-    TextButton hideTrackHeaderButton;
     TextButton followPlayHeadButton;
     TextButton onlySelectedTracksButton;
     TextButton fitTrackWidthButton;

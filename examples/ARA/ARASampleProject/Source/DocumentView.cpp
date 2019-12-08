@@ -257,27 +257,10 @@ int  DocumentView::getTrackHeaderMinimumWidth ()
     return layout.trackHeader.minWidth;
 }
 
-void DocumentView::setIsTrackHeadersVisible (bool shouldBeVisible)
-{
-    layout.trackHeader.visibleWidth = shouldBeVisible ? layout.trackHeader.width : 0;
-    layout.invalidateLayout (*this);
-    if (getParentComponent() != nullptr)
-    {
-        resized();
-        repaint();
-    }
-}
-
-bool DocumentView::isTrackHeadersVisible() const
-{
-    return layout.trackHeader.visibleWidth > 0;
-}
-
 void DocumentView::setTrackHeaderWidth (int newWidth)
 {
     layout.trackHeader.width = newWidth;
-    if (isTrackHeadersVisible())
-        layout.trackHeader.visibleWidth = newWidth;
+    layout.trackHeader.visibleWidth = newWidth;
 
     layout.invalidateLayout (*this);
     if (getParentComponent() != nullptr)
