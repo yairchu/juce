@@ -1,41 +1,17 @@
 #include "PlaybackRegionView.h"
 #include "DocumentView.h"
-#include <juce_audio_plugin_client/utility/juce_IncludeModuleHeaders.h>
-
-PlaybackRegionView::PlaybackRegionView (RegionSequenceView* track, ARAPlaybackRegion* region)
-    : playbackRegion (region), ownerTrack (track)
-{}
-
-PlaybackRegionView::~PlaybackRegionView()
-{
-    playbackRegion = nullptr;
-}
-
-Range<double> PlaybackRegionView::getVisibleTimeRange() const
-{
-    if (getLocalBounds().getWidth() == 0 || ! isVisible() || ownerTrack == nullptr)
-        return {0.0, 0.0};
-
-    auto range = getTimeRange();
-    return { jmax (range.getStart(), ownerTrack->getParentDocumentView().getTimeMapper().getPositionForPixel (getBoundsInParent().getX())),
-             jmin (range.getEnd(), ownerTrack->getParentDocumentView().getTimeMapper().getPositionForPixel (getBoundsInParent().getRight()))
-           };
-}
-
+#include "ARASampleProjectAudioProcessor.h"
 
 //==============================================================================
-PlaybackRegionViewImpl::PlaybackRegionViewImpl (RegionSequenceView* track, ARAPlaybackRegion* region)
-    : PlaybackRegionView (track, region),
-      ownerTrack (track),
+PlaybackRegionView::PlaybackRegionView (DocumentView& docView, ARAPlaybackRegion* region)
+    : documentView (docView),
       playbackRegion (region),
-      audioThumb (128, formatManager, *sharedAudioThumbnailCache)
+      audioThumb (128, docView.getAudioFormatManger(), *sharedAudioThumbnailCache)
 {
     audioThumb.addChangeListener (this);
 
-    jassert (ownerTrack != nullptr);
-
-    ownerTrack->getParentDocumentView().getController().getARAEditorView()->addListener (this);
-    onNewSelection (ownerTrack->getParentDocumentView().getController().getARAEditorView()->getViewSelection());
+    documentView.getARAEditorView()->addListener (this);
+    onNewSelection (documentView.getARAEditorView()->getViewSelection());
 
     playbackRegion->getRegionSequence()->getDocument<ARADocument>()->addListener (this);
     playbackRegion->getAudioModification<ARAAudioModification>()->addListener (this);
@@ -43,14 +19,11 @@ PlaybackRegionViewImpl::PlaybackRegionViewImpl (RegionSequenceView* track, ARAPl
     playbackRegion->addListener (this);
 
     recreatePlaybackRegionReader();
-    addAndMakeVisible (regionName);
-    updateRegionName();
 }
 
-PlaybackRegionViewImpl::~PlaybackRegionViewImpl()
+PlaybackRegionView::~PlaybackRegionView()
 {
-    jassert (ownerTrack != nullptr);
-    ownerTrack->getParentDocumentView().getController().getARAEditorView()->removeListener (this);
+    documentView.getARAEditorView()->removeListener (this);
 
     playbackRegion->removeListener (this);
     playbackRegion->getAudioModification<ARAAudioModification>()->removeListener (this);
@@ -62,16 +35,14 @@ PlaybackRegionViewImpl::~PlaybackRegionViewImpl()
 }
 
 //==============================================================================
-void PlaybackRegionViewImpl::paint (Graphics& g)
+void PlaybackRegionView::paint (Graphics& g)
 {
-    SettableTooltipClient::setTooltip (playbackRegionToString());
-    Colour regionColour = convertOptionalARAColour (playbackRegion->getEffectiveColor());
-
     auto rect = getLocalBounds();
     g.setColour (isSelected ? Colours::yellow : Colours::black);
     g.drawRect (rect);
     rect.reduce (1, 1);
 
+    const Colour regionColour = convertOptionalARAColour (playbackRegion->getEffectiveColor());
     g.setColour (regionColour);
     g.fillRect (rect);
 
@@ -80,16 +51,16 @@ void PlaybackRegionViewImpl::paint (Graphics& g)
         auto clipBounds = g.getClipBounds();
         if (clipBounds.getWidth() > 0)
         {
-            const auto& mapper = ownerTrack->getParentDocumentView().getTimeMapper();
+            const auto convertedBounds = clipBounds + getBoundsInParent().getPosition();
+            const double startTime = documentView.getPlaybackRegionsViewsTimeForX (convertedBounds.getX());
+            const double endTime = documentView.getPlaybackRegionsViewsTimeForX (convertedBounds.getRight());
+
             const auto regionTimeRange = getTimeRange();
-            // this is clipped range that considered dirty
-            // (it might be only part of entire bounds
-            const auto visibleRange = mapper.getRangeForPixels (clipBounds.getX(), clipBounds.getRight());
 
             auto drawBounds = getBounds() - getPosition();
             drawBounds.setHorizontalRange (clipBounds.getHorizontalRange());
             g.setColour (regionColour.contrasting (0.7f));
-            audioThumb.drawChannels (g, drawBounds, visibleRange.getStart() - regionTimeRange.getStart(), visibleRange.getEnd() - regionTimeRange.getStart(), 1.0f);
+            audioThumb.drawChannels (g, drawBounds, startTime - regionTimeRange.getStart(), endTime - regionTimeRange.getStart(), 1.0f);
         }
     }
     else
@@ -98,46 +69,20 @@ void PlaybackRegionViewImpl::paint (Graphics& g)
         g.setFont (Font (12.0f));
         g.drawText ("Access Disabled", getBounds(), Justification::centred);
     }
-}
 
-void PlaybackRegionViewImpl::resized()
-{
-    regionName.setBounds (0, 0, 1, regionName.getFont().getHeight());
-    const int minTextWidth = 40.0;
-    ownerTrack->getParentDocumentView().getViewport().anchorChildForTimeRange (getTimeRange(), getVisibleTimeRange(), regionName,  regionName.getFont().getStringWidthFloat (regionName.getText()) + minTextWidth);
+    g.setColour (regionColour.contrasting (1.0f));
+    g.setFont (Font (12.0f));
+    g.drawText (convertOptionalARAString (playbackRegion->getEffectiveName()), rect, Justification::topLeft);
 }
 
 //==============================================================================
-String PlaybackRegionViewImpl::playbackRegionToString() const
-{
-    const auto audioMod =
-        "AudioMod: " +
-        convertOptionalARAString (playbackRegion->getAudioModification()->getEffectiveName()) +
-        "(" +  String (playbackRegion->getAudioModification()->getPersistentID()) + ")";
-    const auto audioSource =
-        "AudioSource: " +
-        convertOptionalARAString (playbackRegion->getAudioModification()->getAudioSource()->getName()) +
-        "(" +
-        String (playbackRegion->getAudioModification()->getAudioSource()->getPersistentID()) +
-        ")\nDuration : " +
-        String (playbackRegion->getAudioModification()->getAudioSource()->getDuration(), 3);
-    const auto region =
-        String ("PlaybackRegion: \nStart (within mod): ") +
-        String (playbackRegion->getStartInAudioModificationTime(), 2) +
-        "\nEnd (within mod): " +
-        String (playbackRegion->getEndInAudioModificationTime());
-
-    return region + "\n" + audioMod + "\n" + audioSource;
-}
-
-//==============================================================================
-void PlaybackRegionViewImpl::changeListenerCallback (ChangeBroadcaster* /*broadcaster*/)
+void PlaybackRegionView::changeListenerCallback (ChangeBroadcaster* /*broadcaster*/)
 {
     // our thumb nail has changed
     repaint();
 }
 
-void PlaybackRegionViewImpl::onNewSelection (const ARA::PlugIn::ViewSelection& viewSelection)
+void PlaybackRegionView::onNewSelection (const ARA::PlugIn::ViewSelection& viewSelection)
 {
     bool selected = ARA::contains (viewSelection.getPlaybackRegions(), playbackRegion);
     if (selected != isSelected)
@@ -147,7 +92,7 @@ void PlaybackRegionViewImpl::onNewSelection (const ARA::PlugIn::ViewSelection& v
     }
 }
 
-void PlaybackRegionViewImpl::didEndEditing (ARADocument* document)
+void PlaybackRegionView::didEndEditing (ARADocument* document)
 {
     jassert (document == playbackRegion->getRegionSequence()->getDocument());
 
@@ -155,13 +100,12 @@ void PlaybackRegionViewImpl::didEndEditing (ARADocument* document)
     if (playbackRegionReader ==  nullptr || ! playbackRegionReader->isValid())
     {
         recreatePlaybackRegionReader();
-        ownerTrack->getParentDocumentView().setRegionBounds (
-            this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange(),
-            ownerTrack->getTrackBorders());
+        documentView.resized();
+        repaint();
     }
 }
 
-void PlaybackRegionViewImpl::willEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool enable)
+void PlaybackRegionView::willEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool enable)
 {
     jassert (audioSource == playbackRegion->getAudioModification()->getAudioSource());
 
@@ -170,7 +114,7 @@ void PlaybackRegionViewImpl::willEnableAudioSourceSamplesAccess (ARAAudioSource*
         destroyPlaybackRegionReader();
 }
 
-void PlaybackRegionViewImpl::didEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool enable)
+void PlaybackRegionView::didEnableAudioSourceSamplesAccess (ARAAudioSource* audioSource, bool enable)
 {
     jassert (audioSource == playbackRegion->getAudioModification()->getAudioSource());
 
@@ -182,40 +126,31 @@ void PlaybackRegionViewImpl::didEnableAudioSourceSamplesAccess (ARAAudioSource* 
     repaint();
 }
 
-void PlaybackRegionViewImpl::willUpdateAudioSourceProperties (ARAAudioSource* audioSource, ARAAudioSource::PropertiesPtr newProperties)
+void PlaybackRegionView::willUpdateAudioSourceProperties (ARAAudioSource* audioSource, ARAAudioSource::PropertiesPtr newProperties)
 {
     jassert (audioSource == playbackRegion->getAudioModification()->getAudioSource());
 
     if (playbackRegion->getName() == nullptr && playbackRegion->getAudioModification()->getName() == nullptr && newProperties->name != audioSource->getName())
-    {
-        updateRegionName();
-    }
+        repaint();
 }
 
-void PlaybackRegionViewImpl::willUpdateAudioModificationProperties (ARAAudioModification* audioModification, ARAAudioModification::PropertiesPtr newProperties)
+void PlaybackRegionView::willUpdateAudioModificationProperties (ARAAudioModification* audioModification, ARAAudioModification::PropertiesPtr newProperties)
 {
     jassert (audioModification == playbackRegion->getAudioModification());
 
     if (playbackRegion->getName() == nullptr && newProperties->name != audioModification->getName())
-    {
-        updateRegionName();
-    }
+        repaint();
 }
 
-void PlaybackRegionViewImpl::willUpdatePlaybackRegionProperties (ARAPlaybackRegion* region, ARAPlaybackRegion::PropertiesPtr newProperties)
+void PlaybackRegionView::willUpdatePlaybackRegionProperties (ARAPlaybackRegion* region, ARAPlaybackRegion::PropertiesPtr newProperties)
 {
     jassert (playbackRegion == region);
 
     if (playbackRegion->getName() != newProperties->name || playbackRegion->getColor() != newProperties->color)
-    {
-        updateRegionName();
-        ownerTrack->getParentDocumentView().setRegionBounds (
-            this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange(),
-            ownerTrack->getTrackBorders());
-    }
+        repaint();
 }
 
-void PlaybackRegionViewImpl::didUpdatePlaybackRegionContent (ARAPlaybackRegion* region, ARAContentUpdateScopes scopeFlags)
+void PlaybackRegionView::didUpdatePlaybackRegionContent (ARAPlaybackRegion* region, ARAContentUpdateScopes scopeFlags)
 {
     jassert (playbackRegion == region);
 
@@ -225,14 +160,12 @@ void PlaybackRegionViewImpl::didUpdatePlaybackRegionContent (ARAPlaybackRegion* 
     if (scopeFlags.affectSamples() && ! playbackRegion->getDocumentController()->isHostEditingDocument())
     {
         recreatePlaybackRegionReader();
-        ownerTrack->getParentDocumentView().setRegionBounds (
-            this, ownerTrack->getParentDocumentView().getViewport().getVisibleRange(),
-            ownerTrack->getTrackBorders());
+        repaint();
     }
 }
 
 //==============================================================================
-void PlaybackRegionViewImpl::destroyPlaybackRegionReader()
+void PlaybackRegionView::destroyPlaybackRegionReader()
 {
     if (playbackRegionReader == nullptr)
         return;
@@ -242,12 +175,13 @@ void PlaybackRegionViewImpl::destroyPlaybackRegionReader()
     playbackRegionReader = nullptr;
 }
 
-void PlaybackRegionViewImpl::recreatePlaybackRegionReader()
+void PlaybackRegionView::recreatePlaybackRegionReader()
 {
     destroyPlaybackRegionReader();
 
-    // create an audio processor for renderering our region
-    std::unique_ptr<AudioProcessor> audioProcessor { createPluginFilterOfType (PluginHostType::getPluginLoadedAs()) };
+    // Create an audio processor for rendering our region
+    // We're disabling buffered audio source reading because the thumb nail cache will do buffering.
+    auto audioProcessor = std::make_unique<ARASampleProjectAudioProcessor> (false);
     const auto sampleRate = playbackRegion->getAudioModification()->getAudioSource()->getSampleRate();
     const auto numChannels = playbackRegion->getAudioModification()->getAudioSource()->getChannelCount();
     const auto channelSet = AudioChannelSet::canonicalChannelSet (numChannels);
@@ -257,7 +191,7 @@ void PlaybackRegionViewImpl::recreatePlaybackRegionReader()
     audioProcessor->setRateAndBufferSizeDetails (sampleRate, 4*1024);
     audioProcessor->setNonRealtime (true);
 
-    // create a non-realtime playback region reader for our audio thumb
+    // Create a playback region reader using this processor for our audio thumb
     playbackRegionReader = new ARAPlaybackRegionReader (std::move (audioProcessor), { playbackRegion });
     audioThumb.setReader (playbackRegionReader, reinterpret_cast<intptr_t> (playbackRegionReader));
 
@@ -265,14 +199,4 @@ void PlaybackRegionViewImpl::recreatePlaybackRegionReader()
     // by deleting the reader, therefore we must clear our "weak" pointer to the reader in this case.
     if (playbackRegionReader->lengthInSamples <= 0)
         playbackRegionReader = nullptr;
-}
-
-void PlaybackRegionViewImpl::updateRegionName()
-{
-    Colour regionColour = convertOptionalARAColour (playbackRegion->getEffectiveColor());
-    regionName.setFont (Font (12.0f));
-    regionName.setMinimumHorizontalScale (1.0);
-    regionName.setJustificationType (Justification::topLeft);
-    regionName.setText (convertOptionalARAString (playbackRegion->getEffectiveName()), sendNotification);
-    regionName.setColour (Label::ColourIds::textColourId, regionColour.contrasting (1.0f));
 }

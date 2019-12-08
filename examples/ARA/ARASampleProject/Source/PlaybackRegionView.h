@@ -4,48 +4,26 @@
 
 //==============================================================================
 /**
-    PlaybackRegionView
-    abstract component to visualize and handle interaction with ARAPlaybackRegion.
- */
-class PlaybackRegionView    : public Component
-{
-public:
-    PlaybackRegionView (RegionSequenceView* ownerTrack, ARAPlaybackRegion* region);
-    virtual ~PlaybackRegionView();
-
-    ARAPlaybackRegion* getPlaybackRegion() const { return playbackRegion; }
-    /* Returns this region time range on timeline */
-    Range<double> getTimeRange() const { return playbackRegion->getTimeRange(); }
-    /* Returns the visible region area on timeline.
-       If regions bounds are invalid or it's invisible it'll return {0,0}
-     */
-    Range<double> getVisibleTimeRange() const;
-
-private:
-    ARAPlaybackRegion* playbackRegion;
-    RegionSequenceView* ownerTrack;
-};
-
-/**
-    PlaybackRegionViewImpl
+    RegionSequenceView
     JUCE component used to display ARA playback regions
     along with their output waveform, name, color, and selection state
 */
-class PlaybackRegionViewImpl : public PlaybackRegionView,
-                               public ChangeListener,
-                               public SettableTooltipClient,
-                               private ARAEditorView::Listener,
-                               private ARADocument::Listener,
-                               private ARAAudioSource::Listener,
-                               private ARAAudioModification::Listener,
-                               private ARAPlaybackRegion::Listener
+class PlaybackRegionView    : public Component,
+                              public ChangeListener,
+                              private ARAEditorView::Listener,
+                              private ARADocument::Listener,
+                              private ARAAudioSource::Listener,
+                              private ARAAudioModification::Listener,
+                              private ARAPlaybackRegion::Listener
 {
 public:
-    PlaybackRegionViewImpl (RegionSequenceView* ownerTrack, ARAPlaybackRegion* region);
-    ~PlaybackRegionViewImpl() override;
+    PlaybackRegionView (DocumentView& documentView, ARAPlaybackRegion* region);
+    ~PlaybackRegionView();
+
+    ARAPlaybackRegion* getPlaybackRegion() const { return playbackRegion; }
+    Range<double> getTimeRange() const { return playbackRegion->getTimeRange(); }
 
     void paint (Graphics&) override;
-    void resized() override;
 
     // ChangeListener overrides
     void changeListenerCallback (ChangeBroadcaster*) override;
@@ -66,13 +44,13 @@ public:
     // ARAPlaybackRegion::Listener overrides
     void willUpdatePlaybackRegionProperties (ARAPlaybackRegion* playbackRegion, ARAPlaybackRegion::PropertiesPtr newProperties) override;
     void didUpdatePlaybackRegionContent (ARAPlaybackRegion* playbackRegion, ARAContentUpdateScopes scopeFlags) override;
-private:
-    void updateRegionName();
-    void destroyPlaybackRegionReader();
-    void recreatePlaybackRegionReader();
-    String playbackRegionToString() const;
 
 private:
+    void destroyPlaybackRegionReader();
+    void recreatePlaybackRegionReader();
+
+private:
+
     // We're subclassing here only to provide a proper default c'tor for our shared ressource
     class SharedAudioThumbnailCache : public AudioThumbnailCache
     {
@@ -82,14 +60,13 @@ private:
             {}
     };
     SharedResourcePointer<SharedAudioThumbnailCache> sharedAudioThumbnailCache;
-    RegionSequenceView* ownerTrack;
+
+    DocumentView& documentView;
     ARAPlaybackRegion* playbackRegion;
     bool isSelected { false };
-    Label regionName;
 
-    AudioFormatManager formatManager;
     AudioThumbnail audioThumb;
     ARAPlaybackRegionReader* playbackRegionReader { nullptr };  // careful: "weak" pointer, actual pointer is owned by our audioThumb
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PlaybackRegionViewImpl)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PlaybackRegionView)
 };

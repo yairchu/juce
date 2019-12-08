@@ -1,4 +1,5 @@
 #include "ARASampleProjectAudioProcessorEditor.h"
+#include "ARA_Library/Utilities/ARATimelineConversion.h"
 
 constexpr int kStatusBarHeight = 20;
 constexpr int kPositionLabelWidth = 100;
@@ -7,10 +8,9 @@ constexpr int kWidth = 1000;
 constexpr int kMinHeight = 200;
 constexpr int kHeight = 600;
 
-static const Identifier zoomFactorId = "zoom_factor";
+static const Identifier pixelsPerSecondId = "pixels_per_second";
 static const Identifier trackHeightId = "track_height";
 static const Identifier trackHeaderWidthId = "track_header_width";
-static const Identifier fitTrackWidthId = "fit_track_width";
 static const Identifier trackHeadersVisibleId = "track_headers_visible";
 static const Identifier showOnlySelectedId = "show_only_selected";
 static const Identifier scrollFollowsPlayHeadId = "scroll_follows_playhead";
@@ -24,54 +24,34 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
 {
     if (isARAEditorView())
     {
-        documentViewController = new ARASampleProjectDocumentViewController (*this);
-        documentView.reset (new DocumentView (documentViewController,  p.getLastKnownPositionInfo()));
-
-        addAndMakeVisible (documentView->getScrollBar (true));
-        addAndMakeVisible (documentView->getScrollBar (false));
+        documentView.reset (new DocumentView (*this, p.getLastKnownPositionInfo()));
 
         // if no defaults yet, construct defaults based on hard-coded defaults from DocumentView
         documentView->setTrackHeight (editorDefaultSettings.getProperty (trackHeightId, documentView->getTrackHeight()));
         documentView->setTrackHeaderWidth (editorDefaultSettings.getProperty (trackHeaderWidthId, documentView->getTrackHeaderWidth()));
-
-        setSelectedTrackOnly (editorDefaultSettings.getProperty (showOnlySelectedId, false));
-        documentView->setFitTrackWidth (editorDefaultSettings.getProperty (fitTrackWidthId, true));
-
+        documentView->setShowOnlySelectedRegionSequences (editorDefaultSettings.getProperty (showOnlySelectedId, false));
         documentView->setScrollFollowsPlayHead (editorDefaultSettings.getProperty (scrollFollowsPlayHeadId, documentView->isScrollFollowingPlayHead()));
-        documentView->zoomBy (editorDefaultSettings.getProperty (zoomFactorId, documentView->getTimeMapper().getZoomFactor()));
+        documentView->setPixelsPerSecond (editorDefaultSettings.getProperty(pixelsPerSecondId, documentView->getPixelsPerSecond()));
+
         // TODO JUCE_ARA hotfix for Unicode chord symbols, see https://forum.juce.com/t/embedding-unicode-string-literals-in-your-cpp-files/12600/7
         documentView->getLookAndFeel().setDefaultSansSerifTypefaceName("Arial Unicode MS");
+        documentView->setIsRulersVisible (true);
         documentView->addListener (this);
         addAndMakeVisible (documentView.get());
 
         onlySelectedTracksButton.setButtonText ("Selected Tracks Only");
         onlySelectedTracksButton.setClickingTogglesState (true);
-        onlySelectedTracksButton.setToggleState (editorDefaultSettings.getProperty (showOnlySelectedId, false), dontSendNotification);
+        onlySelectedTracksButton.setToggleState (documentView->isShowingOnlySelectedRegionSequences(), dontSendNotification);
         onlySelectedTracksButton.onClick = [this]
         {
-            setSelectedTrackOnly (onlySelectedTracksButton.getToggleState());
+            const bool isOnlySelected = onlySelectedTracksButton.getToggleState();
+            documentView->setShowOnlySelectedRegionSequences (isOnlySelected);
+            verticalZoomLabel.setVisible (! isOnlySelected);
+            verticalZoomInButton.setVisible (! isOnlySelected);
+            verticalZoomOutButton.setVisible (! isOnlySelected);
+            editorDefaultSettings.setProperty (showOnlySelectedId, onlySelectedTracksButton.getToggleState(), nullptr);
         };
         addAndMakeVisible (onlySelectedTracksButton);
-
-        onlySelectedTracksButton.setButtonText ("Selected Tracks Only");
-        onlySelectedTracksButton.setClickingTogglesState (true);
-        onlySelectedTracksButton.setToggleState (editorDefaultSettings.getProperty (showOnlySelectedId, false), dontSendNotification);
-        onlySelectedTracksButton.onClick = [this]
-        {
-            setSelectedTrackOnly (onlySelectedTracksButton.getToggleState());
-        };
-        addAndMakeVisible (onlySelectedTracksButton);
-
-        fitTrackWidthButton.setButtonText ("Fit Track Width");
-        fitTrackWidthButton.setClickingTogglesState (true);
-        fitTrackWidthButton.setToggleState (editorDefaultSettings.getProperty (fitTrackWidthId, false), dontSendNotification);
-        fitTrackWidthButton.onClick = [this]
-        {
-            const auto val = fitTrackWidthButton.getToggleState();
-            editorDefaultSettings.setProperty (fitTrackWidthId, val, nullptr);
-            documentView->setFitTrackWidth (val);
-        };
-        addAndMakeVisible (fitTrackWidthButton);
 
         followPlayHeadButton.setButtonText ("Follow Play-Head");
         followPlayHeadButton.setClickingTogglesState (true);
@@ -94,13 +74,11 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
         constexpr double zoomStepFactor = 1.5;
         horizontalZoomInButton.onClick = [this, zoomStepFactor]
         {
-            fitTrackWidthButton.setToggleState (false, sendNotification);
-            documentView->zoomBy (zoomStepFactor);
+            documentView->setPixelsPerSecond (documentView->getPixelsPerSecond() * zoomStepFactor);
         };
         horizontalZoomOutButton.onClick = [this, zoomStepFactor]
         {
-            fitTrackWidthButton.setToggleState (false, sendNotification);
-            documentView->zoomBy (1.0 / zoomStepFactor);
+            documentView->setPixelsPerSecond (documentView->getPixelsPerSecond() / zoomStepFactor);
         };
         verticalZoomInButton.onClick = [this, zoomStepFactor]
         {
@@ -110,12 +88,20 @@ ARASampleProjectAudioProcessorEditor::ARASampleProjectAudioProcessorEditor (ARAS
         {
             documentView->setTrackHeight ((int) (documentView->getTrackHeight () / zoomStepFactor));
         };
-        // zoom
         addAndMakeVisible (horizontalZoomInButton);
         addAndMakeVisible (horizontalZoomOutButton);
-        addAndMakeVisible (verticalZoomLabel);
-        addAndMakeVisible (verticalZoomInButton);
-        addAndMakeVisible (verticalZoomOutButton);
+        if (! documentView->isShowingOnlySelectedRegionSequences())
+        {
+            addAndMakeVisible (verticalZoomLabel);
+            addAndMakeVisible (verticalZoomInButton);
+            addAndMakeVisible (verticalZoomOutButton);
+        }
+        else
+        {
+            addChildComponent (verticalZoomLabel);
+            addChildComponent (verticalZoomInButton);
+            addChildComponent (verticalZoomOutButton);
+        }
 
         // show playhead position
         playheadLinearPositionLabel.setJustificationType (Justification::centred);
@@ -152,14 +138,9 @@ void ARASampleProjectAudioProcessorEditor::resized()
 {
     if (isARAEditorView())
     {
-        const int kScrollBarSize = 10;
-        documentView->setBounds (0, 0, getWidth() - kScrollBarSize, getHeight() - kStatusBarHeight - kScrollBarSize);
-        // ScrollBar is fully customizable.
-        documentView->getScrollBar (true).setBounds (documentView->getRight(), 0, kScrollBarSize, documentView->getHeight());
-        documentView->getScrollBar (false).setBounds (documentView->getX(), documentView->getBottom(), documentView->getWidth(), kScrollBarSize);
+        documentView->setBounds (0, 0, getWidth(), getHeight() - kStatusBarHeight);
         onlySelectedTracksButton.setBounds (0, getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
-        fitTrackWidthButton.setBounds (onlySelectedTracksButton.getRight(), getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
-        followPlayHeadButton.setBounds (fitTrackWidthButton.getRight(), getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
+        followPlayHeadButton.setBounds (onlySelectedTracksButton.getRight(), getHeight() - kStatusBarHeight, 120, kStatusBarHeight);
         verticalZoomInButton.setBounds (getWidth() - kStatusBarHeight, getHeight() - kStatusBarHeight, kStatusBarHeight, kStatusBarHeight);
         verticalZoomOutButton.setBounds (verticalZoomInButton.getBounds().translated (-kStatusBarHeight, 0));
         verticalZoomLabel.setBounds (verticalZoomOutButton.getBounds().translated (-kStatusBarHeight, 0));
@@ -171,10 +152,11 @@ void ARASampleProjectAudioProcessorEditor::resized()
     }
 }
 
-void ARASampleProjectAudioProcessorEditor::visibleTimeRangeChanged (Range<double> /*newVisibleTimeRange*/, double zoomFactor)
+void ARASampleProjectAudioProcessorEditor::visibleTimeRangeChanged (Range<double> /*newVisibleTimeRange*/, double pixelsPerSecond)
 {
-    jassert (zoomFactor > 0.0);
-    editorDefaultSettings.setProperty (zoomFactorId, zoomFactor, nullptr);
+    horizontalZoomInButton.setEnabled (documentView->isMinimumPixelsPerSecond());
+    horizontalZoomOutButton.setEnabled (documentView->isMaximumPixelsPerSecond());
+    editorDefaultSettings.setProperty (pixelsPerSecondId, pixelsPerSecond, nullptr);
 }
 
 void ARASampleProjectAudioProcessorEditor::trackHeightChanged (int newTrackHeight)
@@ -203,62 +185,23 @@ void ARASampleProjectAudioProcessorEditor::timerCallback()
     playheadLinearPositionLabel.setText (timeToTimecodeString (timePosition), dontSendNotification);
 
     String musicalPosition;
-    const auto& mapper = documentView->getTimeMapper();
-    if (mapper.getCurrentMusicalContext() != nullptr)
+    const auto musicalContext = documentView->getCurrentMusicalContext();
+    if (musicalContext != nullptr)
     {
-            const auto quarterPosition = mapper.getQuarterForTime (timePosition);
-            const auto barIndex = mapper.getBarIndexForQuarter (quarterPosition);
-            const auto beatDistance = mapper.getBeatDistanceFromBarStartForQuarter (quarterPosition);
-            const auto quartersPerBeat = 4.0 / (double) mapper.getBarSignatureForQuarter (quarterPosition).denominator;
+        const ARA::PlugIn::HostContentReader<ARA::kARAContentTypeTempoEntries> tempoReader (musicalContext);
+        const ARA::PlugIn::HostContentReader<ARA::kARAContentTypeBarSignatures> barSignaturesReader (musicalContext);
+        if (tempoReader && barSignaturesReader)
+        {
+            const ARA::TempoConverter<decltype (tempoReader)> tempoConverter (tempoReader);
+            const ARA::BarSignaturesConverter<decltype (barSignaturesReader)> barSignaturesConverter (barSignaturesReader);
+            const auto quarterPosition = tempoConverter.getQuarterForTime (timePosition);
+            const auto barIndex = barSignaturesConverter.getBarIndexForQuarter (quarterPosition);
+            const auto beatDistance = barSignaturesConverter.getBeatDistanceFromBarStartForQuarter (quarterPosition);
+            const auto quartersPerBeat = 4.0 / (double) barSignaturesConverter.getBarSignatureForQuarter (quarterPosition).denominator;
             const auto beatIndex = (int) beatDistance;
             const auto tickIndex = roundToInt ((beatDistance - beatIndex) * quartersPerBeat * 960.0);
             musicalPosition = String::formatted ("bar %d | beat %d | tick %03d", (barIndex >= 0) ? barIndex + 1 : barIndex, beatIndex + 1, tickIndex + 1);
+        }
     }
     playheadMusicalPositionLabel.setText (musicalPosition, dontSendNotification);
 }
-
-void ARASampleProjectAudioProcessorEditor::setSelectedTrackOnly (bool isOnlySelected)
-{
-    editorDefaultSettings.setProperty (showOnlySelectedId,
-                                       isOnlySelected, nullptr);
-    verticalZoomLabel.setVisible (! isOnlySelected);
-    verticalZoomInButton.setVisible (! isOnlySelected);
-    verticalZoomOutButton.setVisible (! isOnlySelected);
-    editorDefaultSettings.setProperty (showOnlySelectedId, isOnlySelected, nullptr);
-    documentView->setFitTrackHeight (isOnlySelected);
-    documentViewController->setShouldShowSelectedTracksOnly (isOnlySelected);
-}
-
-ARASampleProjectAudioProcessorEditor::ARASampleProjectDocumentViewController::ARASampleProjectDocumentViewController(const juce::AudioProcessorEditorARAExtension &editorARAExtension)
-: DocumentViewController (editorARAExtension),
-  shouldShowSelectedTracksOnly (true)
-{
-}
-
-std::vector<ARARegionSequence *> ARASampleProjectAudioProcessorEditor::ARASampleProjectDocumentViewController::getVisibleRegionSequences()
-{
-    if (shouldShowSelectedTracksOnly)
-    {
-        return getARAEditorView()->getViewSelection().getEffectiveRegionSequences<ARARegionSequence>();
-    }
-    else
-    {
-        std::vector<ARARegionSequence*> visibleSequences;
-        visibleSequences.clear();
-        for (auto regionSequence : getDocument()->getRegionSequences<ARARegionSequence>())
-        {
-            if (! ARA::contains (getARAEditorView()->getHiddenRegionSequences(), regionSequence))
-            {
-                visibleSequences.push_back (regionSequence);
-            }
-        }
-        return visibleSequences;
-    }
-}
-
-void ARASampleProjectAudioProcessorEditor::ARASampleProjectDocumentViewController::setShouldShowSelectedTracksOnly(bool selectedOnly)
-{
-    shouldShowSelectedTracksOnly = selectedOnly;
-    invalidateRegionSequenceViews();
-}
-

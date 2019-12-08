@@ -1,11 +1,11 @@
 #include "TrackHeaderView.h"
 
 //==============================================================================
-TrackHeaderView::TrackHeaderView (ARAEditorView* view, RegionSequenceView& ownerTrack)
+TrackHeaderView::TrackHeaderView (ARAEditorView* view, ARARegionSequence* sequence)
     : editorView (view),
-      owner (ownerTrack)
+      regionSequence (sequence)
 {
-    owner.getRegionSequence()->addListener (this);
+    regionSequence->addListener (this);
 
     editorView->addListener (this);
     onNewSelection (editorView->getViewSelection());
@@ -18,45 +18,42 @@ TrackHeaderView::~TrackHeaderView()
 
 void TrackHeaderView::detachFromRegionSequence()
 {
-    if (owner.getRegionSequence() == nullptr)
+    if (regionSequence == nullptr)
         return;
 
-    owner.getRegionSequence()->removeListener (this);
+    regionSequence->removeListener (this);
 
     editorView->removeListener (this);
+
+    regionSequence = nullptr;
 }
 
 //==============================================================================
 void TrackHeaderView::paint (juce::Graphics& g)
 {
-    const auto regionSequence = owner.getRegionSequence();
     if (regionSequence == nullptr)
         return;
-
-    Colour trackColour = convertOptionalARAColour (regionSequence->getColor());
 
     auto rect = getLocalBounds();
     g.setColour (isSelected ? Colours::yellow : Colours::black);
     g.drawRect (rect);
     rect.reduce (1, 1);
 
+    const Colour trackColour = convertOptionalARAColour (regionSequence->getColor());
     g.setColour (trackColour);
     g.fillRect (rect);
 
-    if (const auto& name = regionSequence->getName())
-    {
-        g.setColour (trackColour.contrasting (1.0f));
-        g.setFont (Font (12.0f));
-        g.drawText (convertOptionalARAString (name), rect, Justification::centredLeft);
-    }
+    g.setColour (trackColour.contrasting (1.0f));
+    g.setFont (Font (12.0f));
+    g.drawText (convertOptionalARAString (regionSequence->getName()), rect, Justification::centredLeft);
 }
 
 //==============================================================================
 void TrackHeaderView::onNewSelection (const ARA::PlugIn::ViewSelection& viewSelection)
 {
-    jassert (owner.getRegionSequence() != nullptr);
+    jassert (regionSequence != nullptr);
 
-    bool selected = ARA::contains (viewSelection.getRegionSequences(), owner.getRegionSequence());
+    bool selected = ARA::contains (viewSelection.getRegionSequences(), regionSequence);
     if (selected != isSelected)
     {
         isSelected = selected;
@@ -66,14 +63,14 @@ void TrackHeaderView::onNewSelection (const ARA::PlugIn::ViewSelection& viewSele
 
 void TrackHeaderView::didUpdateRegionSequenceProperties (ARARegionSequence* sequence)
 {
-    jassert (owner.getRegionSequence() == sequence);
+    jassert (regionSequence == sequence);
 
     repaint();
 }
 
 void TrackHeaderView::willDestroyRegionSequence (ARARegionSequence* sequence)
 {
-    jassert (owner.getRegionSequence() == sequence);
+    jassert (regionSequence == sequence);
 
     detachFromRegionSequence();
 }
