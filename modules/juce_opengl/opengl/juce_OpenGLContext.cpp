@@ -159,12 +159,7 @@ public:
     //==============================================================================
     void paint (Graphics&) override
     {
-        bool canTriggerUpdate = false;
-#if JUCE_MAC
-        auto* lastColourSpace = nativeContext->getNSColourSpace();
-        canTriggerUpdate = lastColourSpace != nativeContext->updateColourSpace();
-#endif
-        updateViewportSize (canTriggerUpdate);
+        updateViewportSize (true);
     }
 
     bool invalidateAll() override

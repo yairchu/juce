@@ -66,8 +66,6 @@ public:
         [format release];
 
         viewAttachment = NSViewComponent::attachViewToComponent (component, view);
-
-        updateColourSpace();
     }
 
     ~NativeContext()
@@ -234,15 +232,8 @@ public:
         return numFrames;
     }
 
-    void* getNSColourSpace() { return colourSpace; }
+    void* getNSColourSpace() { return [[[view window] screen] colorSpace]; }
 
-    void* updateColourSpace()
-    {
-        colourSpace = [[[view window] screen] colorSpace];
-        return colourSpace;
-    }
-
-    NSColorSpace* colourSpace = nil;
     NSOpenGLContext* renderContext = nil;
     NSOpenGLView* view = nil;
     ReferenceCountedObjectPtr<ReferenceCountedObject> viewAttachment;
