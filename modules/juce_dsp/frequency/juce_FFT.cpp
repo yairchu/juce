@@ -448,7 +448,29 @@ struct AppleFFT  : public FFT::Instance
           fftSetup (vDSP_create_fftsetup (order, 2)),
           forwardNormalisation (0.5f),
           inverseNormalisation (1.0f / static_cast<float> (1 << order))
-    {}
+    {
+        if (order <= 4)
+        {
+            // Not using vDSP_DFT_Interleaved on small setups.
+            //
+            // According to docs minimum size should be 8 (order 3, 2*2^2):
+            //
+            // > The number of complex elements. The supported values are f * 2ⁿ, where f is 2, 3, 5, 3 * 3, 3 * 5, or 5 * 5, and n >= 2.
+            // - https://developer.apple.com/documentation/accelerate/3746720-vdsp_dft_interleaved_createsetup
+            //
+            // However there might be an extra factor of 2 involved with real transforms?
+            // As in practice it produces bad results (fails the JUCE unit tests)
+        }
+        else
+        {
+            if (@available(macOS 12.0, *))
+            {
+                rfftFwdSetup = vDSP_DFT_Interleaved_CreateSetup (nullptr, 1 << (order - 1), vDSP_DFT_FORWARD, vDSP_DFT_Interleaved_RealtoComplex);
+                if (rfftFwdSetup == nullptr)
+                    DBG ("vDSP_DFT_Interleaved_CreateSetup failed for order " << order);
+            }
+        }
+    }
 
     ~AppleFFT() override
     {
@@ -457,6 +479,9 @@ struct AppleFFT  : public FFT::Instance
             vDSP_destroy_fftsetup (fftSetup);
             fftSetup = nullptr;
         }
+        if (@available(macOS 12.0, *))
+            if (rfftFwdSetup != nullptr)
+                vDSP_DFT_Interleaved_DestroySetup (rfftFwdSetup);
     }
 
     void perform (const Complex<float>* input, Complex<float>* output, bool inverse) const noexcept override
@@ -475,14 +500,24 @@ struct AppleFFT  : public FFT::Instance
 
     void performRealOnlyForwardTransform (float* inoutData, bool ignoreNegativeFreqs) const noexcept override
     {
-        auto size = (1 << order);
         auto* inout = reinterpret_cast<Complex<float>*> (inoutData);
-        auto splitInOut (toSplitComplex (inout));
+        auto size = (1 << order);
 
-        inoutData[size] = 0.0f;
-        vDSP_fft_zrip (fftSetup, &splitInOut, 2, order, kFFTDirection_Forward);
+        if (rfftFwdSetup != nullptr)
+        {
+            if (@available(macOS 12.0, *))
+                vDSP_DFT_Interleaved_Execute (rfftFwdSetup, (const DSPComplex*) inoutData, (DSPComplex*) inoutData);
+            else
+                jassertfalse;
+        }
+        else
+        {
+            auto splitInOut (toSplitComplex (inout));
+            inoutData[size] = 0.0f;
+            vDSP_fft_zrip (fftSetup, &splitInOut, 2, order, kFFTDirection_Forward);
+        }
+
         vDSP_vsmul (inoutData, 1, &forwardNormalisation, inoutData, 1, static_cast<size_t> (size << 1));
-
         mirrorResult (inout, ignoreNegativeFreqs);
     }
 
@@ -532,6 +567,7 @@ private:
     //==============================================================================
     vDSP_Length order;
     FFTSetup fftSetup;
+    vDSP_DFT_Interleaved_Setup rfftFwdSetup = nullptr;
     float forwardNormalisation, inverseNormalisation;
 };
 
