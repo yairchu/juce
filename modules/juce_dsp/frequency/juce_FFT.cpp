@@ -32,6 +32,7 @@ struct FFT::Instance
 {
     virtual ~Instance() = default;
     virtual void perform (const Complex<float>* input, Complex<float>* output, bool inverse) const noexcept = 0;
+    virtual void perform (const Complex<double>* input, Complex<double>* output, bool inverse) const noexcept = 0;
     virtual void performRealOnlyForwardTransform (float*, bool) const noexcept = 0;
     virtual void performRealOnlyInverseTransform (float*) const noexcept = 0;
 };
@@ -122,6 +123,11 @@ struct FFTFallback  : public FFT::Instance
         {
             configForward->perform (input, output);
         }
+    }
+
+    void perform (const Complex<double>* input, Complex<double>* output, bool inverse) const noexcept override
+    {
+        jassertfalse;
     }
 
     const size_t maxFFTScratchSpaceToAlloca = 256 * 1024;
@@ -446,6 +452,7 @@ struct AppleFFT  : public FFT::Instance
     AppleFFT (int orderToUse)
         : order (static_cast<vDSP_Length> (orderToUse)),
           fftSetup (vDSP_create_fftsetup (order, 2)),
+          fftSetupD (vDSP_create_fftsetupD (order, 2)),
           forwardNormalisation (0.5f),
           inverseNormalisation (1.0f / static_cast<float> (1 << order))
     {}
@@ -456,6 +463,11 @@ struct AppleFFT  : public FFT::Instance
         {
             vDSP_destroy_fftsetup (fftSetup);
             fftSetup = nullptr;
+        }
+        if (fftSetupD != nullptr)
+        {
+            vDSP_destroy_fftsetupD (fftSetupD);
+            fftSetupD = nullptr;
         }
     }
 
@@ -471,6 +483,20 @@ struct AppleFFT  : public FFT::Instance
 
         float factor = (inverse ? inverseNormalisation : forwardNormalisation * 2.0f);
         vDSP_vsmul ((float*) output, 1, &factor, (float*) output, 1, static_cast<size_t> (size << 1));
+    }
+
+    void perform (const Complex<double>* input, Complex<double>* output, bool inverse) const noexcept override
+    {
+        auto size = (1 << order);
+
+        DSPDoubleSplitComplex splitInput  (toSplitComplexD (const_cast<Complex<double>*> (input)));
+        DSPDoubleSplitComplex splitOutput (toSplitComplexD (output));
+
+        vDSP_fft_zopD (fftSetupD, &splitInput,  2, &splitOutput, 2,
+                       order, inverse ?  kFFTDirection_Inverse : kFFTDirection_Forward);
+
+        double factor = (inverse ? inverseNormalisation : forwardNormalisation * 2.0f);
+        vDSP_vsmulD ((double*) output, 1, &factor, (double*) output, 1, static_cast<size_t> (size << 1));
     }
 
     void performRealOnlyForwardTransform (float* inoutData, bool ignoreNegativeFreqs) const noexcept override
@@ -528,9 +554,18 @@ private:
                  reinterpret_cast<float*> (data) + 1};
     }
 
+    static DSPDoubleSplitComplex toSplitComplexD (Complex<double>* data) noexcept
+    {
+        // this assumes that Complex interleaves real and imaginary parts
+        // and is tightly packed.
+        return { reinterpret_cast<double*> (data),
+                 reinterpret_cast<double*> (data) + 1};
+    }
+
     //==============================================================================
     vDSP_Length order;
     FFTSetup fftSetup;
+    FFTSetupD fftSetupD;
     float forwardNormalisation, inverseNormalisation;
 };
 
@@ -1038,6 +1073,12 @@ FFT& FFT::operator= (FFT&&) noexcept = default;
 FFT::~FFT() = default;
 
 void FFT::perform (const Complex<float>* input, Complex<float>* output, bool inverse) const noexcept
+{
+    if (engine != nullptr)
+        engine->perform (input, output, inverse);
+}
+
+void FFT::perform (const Complex<double>* input, Complex<double>* output, bool inverse) const noexcept
 {
     if (engine != nullptr)
         engine->perform (input, output, inverse);

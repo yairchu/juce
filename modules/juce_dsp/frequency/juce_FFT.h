@@ -64,6 +64,7 @@ public:
         The arrays must contain at least getSize() elements.
     */
     void perform (const Complex<float>* input, Complex<float>* output, bool inverse) const noexcept;
+    void perform (const Complex<double>* input, Complex<double>* output, bool inverse) const noexcept;
 
     /** Performs an in-place forward transform on a block of real data.
 
