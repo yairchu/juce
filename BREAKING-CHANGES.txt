@@ -1,8 +1,97 @@
 JUCE breaking changes
 =====================
 
-develop
-=======
+Version 7.0.6
+=============
+
+Change
+------
+Thread::wait and WaitableEvent::wait now take a double rather than an int to
+indicate the number of milliseconds to wait.
+
+Possible Issues
+---------------
+Calls to either wait function may trigger warnings.
+
+Workaround
+----------
+Explicitly cast the value to double.
+
+Rationale
+---------
+Changing to double allows sub-millisecond waits which was important for
+supporting changes to the HighResolutionTimer.
+
+
+Change
+------
+RealtimeOptions member workDurationMs was replaced by three optional member
+variables in RealtimeOptions, and all RealtimeOptions member variables were
+marked private.
+
+Possible Issues
+---------------
+Trying to construct a RealtimeOptions object with one or two values, or access
+any of its member variables, will no longer compile.
+
+Workaround
+----------
+Use the withMember functions to construct the object, and the getter functions
+to access the member variable values.
+
+Rationale
+---------
+The new approach improves the flexibility for users to specify realtime thread
+options on macOS/iOS and improves the flexibility for the API to evolve without
+introducing further breaking changes.
+
+
+Change
+------
+JUCE module compilation files with a platform suffix are now checked case
+insensitively for CMake builds.
+
+Possible Issues
+---------------
+If a JUCE module compilation file ends in a specific platform suffix but does
+not match the case for the string previously checked by the CMake
+implementation, it may have compiled for all platforms. Now, it will only
+compile for the platform specified by the suffix.
+
+Workaround
+----------
+In most cases this was probably a bug, in other cases rename the file to remove
+the platform suffix.
+
+Rationale
+---------
+This change improves consistency between the Projucer and CMake integrations.
+
+
+Change
+------
+An undocumented feature that allowed JUCE module compilation files to compile
+for a specific platform or subset of platforms by declaring the platform name
+followed by an underscore, was removed.
+
+Possible Issues
+---------------
+If a JUCE module compilation file contains a matching platform suffix followed
+by an underscore and is loaded by the Projucer it will no longer compile for
+just that platform.
+
+Workaround
+----------
+Use the suffix of the name only. If the undocumented feature was used to select
+multiple platforms, make multiple separate files for each of the required
+platforms.
+
+Rationale
+---------
+This change improves consistency between the Projucer and CMake integrations.
+Given the functionality was undocumented, the ease of a workaround, and the
+added complexity required for CMake support, the functionality was removed.
+
 
 Change
 ------

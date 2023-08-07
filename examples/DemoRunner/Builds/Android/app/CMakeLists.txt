@@ -14,7 +14,7 @@ add_subdirectory (${OBOE_DIR} ./oboe)
 add_library("cpufeatures" STATIC "${ANDROID_NDK}/sources/android/cpufeatures/cpu-features.c")
 set_source_files_properties("${ANDROID_NDK}/sources/android/cpufeatures/cpu-features.c" PROPERTIES COMPILE_FLAGS "-Wno-sign-conversion -Wno-gnu-statement-expression")
 
-add_definitions([[-DJUCE_ANDROID=1]] [[-DJUCE_ANDROID_API_VERSION=23]] [[-DJUCE_PUSH_NOTIFICATIONS=1]] [[-DJUCE_PUSH_NOTIFICATIONS_ACTIVITY="com/rmsl/juce/JuceActivity"]] [[-DJUCE_CONTENT_SHARING=1]] [[-DJUCE_ANDROID_GL_ES_VERSION_3_0=1]] [[-DJUCE_DEMO_RUNNER=1]] [[-DJUCE_UNIT_TESTS=1]] [[-DJUCER_ANDROIDSTUDIO_7F0E4A25=1]] [[-DJUCE_APP_VERSION=7.0.5]] [[-DJUCE_APP_VERSION_HEX=0x70005]])
+add_definitions([[-DJUCE_ANDROID=1]] [[-DJUCE_ANDROID_API_VERSION=23]] [[-DJUCE_PUSH_NOTIFICATIONS=1]] [[-DJUCE_PUSH_NOTIFICATIONS_ACTIVITY="com/rmsl/juce/JuceActivity"]] [[-DJUCE_CONTENT_SHARING=1]] [[-DJUCE_ANDROID_GL_ES_VERSION_3_0=1]] [[-DJUCE_DEMO_RUNNER=1]] [[-DJUCE_UNIT_TESTS=1]] [[-DJUCER_ANDROIDSTUDIO_7F0E4A25=1]] [[-DJUCE_APP_VERSION=7.0.6]] [[-DJUCE_APP_VERSION_HEX=0x70006]])
 
 include_directories( AFTER
     "../../../../../modules/juce_audio_processors/format_types/LV2_SDK/lilv/src"
@@ -34,9 +34,9 @@ include_directories( AFTER
 enable_language(ASM)
 
 if(JUCE_BUILD_CONFIGURATION MATCHES "DEBUG")
-    add_definitions([[-DJUCE_DISPLAY_SPLASH_SCREEN=0]] [[-DJUCE_USE_DARK_SPLASH_SCREEN=1]] [[-DJUCE_PROJUCER_VERSION=0x70005]] [[-DJUCE_MODULE_AVAILABLE_juce_analytics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_basics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_formats=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_processors=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_utils=1]] [[-DJUCE_MODULE_AVAILABLE_juce_box2d=1]] [[-DJUCE_MODULE_AVAILABLE_juce_core=1]] [[-DJUCE_MODULE_AVAILABLE_juce_cryptography=1]] [[-DJUCE_MODULE_AVAILABLE_juce_data_structures=1]] [[-DJUCE_MODULE_AVAILABLE_juce_dsp=1]] [[-DJUCE_MODULE_AVAILABLE_juce_events=1]] [[-DJUCE_MODULE_AVAILABLE_juce_graphics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_gui_basics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_gui_extra=1]] [[-DJUCE_MODULE_AVAILABLE_juce_opengl=1]] [[-DJUCE_MODULE_AVAILABLE_juce_osc=1]] [[-DJUCE_MODULE_AVAILABLE_juce_product_unlocking=1]] [[-DJUCE_MODULE_AVAILABLE_juce_video=1]] [[-DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1]] [[-DJUCE_USE_MP3AUDIOFORMAT=1]] [[-DJUCE_PLUGINHOST_VST3=1]] [[-DJUCE_PLUGINHOST_LV2=1]] [[-DJUCE_ALLOW_STATIC_NULL_VARIABLES=0]] [[-DJUCE_STRICT_REFCOUNTEDPOINTER=1]] [[-DJUCE_USE_CAMERA=1]] [[-DJUCE_STANDALONE_APPLICATION=1]] [[-DJUCE_DEMO_RUNNER=1]] [[-DJUCE_UNIT_TESTS=1]] [[-DJUCER_ANDROIDSTUDIO_7F0E4A25=1]] [[-DJUCE_APP_VERSION=7.0.5]] [[-DJUCE_APP_VERSION_HEX=0x70005]] [[-DDEBUG=1]] [[-D_DEBUG=1]])
+    add_definitions([[-DJUCE_DISPLAY_SPLASH_SCREEN=0]] [[-DJUCE_USE_DARK_SPLASH_SCREEN=1]] [[-DJUCE_PROJUCER_VERSION=0x70006]] [[-DJUCE_MODULE_AVAILABLE_juce_analytics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_basics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_formats=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_processors=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_utils=1]] [[-DJUCE_MODULE_AVAILABLE_juce_box2d=1]] [[-DJUCE_MODULE_AVAILABLE_juce_core=1]] [[-DJUCE_MODULE_AVAILABLE_juce_cryptography=1]] [[-DJUCE_MODULE_AVAILABLE_juce_data_structures=1]] [[-DJUCE_MODULE_AVAILABLE_juce_dsp=1]] [[-DJUCE_MODULE_AVAILABLE_juce_events=1]] [[-DJUCE_MODULE_AVAILABLE_juce_graphics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_gui_basics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_gui_extra=1]] [[-DJUCE_MODULE_AVAILABLE_juce_opengl=1]] [[-DJUCE_MODULE_AVAILABLE_juce_osc=1]] [[-DJUCE_MODULE_AVAILABLE_juce_product_unlocking=1]] [[-DJUCE_MODULE_AVAILABLE_juce_video=1]] [[-DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1]] [[-DJUCE_USE_MP3AUDIOFORMAT=1]] [[-DJUCE_PLUGINHOST_VST3=1]] [[-DJUCE_PLUGINHOST_LV2=1]] [[-DJUCE_ALLOW_STATIC_NULL_VARIABLES=0]] [[-DJUCE_STRICT_REFCOUNTEDPOINTER=1]] [[-DJUCE_USE_CAMERA=1]] [[-DJUCE_STANDALONE_APPLICATION=1]] [[-DJUCE_DEMO_RUNNER=1]] [[-DJUCE_UNIT_TESTS=1]] [[-DJUCER_ANDROIDSTUDIO_7F0E4A25=1]] [[-DJUCE_APP_VERSION=7.0.6]] [[-DJUCE_APP_VERSION_HEX=0x70006]] [[-DDEBUG=1]] [[-D_DEBUG=1]])
 elseif(JUCE_BUILD_CONFIGURATION MATCHES "RELEASE")
-    add_definitions([[-DJUCE_DISPLAY_SPLASH_SCREEN=0]] [[-DJUCE_USE_DARK_SPLASH_SCREEN=1]] [[-DJUCE_PROJUCER_VERSION=0x70005]] [[-DJUCE_MODULE_AVAILABLE_juce_analytics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_basics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_formats=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_processors=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_utils=1]] [[-DJUCE_MODULE_AVAILABLE_juce_box2d=1]] [[-DJUCE_MODULE_AVAILABLE_juce_core=1]] [[-DJUCE_MODULE_AVAILABLE_juce_cryptography=1]] [[-DJUCE_MODULE_AVAILABLE_juce_data_structures=1]] [[-DJUCE_MODULE_AVAILABLE_juce_dsp=1]] [[-DJUCE_MODULE_AVAILABLE_juce_events=1]] [[-DJUCE_MODULE_AVAILABLE_juce_graphics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_gui_basics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_gui_extra=1]] [[-DJUCE_MODULE_AVAILABLE_juce_opengl=1]] [[-DJUCE_MODULE_AVAILABLE_juce_osc=1]] [[-DJUCE_MODULE_AVAILABLE_juce_product_unlocking=1]] [[-DJUCE_MODULE_AVAILABLE_juce_video=1]] [[-DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1]] [[-DJUCE_USE_MP3AUDIOFORMAT=1]] [[-DJUCE_PLUGINHOST_VST3=1]] [[-DJUCE_PLUGINHOST_LV2=1]] [[-DJUCE_ALLOW_STATIC_NULL_VARIABLES=0]] [[-DJUCE_STRICT_REFCOUNTEDPOINTER=1]] [[-DJUCE_USE_CAMERA=1]] [[-DJUCE_STANDALONE_APPLICATION=1]] [[-DJUCE_DEMO_RUNNER=1]] [[-DJUCE_UNIT_TESTS=1]] [[-DJUCER_ANDROIDSTUDIO_7F0E4A25=1]] [[-DJUCE_APP_VERSION=7.0.5]] [[-DJUCE_APP_VERSION_HEX=0x70005]] [[-DNDEBUG=1]])
+    add_definitions([[-DJUCE_DISPLAY_SPLASH_SCREEN=0]] [[-DJUCE_USE_DARK_SPLASH_SCREEN=1]] [[-DJUCE_PROJUCER_VERSION=0x70006]] [[-DJUCE_MODULE_AVAILABLE_juce_analytics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_basics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_devices=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_formats=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_processors=1]] [[-DJUCE_MODULE_AVAILABLE_juce_audio_utils=1]] [[-DJUCE_MODULE_AVAILABLE_juce_box2d=1]] [[-DJUCE_MODULE_AVAILABLE_juce_core=1]] [[-DJUCE_MODULE_AVAILABLE_juce_cryptography=1]] [[-DJUCE_MODULE_AVAILABLE_juce_data_structures=1]] [[-DJUCE_MODULE_AVAILABLE_juce_dsp=1]] [[-DJUCE_MODULE_AVAILABLE_juce_events=1]] [[-DJUCE_MODULE_AVAILABLE_juce_graphics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_gui_basics=1]] [[-DJUCE_MODULE_AVAILABLE_juce_gui_extra=1]] [[-DJUCE_MODULE_AVAILABLE_juce_opengl=1]] [[-DJUCE_MODULE_AVAILABLE_juce_osc=1]] [[-DJUCE_MODULE_AVAILABLE_juce_product_unlocking=1]] [[-DJUCE_MODULE_AVAILABLE_juce_video=1]] [[-DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1]] [[-DJUCE_USE_MP3AUDIOFORMAT=1]] [[-DJUCE_PLUGINHOST_VST3=1]] [[-DJUCE_PLUGINHOST_LV2=1]] [[-DJUCE_ALLOW_STATIC_NULL_VARIABLES=0]] [[-DJUCE_STRICT_REFCOUNTEDPOINTER=1]] [[-DJUCE_USE_CAMERA=1]] [[-DJUCE_STANDALONE_APPLICATION=1]] [[-DJUCE_DEMO_RUNNER=1]] [[-DJUCE_UNIT_TESTS=1]] [[-DJUCER_ANDROIDSTUDIO_7F0E4A25=1]] [[-DJUCE_APP_VERSION=7.0.6]] [[-DJUCE_APP_VERSION_HEX=0x70006]] [[-DNDEBUG=1]])
 else()
     message( FATAL_ERROR "No matching build-configuration found." )
 endif()
@@ -1059,12 +1059,10 @@ add_library( ${BINARY_NAME}
     "../../../../../modules/juce_core/native/juce_CFHelpers_mac.h"
     "../../../../../modules/juce_core/native/juce_CommonFile_linux.cpp"
     "../../../../../modules/juce_core/native/juce_ComSmartPtr_windows.h"
-    "../../../../../modules/juce_core/native/juce_FileDescriptor_linux.cpp"
     "../../../../../modules/juce_core/native/juce_Files_android.cpp"
     "../../../../../modules/juce_core/native/juce_Files_linux.cpp"
     "../../../../../modules/juce_core/native/juce_Files_mac.mm"
     "../../../../../modules/juce_core/native/juce_Files_windows.cpp"
-    "../../../../../modules/juce_core/native/juce_HighResolutionTimerThread.h"
     "../../../../../modules/juce_core/native/juce_IPAddress_posix.h"
     "../../../../../modules/juce_core/native/juce_JNIHelpers_android.cpp"
     "../../../../../modules/juce_core/native/juce_JNIHelpers_android.h"
@@ -1077,8 +1075,6 @@ add_library( ${BINARY_NAME}
     "../../../../../modules/juce_core/native/juce_Network_windows.cpp"
     "../../../../../modules/juce_core/native/juce_ObjCHelpers_mac.h"
     "../../../../../modules/juce_core/native/juce_PlatformTimer_generic.cpp"
-    "../../../../../modules/juce_core/native/juce_PlatformTimer_linux.cpp"
-    "../../../../../modules/juce_core/native/juce_PlatformTimer_mac.mm"
     "../../../../../modules/juce_core/native/juce_PlatformTimer_windows.cpp"
     "../../../../../modules/juce_core/native/juce_PlatformTimerListener.h"
     "../../../../../modules/juce_core/native/juce_Registry_windows.cpp"
@@ -1932,8 +1928,8 @@ add_library( ${BINARY_NAME}
     "../../../../../modules/juce_gui_basics/windows/juce_TooltipWindow.h"
     "../../../../../modules/juce_gui_basics/windows/juce_TopLevelWindow.cpp"
     "../../../../../modules/juce_gui_basics/windows/juce_TopLevelWindow.h"
-    "../../../../../modules/juce_gui_basics/windows/juce_VBlankAttachement.cpp"
-    "../../../../../modules/juce_gui_basics/windows/juce_VBlankAttachement.h"
+    "../../../../../modules/juce_gui_basics/windows/juce_VBlankAttachment.cpp"
+    "../../../../../modules/juce_gui_basics/windows/juce_VBlankAttachment.h"
     "../../../../../modules/juce_gui_basics/windows/juce_WindowUtils.h"
     "../../../../../modules/juce_gui_basics/juce_gui_basics.cpp"
     "../../../../../modules/juce_gui_basics/juce_gui_basics.mm"
@@ -3120,12 +3116,10 @@ set_source_files_properties(
     "../../../../../modules/juce_core/native/juce_CFHelpers_mac.h"
     "../../../../../modules/juce_core/native/juce_CommonFile_linux.cpp"
     "../../../../../modules/juce_core/native/juce_ComSmartPtr_windows.h"
-    "../../../../../modules/juce_core/native/juce_FileDescriptor_linux.cpp"
     "../../../../../modules/juce_core/native/juce_Files_android.cpp"
     "../../../../../modules/juce_core/native/juce_Files_linux.cpp"
     "../../../../../modules/juce_core/native/juce_Files_mac.mm"
     "../../../../../modules/juce_core/native/juce_Files_windows.cpp"
-    "../../../../../modules/juce_core/native/juce_HighResolutionTimerThread.h"
     "../../../../../modules/juce_core/native/juce_IPAddress_posix.h"
     "../../../../../modules/juce_core/native/juce_JNIHelpers_android.cpp"
     "../../../../../modules/juce_core/native/juce_JNIHelpers_android.h"
@@ -3138,8 +3132,6 @@ set_source_files_properties(
     "../../../../../modules/juce_core/native/juce_Network_windows.cpp"
     "../../../../../modules/juce_core/native/juce_ObjCHelpers_mac.h"
     "../../../../../modules/juce_core/native/juce_PlatformTimer_generic.cpp"
-    "../../../../../modules/juce_core/native/juce_PlatformTimer_linux.cpp"
-    "../../../../../modules/juce_core/native/juce_PlatformTimer_mac.mm"
     "../../../../../modules/juce_core/native/juce_PlatformTimer_windows.cpp"
     "../../../../../modules/juce_core/native/juce_PlatformTimerListener.h"
     "../../../../../modules/juce_core/native/juce_Registry_windows.cpp"
@@ -3993,8 +3985,8 @@ set_source_files_properties(
     "../../../../../modules/juce_gui_basics/windows/juce_TooltipWindow.h"
     "../../../../../modules/juce_gui_basics/windows/juce_TopLevelWindow.cpp"
     "../../../../../modules/juce_gui_basics/windows/juce_TopLevelWindow.h"
-    "../../../../../modules/juce_gui_basics/windows/juce_VBlankAttachement.cpp"
-    "../../../../../modules/juce_gui_basics/windows/juce_VBlankAttachement.h"
+    "../../../../../modules/juce_gui_basics/windows/juce_VBlankAttachment.cpp"
+    "../../../../../modules/juce_gui_basics/windows/juce_VBlankAttachment.h"
     "../../../../../modules/juce_gui_basics/windows/juce_WindowUtils.h"
     "../../../../../modules/juce_gui_basics/juce_gui_basics.cpp"
     "../../../../../modules/juce_gui_basics/juce_gui_basics.mm"
