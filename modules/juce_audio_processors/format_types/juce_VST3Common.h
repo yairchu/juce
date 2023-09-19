@@ -1179,6 +1179,8 @@ private:
 };
 
 //==============================================================================
+// We have to trust that Steinberg won't double-delete
+// NOLINTBEGIN(clang-analyzer-cplusplus.NewDelete)
 template <class ObjectType>
 class VSTComSmartPtr
 {
@@ -1221,6 +1223,7 @@ public:
 private:
     ObjectType* source;
 };
+// NOLINTEND(clang-analyzer-cplusplus.NewDelete)
 
 //==============================================================================
 /*  This class stores a plugin's preferred MIDI mappings.

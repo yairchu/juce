@@ -25,8 +25,6 @@
 
 namespace juce
 {
-namespace dsp
-{
 
 #ifndef DOXYGEN
 
@@ -136,8 +134,8 @@ public:
         static constexpr auto vtableForCallable = detail::makeVtable<Fn, Ret, Args...>();
         vtable = &vtableForCallable;
 
-        auto* ptr = new (&storage) Fn (std::forward<Callable> (callable));
-        jassertquiet ((void*) ptr == (void*) &storage);
+        [[maybe_unused]] auto* ptr = new (&storage) Fn (std::forward<Callable> (callable));
+        jassert ((void*) ptr == (void*) &storage);
     }
 
     /** Move constructor. */
@@ -237,5 +235,4 @@ template <size_t len, typename T>
 bool operator== (std::nullptr_t, const FixedSizeFunction<len, T>& fn) { return ! (fn != nullptr); }
 
 
-}
 }

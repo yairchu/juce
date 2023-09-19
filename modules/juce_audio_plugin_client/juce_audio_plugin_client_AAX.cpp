@@ -124,9 +124,9 @@ namespace AAXClasses
         return result;
     }
 
-    static void check (AAX_Result result)
+    static void check ([[maybe_unused]] AAX_Result result)
     {
-        jassertquiet (result == AAX_SUCCESS);
+        jassert (result == AAX_SUCCESS);
     }
 
     // maps a channel index of an AAX format to an index of a juce format
@@ -1803,8 +1803,8 @@ namespace AAXClasses
                                                    AudioProcessor::BusesLayout& fullLayout)
         {
             auto currentLayout = getDefaultLayout (p, true);
-            bool success = p.checkBusesLayoutSupported (currentLayout);
-            jassertquiet (success);
+            [[maybe_unused]] bool success = p.checkBusesLayoutSupported (currentLayout);
+            jassert (success);
 
             auto numInputBuses  = p.getBusCount (true);
             auto numOutputBuses = p.getBusCount (false);
@@ -2137,7 +2137,7 @@ namespace AAXClasses
 
         bool getMainBusFormats (AudioChannelSet& inputSet, AudioChannelSet& outputSet)
         {
-            auto& audioProcessor = getPluginInstance();
+            [[maybe_unused]] auto& audioProcessor = getPluginInstance();
 
            #if JucePlugin_IsMidiEffect
             // MIDI effect plug-ins do not support any audio channels
@@ -2820,8 +2820,8 @@ namespace AAXClasses
                                   Array<int32>& pluginIds,
                                   const int numMeters)
     {
-        auto aaxInputFormat  = getFormatForAudioChannelSet (fullLayout.getMainInputChannelSet(),  false);
-        auto aaxOutputFormat = getFormatForAudioChannelSet (fullLayout.getMainOutputChannelSet(), false);
+        [[maybe_unused]] auto aaxInputFormat  = getFormatForAudioChannelSet (fullLayout.getMainInputChannelSet(),  false);
+        [[maybe_unused]] auto aaxOutputFormat = getFormatForAudioChannelSet (fullLayout.getMainOutputChannelSet(), false);
 
        #if JucePlugin_IsSynth
         if (aaxInputFormat == AAX_eStemFormat_None)
@@ -2992,8 +2992,8 @@ namespace AAXClasses
         auto aaxType = isEnhancedAudioSuite ? AudioProcessor::wrapperType_AudioSuite : AudioProcessor::wrapperType_AAX;
 
         auto plugin = createPluginFilterOfType (aaxType);
-        auto numInputBuses  = plugin->getBusCount (true);
-        auto numOutputBuses = plugin->getBusCount (false);
+        [[maybe_unused]] auto numInputBuses  = plugin->getBusCount (true);
+        [[maybe_unused]] auto numOutputBuses = plugin->getBusCount (false);
 
         auto pluginNames = plugin->getAlternateDisplayNames();
 
