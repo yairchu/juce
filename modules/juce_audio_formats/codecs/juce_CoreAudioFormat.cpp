@@ -622,7 +622,7 @@ static AudioFormatID formatForFileType (AudioFileTypeID fileType)
 static void fillAudioStreamBasicDescription (AudioStreamBasicDescription* fmt)
 {
     UInt32 sz = sizeof (AudioStreamBasicDescription);
-    OSStatus e = AudioFormatGetProperty (kAudioFormatProperty_FormatInfo, 0, nullptr, &sz, fmt);
+    OSStatus e [[maybe_unused]] = AudioFormatGetProperty (kAudioFormatProperty_FormatInfo, 0, nullptr, &sz, fmt);
     jassertquiet (e == noErr);
 }
 
@@ -640,7 +640,7 @@ public:
             fmt.mSampleRate = sr;
             fmt.mChannelsPerFrame = numberOfChannels;
             fmt.mFormatID = formatForFileType (fileType);
-            OSStatus e = AudioFileInitializeWithCallbacks (
+            OSStatus e [[maybe_unused]] = AudioFileInitializeWithCallbacks (
                 this,
                 &readCallback,
                 &writeCallback,
@@ -664,7 +664,7 @@ public:
             fmt.mBitsPerChannel = sizeof (float) * 8;
             fmt.mBytesPerFrame = sizeof (float);
             fillAudioStreamBasicDescription (&fmt);
-            OSStatus e =
+            OSStatus e [[maybe_unused]] =
                 ExtAudioFileSetProperty (audioFileRef, kExtAudioFileProperty_ClientDataFormat, sizeof (fmt), &fmt);
             jassertquiet (e == noErr);
         }
@@ -736,7 +736,7 @@ private:
             FileInputStream in (file->getFile());
             jassert (in.openedOk());
             {
-                bool setPositionOK = in.setPosition (inPosition);
+                bool setPositionOK [[maybe_unused]] = in.setPosition (inPosition);
                 jassertquiet (setPositionOK);
             }
             *actualCount = (UInt32) in.read (buffer, (int) requestCount);
@@ -768,9 +768,9 @@ private:
 
         if (auto* out = dynamic_cast<FileOutputStream*> (self->output))
         {
-            bool setPositionOK = out->setPosition (size);
+            bool setPositionOK [[maybe_unused]] = out->setPosition (size);
             jassertquiet (setPositionOK);
-            Result truncatedOK = out->truncate();
+            Result truncatedOK [[maybe_unused]] = out->truncate();
             jassertquiet (truncatedOK);
         }
         return noErr;
