@@ -54,7 +54,7 @@
 #include "../Assets/DemoUtilities.h"
 
 //==============================================================================
-class MaterialLookAndFeel : public LookAndFeel_V4
+class MaterialLookAndFeel final : public LookAndFeel_V4
 {
 public:
     //==============================================================================
@@ -106,7 +106,7 @@ public:
     //==============================================================================
     void drawLinearSlider (Graphics& g, int x, int y, int width, int height,
                            float sliderPos, float minSliderPos, float maxSliderPos,
-                           const Slider::SliderStyle style, Slider& slider) override
+                           Slider::SliderStyle style, Slider& slider) override
     {
         ignoreUnused (style, minSliderPos, maxSliderPos);
 
@@ -178,8 +178,8 @@ public:
 };
 
 //==============================================================================
-class AUv3SynthEditor   : public AudioProcessorEditor,
-                          private Timer
+class AUv3SynthEditor final : public AudioProcessorEditor,
+                              private Timer
 {
 public:
     //==============================================================================
@@ -309,7 +309,7 @@ private:
 };
 
 //==============================================================================
-class AUv3SynthProcessor : public AudioProcessor
+class AUv3SynthProcessor final : public AudioProcessor
 {
 public:
     AUv3SynthProcessor ()
