@@ -406,8 +406,8 @@ public:
 
                #if JUCE_AUDIOWORKGROUP_TYPES_AVAILABLE
                 case kAudioUnitProperty_RenderContextObserver:
-                    outWritable = false;
                     outDataSize = sizeof (AURenderContextObserver);
+                    outWritable = false;
                     return noErr;
                #endif
 
@@ -582,14 +582,15 @@ public:
                #if JUCE_AUDIOWORKGROUP_TYPES_AVAILABLE
                 case kAudioUnitProperty_RenderContextObserver:
                 {
-                    if (auto* ptr = (AURenderContextObserver*) outData)
+                    AURenderContextObserver callback = ^(const AudioUnitRenderContext* context)
                     {
-                        *ptr = contextObserver;
-                        return noErr;
-                    }
+                        jassert (juceFilter != nullptr);
+                        const auto workgroup = makeRealAudioWorkgroup (context != nullptr ? context->workgroup : nullptr);
+                        juceFilter->audioWorkgroupContextChanged (workgroup);
+                    };
 
-                    jassertfalse;
-                    break;
+                    *(AURenderContextObserver*) outData = [callback copy];
+                    return noErr;
                 }
                #endif
 
@@ -1568,11 +1569,11 @@ public:
 
             for (int i = 0; i < numPrograms; ++i)
             {
-                String name (juceFilter->getProgramName(i));
+                String name (juceFilter->getProgramName (i));
                 if (name.isEmpty())
                     name = "Untitled";
 
-                AUPreset& p = presetsArray.getReference(i);
+                AUPreset& p = presetsArray.getReference (i);
                 p.presetNumber = i;
                 p.presetName = name.toCFString();
 
@@ -1716,7 +1717,7 @@ public:
         void resizeHostWindow()
         {
             [CATransaction begin];
-            [CATransaction setValue:(id) kCFBooleanTrue forKey:kCATransactionDisableActions];
+            [CATransaction setValue: (id) kCFBooleanTrue forKey:kCATransactionDisableActions];
 
             auto rect = convertToHostBounds (makeNSRect (lastBounds));
             auto* view = (NSView*) getWindowHandle();
@@ -1742,7 +1743,7 @@ public:
     {
         for (int i = activeUIs.size(); --i >= 0;)
         {
-            id ui = (id) activeUIs.getUnchecked(i);
+            id ui = (id) activeUIs.getUnchecked (i);
 
             if (JuceUIViewClass::getAU (ui) == this)
                 JuceUIViewClass::deleteEditor (ui);
@@ -1772,11 +1773,11 @@ public:
 
             if (editorComp != nullptr)
             {
-                if (editorComp->getChildComponent(0) != nullptr
+                if (editorComp->getChildComponent (0) != nullptr
                      && activePlugins.contains (getAU (self))) // plugin may have been deleted before the UI
                 {
                     AudioProcessor* const filter = getIvar<AudioProcessor*> (self, "filter");
-                    filter->editorBeingDeleted ((AudioProcessorEditor*) editorComp->getChildComponent(0));
+                    filter->editorBeingDeleted ((AudioProcessorEditor*) editorComp->getChildComponent (0));
                 }
 
                 editorComp = nullptr;
@@ -2037,17 +2038,6 @@ private:
     int totalInChannels, totalOutChannels;
     HeapBlock<bool> pulledSucceeded;
     HeapBlock<MIDIPacketList> packetList { packetListBytes, 1 };
-
-   #if JUCE_AUDIOWORKGROUP_TYPES_AVAILABLE
-    ObjCBlock<AURenderContextObserver> contextObserver { ^(const AudioUnitRenderContext* context)
-    {
-        if (juceFilter == nullptr)
-            return;
-
-        auto workgroup = makeRealAudioWorkgroup (context != nullptr ? context->workgroup : nullptr);
-        juceFilter->audioWorkgroupContextChanged (std::move (workgroup));
-    } };
-   #endif
 
     ThreadLocalValue<bool> inParameterChangedCallback;
 
@@ -2565,7 +2555,7 @@ private:
     void clearPresetsArray() const
     {
         for (int i = presetsArray.size(); --i >= 0;)
-            CFRelease (presetsArray.getReference(i).presetName);
+            CFRelease (presetsArray.getReference (i).presetName);
 
         presetsArray.clear();
     }

@@ -474,7 +474,13 @@ public:
             pa.mScope    = kAudioObjectPropertyScopeWildcard;
             pa.mElement  = juceAudioObjectPropertyElementMain;
 
-            return makeRealAudioWorkgroup (audioObjectGetProperty<os_workgroup_t> (deviceID, pa).value_or (nullptr));
+            if (auto* workgroup = audioObjectGetProperty<os_workgroup_t> (deviceID, pa).value_or (nullptr))
+            {
+                ScopeGuard scope { [&] { os_release (workgroup); } };
+                return makeRealAudioWorkgroup (workgroup);
+            }
+
+            return {};
         }();
        #endif
 
@@ -1497,7 +1503,7 @@ public:
           outputWrapper (*this, std::move (outputDevice), false)
     {
         if (getAvailableSampleRates().isEmpty())
-            lastError = TRANS("The input and output devices don't share a common sample rate!");
+            lastError = TRANS ("The input and output devices don't share a common sample rate!");
     }
 
     ~AudioIODeviceCombiner() override
@@ -1746,7 +1752,7 @@ public:
                 if (! forwarder.encounteredError() && newCallback != nullptr)
                     newCallback->audioDeviceAboutToStart (this);
                 else if (lastError.isEmpty())
-                    lastError = TRANS("Failed to initialise all requested devices.");
+                    lastError = TRANS ("Failed to initialise all requested devices.");
             }
 
             const ScopedLock sl (callbackLock);
