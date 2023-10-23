@@ -27,9 +27,7 @@
   #undef None // Defined in X11/X.h, clashes with struct None below
 #endif
 
-namespace juce
-{
-namespace dsp
+namespace juce::dsp
 {
 
 //==============================================================================
@@ -317,5 +315,4 @@ private:
     SampleType alpha = 0.0;
 };
 
-} // namespace dsp
-} // namespace juce
+} // namespace juce::dsp
