@@ -847,7 +847,7 @@ namespace Visuals
 }
 
 //================================= X11 - Bitmap ===============================
-class XBitmapImage  : public ImagePixelData
+class XBitmapImage final : public ImagePixelData
 {
 public:
     explicit XBitmapImage (XImage* image)
