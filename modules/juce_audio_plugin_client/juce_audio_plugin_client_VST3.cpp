@@ -1929,6 +1929,7 @@ private:
                #endif
 
                 component = nullptr;
+                lastReportedSize.reset();
             }
 
            #if JUCE_LINUX || JUCE_BSD
@@ -1940,32 +1941,33 @@ private:
 
         tresult PLUGIN_API onSize (ViewRect* newSize) override
         {
-            if (newSize != nullptr)
+            if (newSize == nullptr)
             {
-                rect = convertFromHostBounds (*newSize);
-
-                if (component != nullptr)
-                {
-                    component->setSize (rect.getWidth(), rect.getHeight());
-
-                   #if JUCE_MAC
-                    if (cubase10Workaround != nullptr)
-                    {
-                        cubase10Workaround->triggerAsyncUpdate();
-                    }
-                    else
-                   #endif
-                    {
-                        if (auto* peer = component->getPeer())
-                            peer->updateBounds();
-                    }
-                }
-
-                return kResultTrue;
+                jassertfalse;
+                return kResultFalse;
             }
 
-            jassertfalse;
-            return kResultFalse;
+            lastReportedSize.reset();
+            rect = convertFromHostBounds (*newSize);
+
+            if (component == nullptr)
+                return kResultTrue;
+
+            component->setSize (rect.getWidth(), rect.getHeight());
+
+           #if JUCE_MAC
+            if (cubase10Workaround != nullptr)
+            {
+                cubase10Workaround->triggerAsyncUpdate();
+            }
+            else
+           #endif
+            {
+                if (auto* peer = component->getPeer())
+                    peer->updateBounds();
+            }
+
+            return kResultTrue;
         }
 
         tresult PLUGIN_API getSize (ViewRect* size) override
@@ -1975,15 +1977,16 @@ private:
                 return kResultFalse;
            #endif
 
-            if (size != nullptr && component != nullptr)
-            {
-                auto editorBounds = component->getSizeToContainChild();
+            if (size == nullptr || component == nullptr)
+                return kResultFalse;
 
-                *size = convertToHostBounds ({ 0, 0, editorBounds.getWidth(), editorBounds.getHeight() });
-                return kResultTrue;
-            }
+            const auto editorBounds = component->getSizeToContainChild();
+            const auto sizeToReport = lastReportedSize.has_value()
+                                    ? *lastReportedSize
+                                    : convertToHostBounds ({ 0, 0, editorBounds.getWidth(), editorBounds.getHeight() });
 
-            return kResultFalse;
+            lastReportedSize = *size = sizeToReport;
+            return kResultTrue;
         }
 
         tresult PLUGIN_API canResize() override
@@ -2360,6 +2363,7 @@ private:
 
         //==============================================================================
         ScopedJuceInitialiser_GUI libraryInitialiser;
+        std::optional<ViewRect> lastReportedSize;
 
        #if JUCE_LINUX || JUCE_BSD
         SharedResourcePointer<detail::MessageThread> messageThread;
@@ -4058,33 +4062,38 @@ public:
         auto filter = createPluginFilterOfType (AudioProcessor::WrapperType::wrapperType_VST3);
         auto* extensions = filter->getVST3ClientExtensions();
 
-        if (extensions == nullptr || extensions->getCompatibleClasses().empty())
-            return kResultFalse;
-
-        DynamicObject::Ptr object { new DynamicObject };
-
-        // New iid is the ID of our Audio Effect class
-        object->setProperty ("New", String (VST3::UID (JuceVST3Component::iid).toString()));
-        object->setProperty ("Old", [&]
+        const auto compatibilityObjects = [&]
         {
-            Array<var> oldArray;
+            if (extensions == nullptr || extensions->getCompatibleClasses().empty())
+                return Array<var>();
 
-            for (const auto& uid : extensions->getCompatibleClasses())
+            DynamicObject::Ptr object { new DynamicObject };
+
+            // New iid is the ID of our Audio Effect class
+            object->setProperty ("New", String (VST3::UID (JuceVST3Component::iid).toString()));
+            object->setProperty ("Old", [&]
             {
-                // All UIDs returned from getCompatibleClasses should be 32 characters long
-                jassert (uid.length() == 32);
+                Array<var> oldArray;
 
-                // All UIDs returned from getCompatibleClasses should be in hex notation
-                jassert (uid.containsOnly ("ABCDEF0123456789"));
+                for (const auto& uid : extensions->getCompatibleClasses())
+                {
+                    // All UIDs returned from getCompatibleClasses should be 32 characters long
+                    jassert (uid.length() == 32);
 
-                oldArray.add (uid);
-            }
+                    // All UIDs returned from getCompatibleClasses should be in hex notation
+                    jassert (uid.containsOnly ("ABCDEF0123456789"));
 
-            return oldArray;
-        }());
+                    oldArray.add (uid);
+                }
+
+                return oldArray;
+            }());
+
+            return Array<var> { object.get() };
+        }();
 
         MemoryOutputStream memory;
-        JSON::writeToStream (memory, var { Array<var> { object.get() } });
+        JSON::writeToStream (memory, var { compatibilityObjects });
         return stream->write (memory.getMemoryBlock().getData(), (Steinberg::int32) memory.getDataSize());
     }
 
