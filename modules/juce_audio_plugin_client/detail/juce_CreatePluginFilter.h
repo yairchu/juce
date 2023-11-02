@@ -38,9 +38,10 @@ inline std::unique_ptr<AudioProcessor> createPluginFilterOfType (AudioProcessor:
     // your createPluginFilter() method must return an object!
     jassert (pluginInstance != nullptr && pluginInstance->wrapperType == type);
 
-   #if JucePlugin_Enable_ARA
-    jassert (dynamic_cast<juce::AudioProcessorARAExtension*> (pluginInstance.get()) != nullptr);
-   #endif
+    // SR: Commented-out to allow disabling RTTI
+//   #if JucePlugin_Enable_ARA
+//    jassert (dynamic_cast<juce::AudioProcessorARAExtension*> (pluginInstance.get()) != nullptr);
+//   #endif
 
     return pluginInstance;
 }
