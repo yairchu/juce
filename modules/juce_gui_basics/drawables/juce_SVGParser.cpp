@@ -1106,7 +1106,7 @@ private:
                 {
                     std::vector<std::tuple<String, float, float>> result;
 
-                    if (xCoords.size() == 1)
+                    if (xCoords.size() <= 1)
                     {
                         result.emplace_back (fullText, xCoords[0], yCoords[0]);
                         return result;
