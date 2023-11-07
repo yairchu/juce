@@ -2892,7 +2892,7 @@ bool JUCE_CALLTYPE Component::isMouseButtonDownAnywhere() noexcept
 
 Point<int> Component::getMouseXYRelative() const
 {
-    return getLocalPoint (nullptr, Desktop::getMousePosition());
+    return getLocalPoint (nullptr, Desktop::getMousePositionFloat()).roundToInt();
 }
 
 //==============================================================================

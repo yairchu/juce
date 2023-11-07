@@ -160,6 +160,9 @@
     <ClCompile Include="..\..\Source\BinaryData\Templates\jucer_AudioPluginARADocumentControllerTemplate.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\Source\BinaryData\Templates\jucer_AudioPluginARAEditorTemplate.cpp">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\Source\BinaryData\Templates\jucer_AudioPluginARAPlaybackRendererTemplate.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
@@ -285,6 +288,9 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\..\..\modules\juce_core\containers\juce_DynamicObject.cpp">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\modules\juce_core\containers\juce_Enumerate_test.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\..\..\modules\juce_core\containers\juce_FixedSizeFunction_test.cpp">
@@ -1648,6 +1654,8 @@
     <ClInclude Include="..\..\Source\BinaryData\Templates\jucer_AudioComponentSimpleTemplate.h"/>
     <ClInclude Include="..\..\Source\BinaryData\Templates\jucer_AudioComponentTemplate.h"/>
     <ClInclude Include="..\..\Source\BinaryData\Templates\jucer_AudioPluginARADocumentControllerTemplate.h"/>
+    <ClInclude Include="..\..\Source\BinaryData\Templates\jucer_AudioPluginARAEditorTemplate.h"/>
+    <ClInclude Include="..\..\Source\BinaryData\Templates\jucer_AudioPluginARAFilterTemplate.h"/>
     <ClInclude Include="..\..\Source\BinaryData\Templates\jucer_AudioPluginARAPlaybackRendererTemplate.h"/>
     <ClInclude Include="..\..\Source\BinaryData\Templates\jucer_AudioPluginEditorTemplate.h"/>
     <ClInclude Include="..\..\Source\BinaryData\Templates\jucer_AudioPluginFilterTemplate.h"/>
@@ -1794,6 +1802,7 @@
     <ClInclude Include="..\..\..\..\modules\juce_core\containers\juce_ArrayBase.h"/>
     <ClInclude Include="..\..\..\..\modules\juce_core\containers\juce_DynamicObject.h"/>
     <ClInclude Include="..\..\..\..\modules\juce_core\containers\juce_ElementComparator.h"/>
+    <ClInclude Include="..\..\..\..\modules\juce_core\containers\juce_Enumerate.h"/>
     <ClInclude Include="..\..\..\..\modules\juce_core\containers\juce_FixedSizeFunction.h"/>
     <ClInclude Include="..\..\..\..\modules\juce_core\containers\juce_HashMap.h"/>
     <ClInclude Include="..\..\..\..\modules\juce_core\containers\juce_LinkedListPointer.h"/>
