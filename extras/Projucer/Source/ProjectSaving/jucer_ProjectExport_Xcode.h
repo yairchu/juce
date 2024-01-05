@@ -2229,7 +2229,7 @@ private:
                 && project.getEnabledModules().isModuleEnabled ("juce_audio_plugin_client"))
             {
                 const auto path = rebaseFromProjectFolderToBuildTarget (getLV2HelperProgramSource());
-                addFile (FileOptions().withRelativePath ({ expandPath (path.toUnixStyle()), path.getRoot() })
+                addFile (FileOptions().withRelativePath ({ path.toUnixStyle(), path.getRoot() })
                                       .withSkipPCHEnabled (true)
                                       .withCompilationEnabled (true)
                                       .withInhibitWarningsEnabled (true)
@@ -2241,7 +2241,7 @@ private:
                 && project.getEnabledModules().isModuleEnabled ("juce_audio_plugin_client"))
             {
                 const auto path = rebaseFromProjectFolderToBuildTarget (getVST3HelperProgramSource());
-                addFile (FileOptions().withRelativePath ({ expandPath (path.toUnixStyle()), path.getRoot() })
+                addFile (FileOptions().withRelativePath ({ path.toUnixStyle(), path.getRoot() })
                                       .withSkipPCHEnabled (true)
                                       .withCompilationEnabled (true)
                                       .withInhibitWarningsEnabled (true)
