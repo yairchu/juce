@@ -89,6 +89,12 @@ static_assert (AAX_SDK_CURRENT_REVISION >= AAX_SDK_2p4p0_REVISION, "JUCE require
 #include <AAX_Assert.h>
 #include <AAX_TransportTypes.h>
 
+#if JucePlugin_Enable_ARA
+#include <AAX_VARABinding.h>
+#include <ARAAAX.h>
+#include <ARAAAX_UIDs.h>
+#endif
+
 #if JucePlugin_EnhancedAudioSuite
 #include <AAX_CHostProcessor.h>
 #include <AAX_VHostProcessorDelegate.h>
@@ -752,6 +758,14 @@ namespace AAXClasses
                 g.fillAll (Colours::black);
             }
 
+#if JucePlugin_Enable_ARA
+            void resized() override
+            {
+                if (auto* araEditor = dynamic_cast<juce::AudioProcessorEditorARAExtension*> (pluginEditor.get()))
+                    pluginEditor->setBounds (getLocalBounds());
+            }
+#endif
+
             template <typename MethodType>
             void callMouseMethod (const MouseEvent& e, MethodType method)
             {
@@ -1168,6 +1182,14 @@ namespace AAXClasses
             return new JuceAAX_Processor();
         }
 
+#if JucePlugin_Enable_ARA
+        AAX_Result Initialize (IACFUnknown* iController) override
+        {
+            araBinding.reset (new ARA::AAX_VARABinding (iController));
+            return AAX_CEffectParameters::Initialize (iController);
+        }
+#endif
+
         AAX_Result Uninitialize() override
         {
             cancelPendingUpdate();
@@ -1189,15 +1211,65 @@ namespace AAXClasses
             cancelPendingUpdate();
             check (Controller()->GetSampleRate (&sampleRate));
             processingSidechainChange = false;
+#if JucePlugin_Enable_ARA
+            auto err = trySetupARA();
+            if (err != AAX_SUCCESS)
+                return err;
+            err = preparePlugin();
+#else
             auto err = preparePlugin();
-
+#endif
             if (err != AAX_SUCCESS)
                 return err;
 
-            addAudioProcessorParameters();
-
+#if JucePlugin_Enable_ARA
+            if (! isARA)
+            {
+                // allow parameters only on non-ARA extensions
+#endif
+                addAudioProcessorParameters();
+#if JucePlugin_Enable_ARA
+            }
+#endif
             return AAX_SUCCESS;
         }
+
+#if JucePlugin_Enable_ARA
+        AAX_Result trySetupARA()
+        {
+            AAX_Result result = AAX_SUCCESS;
+
+            ARA::ARAPlugInInstanceRoleFlags knownRoles = 0;
+            const AAX_Result err = araBinding->GetInstanceRoleFlags (&knownRoles, &assignedARARoles);
+
+            // If no ARA roles provided - work as a regular AAX plug-in.
+            if (err != AAX_SUCCESS)
+                return AAX_SUCCESS;
+
+            assignedARARoles &= (ARA::kARAPlaybackRendererRole | ARA::kARAEditorRendererRole | ARA::kARAEditorViewRole);
+            if (assignedARARoles)
+            {
+                result = araBinding->GetDocumentController (&mDocumentControllerRef);
+
+                if (result != AAX_SUCCESS)
+                    return result;
+
+                AudioProcessorARAExtension* araAudioProcessorExtension =
+                    dynamic_cast<AudioProcessorARAExtension*> (pluginInstance.get());
+                if (! araAudioProcessorExtension)
+                    return AAX_ERROR_NULL_OBJECT;
+
+                auto* const plugInExtensionInstance =
+                    araAudioProcessorExtension->bindToARA (mDocumentControllerRef, knownRoles, assignedARARoles);
+                if (! plugInExtensionInstance)
+                    return AAX_ERROR_NULL_OBJECT;
+                result = araBinding->SetPlugInExtensionInstance (plugInExtensionInstance);
+            }
+            isARA = result == AAX_SUCCESS;
+
+            return result;
+        }
+#endif
 
         AAX_Result GetNumberOfChunks (int32_t* numChunks) const override
         {
@@ -2333,20 +2405,36 @@ namespace AAXClasses
             {
                 auto& i = **iter;
 
-                int sideChainBufferIdx = i.pluginInstance->parameters.hasSidechain && i.sideChainBuffers != nullptr
-                                             ? static_cast<int> (*i.sideChainBuffers) : -1;
+#if JucePlugin_Enable_ARA
+                const auto isARAExtension =
+                    dynamic_cast<const AudioProcessorARAExtension*> (&i.pluginInstance->parameters.getPluginInstance())
+                    != nullptr;
+#else
+                constexpr auto isARAExtension = false;
+#endif
+                int sideChainBufferIdx =
+                    ! isARAExtension && i.pluginInstance->parameters.hasSidechain && i.sideChainBuffers != nullptr
+                        ? static_cast<int> (*i.sideChainBuffers)
+                        : -1;
 
                 // sidechain index of zero is an invalid index
                 if (sideChainBufferIdx <= 0)
                     sideChainBufferIdx = -1;
 
                 auto numMeters = i.pluginInstance->parameters.aaxMeters.size();
-                float* const meterTapBuffers = (i.meterTapBuffers != nullptr && numMeters > 0 ? *i.meterTapBuffers : nullptr);
+                float* const meterTapBuffers =
+                    isARAExtension ? nullptr
+                                   : (i.meterTapBuffers != nullptr && numMeters > 0 ? *i.meterTapBuffers : nullptr);
 
-                i.pluginInstance->parameters.process (i.inputChannels, i.outputChannels, sideChainBufferIdx,
-                                                      *(i.bufferSize), *(i.bypass) != 0,
-                                                      getMidiNodeIn (i), getMidiNodeOut (i),
-                                                      meterTapBuffers);
+                i.pluginInstance->parameters.process (
+                    i.inputChannels,
+                    i.outputChannels,
+                    sideChainBufferIdx,
+                    *(i.bufferSize),
+                    isARAExtension ? false : *(i.bypass) != 0,
+                    getMidiNodeIn (i),
+                    getMidiNodeOut (i),
+                    meterTapBuffers);
             }
         }
 
@@ -2643,6 +2731,13 @@ namespace AAXClasses
         LegacyAudioParametersWrapper juceParameters;
         std::unique_ptr<AudioProcessorParameter> ownedBypassParameter;
 
+#if JucePlugin_Enable_ARA
+        ARA::ARAPlugInInstanceRoleFlags assignedARARoles;
+        ARA::ARADocumentControllerRef mDocumentControllerRef;
+        std::unique_ptr<ARA::AAX_VARABinding> araBinding;
+        bool isARA = false;
+#endif
+
         Array<AudioProcessorParameter*> aaxMeters;
 
         struct ChunkMemoryBlock
@@ -2812,6 +2907,13 @@ namespace AAXClasses
     }
 #endif // JucePlugin_EnhancedAudioSuite
 
+#if JucePlugin_Enable_ARA
+    static const ARA::ARAFactory* getFactory()
+    {
+        return createARAFactory();
+    }
+#endif
+
     static void createDescriptor (AAX_IComponentDescriptor& desc,
                                   const AudioProcessor::BusesLayout& fullLayout,
                                   AudioProcessor& processor,
@@ -2901,6 +3003,15 @@ namespace AAXClasses
                                  extensions.getPluginIDForMainBusConfig (fullLayout.getMainInputChannelSet(),
                                                                          fullLayout.getMainOutputChannelSet(),
                                                                          true));
+       #endif
+
+       #if JucePlugin_Enable_ARA
+        // ARA playback renderers need transport information
+        properties->AddProperty (AAX_eProperty_UsesTransport, true);
+        // ARA data must be shared with renderers
+        properties->AddProperty (AAX_eProperty_Constraint_Topology, AAX_eConstraintTopology_Monolithic);
+        // ARA factory
+        properties->AddPointerProperty (ARA::AAX_eProperty_ARAFactoryPointer, getFactory());
        #endif
 
        #if JucePlugin_AAXDisableMultiMono

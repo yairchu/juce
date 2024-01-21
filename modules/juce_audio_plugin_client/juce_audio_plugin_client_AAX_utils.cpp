@@ -98,6 +98,11 @@ JUCE_BEGIN_IGNORE_WARNINGS_MSVC (6001 6053 4996 5033 4068 4996)
 #include <Libs/AAXLibrary/source/AAX_Init.cpp>
 #include <Libs/AAXLibrary/source/AAX_SliderConversions.cpp>
 
+#if JucePlugin_Enable_ARA
+// From AAX SDK
+#include <AAX_VARABinding.cpp>
+#endif
+
 JUCE_END_IGNORE_WARNINGS_MSVC
 JUCE_END_IGNORE_WARNINGS_GCC_LIKE
 
