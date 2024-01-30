@@ -1793,7 +1793,6 @@ void XWindowSystem::setBounds (::Window windowH, Rectangle<int> newBounds, bool 
 }
 
 void XWindowSystem::startHostManagedResize (::Window windowH,
-                                            Point<int> mouseDown,
                                             ResizableBorderComponent::Zone zone)
 {
     const auto moveResize = XWindowSystemUtilities::Atoms::getIfExists (display, "_NET_WM_MOVERESIZE");
@@ -1806,6 +1805,7 @@ void XWindowSystem::startHostManagedResize (::Window windowH,
     X11Symbols::getInstance()->xUngrabPointer (display, CurrentTime);
 
     const auto root = X11Symbols::getInstance()->xRootWindow (display, X11Symbols::getInstance()->xDefaultScreen (display));
+    const auto mouseDown = getCurrentMousePosition();
 
     XClientMessageEvent clientMsg;
     clientMsg.display = display;
@@ -1813,8 +1813,8 @@ void XWindowSystem::startHostManagedResize (::Window windowH,
     clientMsg.type = ClientMessage;
     clientMsg.format = 32;
     clientMsg.message_type = moveResize;
-    clientMsg.data.l[0] = mouseDown.getX();
-    clientMsg.data.l[1] = mouseDown.getY();
+    clientMsg.data.l[0] = (long) mouseDown.x;
+    clientMsg.data.l[1] = (long) mouseDown.y;
     clientMsg.data.l[2] = [&]
     {
         // It's unclear which header is supposed to contain these
