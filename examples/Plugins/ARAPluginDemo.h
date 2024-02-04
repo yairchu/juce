@@ -2303,7 +2303,19 @@ public:
           AudioProcessorEditorARAExtension (&p)
     {
         if (auto* editorView = getARAEditorView())
+        {
             documentView = std::make_unique<DocumentView> (*editorView, p.playHeadState);
+            // Pro Tools doesn't call the processBlock for EditorView.
+            // For AAX, We need to poll it for the ARA EditorView to properly update.
+            if (p.wrapperType == juce::AudioProcessor::wrapperType_AAX)
+            {
+                editorPlayheadUpdates = std::make_unique<TimedCallback> ([playhead = p.getPlayHead(), &state = p.playHeadState]{
+                    if (playhead)
+                        state.update (playhead->getPosition());
+                });
+                editorPlayheadUpdates->startTimerHz (60);
+            }
+        }
 
         addAndMakeVisible (documentView.get());
 
@@ -2337,6 +2349,7 @@ public:
 
 private:
     std::unique_ptr<Component> documentView;
+    std::unique_ptr<TimedCallback> editorPlayheadUpdates;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARADemoPluginProcessorEditor)
 };
