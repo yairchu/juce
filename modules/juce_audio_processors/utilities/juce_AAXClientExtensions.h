@@ -51,6 +51,7 @@ struct AAXClientExtensions
     */
     virtual int32 getPluginIDForMainBusConfig (const AudioChannelSet& mainInputLayout,
                                                const AudioChannelSet& mainOutputLayout,
+                                               bool idForARA,
                                                bool idForAudioSuite) const;
 
     /** Returns an optional filename (including extension) for a page file to be used.

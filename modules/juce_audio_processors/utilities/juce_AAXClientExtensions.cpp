@@ -123,12 +123,13 @@ static const AudioChannelSet channelSets[] { AudioChannelSet::disabled(),
 
 int32 AAXClientExtensions::getPluginIDForMainBusConfig (const AudioChannelSet& mainInputLayout,
                                                         const AudioChannelSet& mainOutputLayout,
+                                                        bool idForARA,
                                                         bool idForAudioSuite) const
 {
     auto pluginId = [&]
     {
         auto opt = idForAudioSuite ? AAXPluginId::create ({ 'j', 'y', 'a', 'a' })
-                                   : AAXPluginId::create ({ 'j', 'c', 'a', 'a' });
+                                   : idForARA ? AAXPluginId::create ({ 'j', 'c', 'r', 'a' }) : AAXPluginId::create ({ 'j', 'c', 'a', 'a' });
         jassert (opt.has_value());
         return *opt;
     }();
@@ -193,6 +194,7 @@ static bool isValidAAXPluginId (int32 pluginId)
 
 static int32 getPluginIDForMainBusConfigJuce705 (const AudioChannelSet& mainInputLayout,
                                                  const AudioChannelSet& mainOutputLayout,
+                                                 bool idForARA
                                                  bool idForAudioSuite)
 {
     int uniqueFormatId = 0;
@@ -252,7 +254,7 @@ static int32 getPluginIDForMainBusConfigJuce705 (const AudioChannelSet& mainInpu
         uniqueFormatId = (uniqueFormatId << 8) | aaxFormatIndex;
     }
 
-    return (idForAudioSuite ? 0x6a796161 /* 'jyaa' */ : 0x6a636161 /* 'jcaa' */) + uniqueFormatId;
+    return (idForAudioSuite ? 0x6a796161 /* 'jyaa' */ : (idForARA ? 0x6a637261 : 0x6a636161 /* 'jcaa' */)) + uniqueFormatId;
 }
 
 class AAXClientExtensionsTests final : public UnitTest
