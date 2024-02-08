@@ -48,11 +48,17 @@ void ARARenderer::prepareToPlay ([[maybe_unused]] double sampleRate,
                                  [[maybe_unused]] AlwaysNonRealtime alwaysNonRealtime) {}
 
 //==============================================================================
-#if ARA_VALIDATE_API_CALLS
 void ARAPlaybackRenderer::addPlaybackRegion (ARA::ARAPlaybackRegionRef playbackRegionRef) noexcept
 {
     if (araExtension)
-        ARA_VALIDATE_API_STATE (! araExtension->isPrepared);
+    {
+      if (araExtension->isAAX)
+        araExtension->shouldInjectAAXPrepare = true;
+#if ARA_VALIDATE_API_CALLS
+        else
+            ARA_VALIDATE_API_STATE (! araExtension->isPrepared);
+#endif
+    }
 
     ARA::PlugIn::PlaybackRenderer::addPlaybackRegion (playbackRegionRef);
 }
@@ -60,11 +66,20 @@ void ARAPlaybackRenderer::addPlaybackRegion (ARA::ARAPlaybackRegionRef playbackR
 void ARAPlaybackRenderer::removePlaybackRegion (ARA::ARAPlaybackRegionRef playbackRegionRef) noexcept
 {
     if (araExtension)
-        ARA_VALIDATE_API_STATE (! araExtension->isPrepared);
+    {
+        if (araExtension->isAAX)
+        {
+            araExtension->shouldInjectAAXPrepare = true;
+            releaseResources();
+        }
+#if ARA_VALIDATE_API_CALLS
+        else
+            ARA_VALIDATE_API_STATE (! araExtension->isPrepared);
+#endif
+    }
 
     ARA::PlugIn::PlaybackRenderer::removePlaybackRegion (playbackRegionRef);
 }
-#endif
 
 bool ARAPlaybackRenderer::processBlock ([[maybe_unused]] AudioBuffer<float>& buffer,
                                         [[maybe_unused]] AudioProcessor::Realtime realtime,
