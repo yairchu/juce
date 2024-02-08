@@ -109,6 +109,8 @@ public:
 #if ARA_VALIDATE_API_CALLS
     bool isPrepared { false };
 #endif
+    bool shouldInjectAAXPrepare { false };
+    bool isAAX { false };
 
 protected:
     /** Implementation helper for AudioProcessor::getTailLengthSeconds().
