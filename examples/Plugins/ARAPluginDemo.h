@@ -1536,24 +1536,25 @@ class RegionSequenceView final : public Component,
                                  private ARAPlaybackRegion::Listener
 {
 public:
-    RegionSequenceView (ARAEditorView& editorView, TimeToViewScaling& scaling, ARARegionSequence& rs, WaveformCache& cache)
-        : araEditorView (editorView), timeToViewScaling (scaling), regionSequence (rs), waveformCache (cache)
-    {
-        regionSequence.addListener (this);
+  RegionSequenceView(ARAEditorView &editorView, TimeToViewScaling &scaling,
+                     ARARegionSequence &rs, WaveformCache &cache)
+      : araEditorView(editorView), timeToViewScaling(scaling),
+        regionSequence(&rs), waveformCache(cache) {
+        regionSequence->addListener(this);
 
-        for (auto* playbackRegion : regionSequence.getPlaybackRegions())
+        for (auto *playbackRegion : regionSequence->getPlaybackRegions())
             createAndAddPlaybackRegionView (playbackRegion);
 
         updatePlaybackDuration();
 
         timeToViewScaling.addListener (this);
-    }
+  }
 
     ~RegionSequenceView() override
     {
         timeToViewScaling.removeListener (this);
 
-        regionSequence.removeListener (this);
+        regionSequence->removeListener(this);
 
         for (const auto& it : playbackRegionViews)
             it.first->removeListener (this);
@@ -1564,11 +1565,15 @@ public:
     void willUpdateRegionSequenceProperties (ARARegionSequence*,
                                              ARARegionSequence::PropertiesPtr newProperties) override
     {
-        if (regionSequence.getColor() != newProperties->color)
-        {
+        if (regionSequence->getColor() != newProperties->color) {
             for (auto& pbr : playbackRegionViews)
                 pbr.second->repaint();
         }
+    }
+
+    void willDestroyRegionSequence(ARARegionSequence *rs) override {
+        rs->removeListener(this);
+        regionSequence = nullptr;
     }
 
     void willRemovePlaybackRegionFromRegionSequence (ARARegionSequence*,
@@ -1646,7 +1651,7 @@ private:
 
     ARAEditorView& araEditorView;
     TimeToViewScaling& timeToViewScaling;
-    ARARegionSequence& regionSequence;
+    ARARegionSequence *regionSequence;
     WaveformCache& waveformCache;
     std::unordered_map<ARAPlaybackRegion*, std::unique_ptr<PlaybackRegionView>> playbackRegionViews;
     double playbackDuration = 0.0;
@@ -1781,30 +1786,35 @@ class TrackHeader final : public Component,
                           private ARAEditorView::Listener
 {
 public:
-    TrackHeader (ARAEditorView& editorView, ARARegionSequence& regionSequenceIn)
-        : araEditorView (editorView), regionSequence (regionSequenceIn)
-    {
-        updateTrackName (regionSequence.getName());
+  TrackHeader(ARAEditorView &editorView, ARARegionSequence &regionSequenceIn)
+      : araEditorView(editorView), regionSequence(&regionSequenceIn) {
+        updateTrackName(regionSequence->getName());
         onNewSelection (araEditorView.getViewSelection());
 
         addAndMakeVisible (trackNameLabel);
 
-        regionSequence.addListener (this);
+        regionSequence->addListener(this);
         araEditorView.addListener (this);
-    }
+  }
 
     ~TrackHeader() override
     {
         araEditorView.removeListener (this);
-        regionSequence.removeListener (this);
+        if (regionSequence != nullptr)
+            regionSequence->removeListener(this);
     }
 
     void willUpdateRegionSequenceProperties (ARARegionSequence*, ARARegionSequence::PropertiesPtr newProperties) override
     {
-        if (regionSequence.getName() != newProperties->name)
+        if (regionSequence->getName() != newProperties->name)
             updateTrackName (newProperties->name);
-        if (regionSequence.getColor() != newProperties->color)
+        if (regionSequence->getColor() != newProperties->color)
             repaint();
+    }
+
+    void willDestroyRegionSequence(ARARegionSequence *rs) override {
+        rs->removeListener(this);
+        regionSequence = nullptr;
     }
 
     void resized() override
@@ -1820,8 +1830,7 @@ public:
         g.setColour (backgroundColour.contrasting());
         g.drawRoundedRectangle (getLocalBounds().reduced (2).toFloat(), 6.0f, 1.0f);
 
-        if (auto colour = regionSequence.getColor())
-        {
+        if (auto colour = regionSequence->getColor()) {
             g.setColour (convertARAColour (colour));
             g.fillRect (getLocalBounds().removeFromTop (16).reduced (6));
             g.fillRect (getLocalBounds().removeFromBottom (16).reduced (6));
@@ -1831,7 +1840,10 @@ public:
     void onNewSelection (const ARAViewSelection& viewSelection) override
     {
         const auto& selectedRegionSequences = viewSelection.getRegionSequences();
-        const bool selected = std::find (selectedRegionSequences.begin(), selectedRegionSequences.end(), &regionSequence) != selectedRegionSequences.end();
+        const bool selected =
+            std::find(selectedRegionSequences.begin(),
+                      selectedRegionSequences.end(),
+                      regionSequence) != selectedRegionSequences.end();
 
         if (selected != isSelected)
         {
@@ -1848,7 +1860,7 @@ private:
     }
 
     ARAEditorView& araEditorView;
-    ARARegionSequence& regionSequence;
+    ARARegionSequence *regionSequence;
     Label trackNameLabel;
     bool isSelected = false;
 };
