@@ -1812,7 +1812,8 @@ public:
             repaint();
     }
 
-    void willDestroyRegionSequence(ARARegionSequence *rs) override {
+    void willDestroyRegionSequence (ARARegionSequence *rs) override {
+        const ScopedLock sl (paintLock);
         rs->removeListener(this);
         regionSequence = nullptr;
     }
@@ -1824,12 +1825,15 @@ public:
 
     void paint (Graphics& g) override
     {
+        const ScopedLock sl (paintLock);
         const auto backgroundColour = getLookAndFeel().findColour (ResizableWindow::backgroundColourId);
         g.setColour (isSelected ? backgroundColour.brighter() : backgroundColour);
         g.fillRoundedRectangle (getLocalBounds().reduced (2).toFloat(), 6.0f);
         g.setColour (backgroundColour.contrasting());
         g.drawRoundedRectangle (getLocalBounds().reduced (2).toFloat(), 6.0f, 1.0f);
 
+        if (regionSequence == nullptr)
+            return;
         if (auto colour = regionSequence->getColor()) {
             g.setColour (convertARAColour (colour));
             g.fillRect (getLocalBounds().removeFromTop (16).reduced (6));
@@ -1863,6 +1867,7 @@ private:
     ARARegionSequence *regionSequence;
     Label trackNameLabel;
     bool isSelected = false;
+    CriticalSection paintLock;
 };
 
 constexpr auto trackHeight = 60;
