@@ -2926,7 +2926,8 @@ namespace AAXClasses
                                   const AudioProcessor::BusesLayout& fullLayout,
                                   AudioProcessor& processor,
                                   Array<int32>& pluginIds,
-                                  const int numMeters)
+                                  const int numMeters,
+                                  const bool isARASupported)
     {
         [[maybe_unused]] auto aaxInputFormat  = getFormatForAudioChannelSet (fullLayout.getMainInputChannelSet(),  false);
         [[maybe_unused]] auto aaxOutputFormat = getFormatForAudioChannelSet (fullLayout.getMainOutputChannelSet(), false);
@@ -3014,7 +3015,7 @@ namespace AAXClasses
        #endif
 
        #if JucePlugin_Enable_ARA
-        if (aaxInputFormat == aaxOutputFormat)
+        if (isARASupported && aaxInputFormat == aaxOutputFormat)
         {
             // ARA playback renderers need transport information
             properties->AddProperty (AAX_eProperty_UsesTransport, true);
@@ -3110,7 +3111,7 @@ namespace AAXClasses
         return (AAX_STEM_FORMAT_INDEX (stemFormat) <= 12);
     }
 
-    static void getPlugInDescription (AAX_IEffectDescriptor& descriptor, [[maybe_unused]] const AAX_IFeatureInfo* featureInfo, bool isEnhancedAudioSuite = false)
+    static void getPlugInDescription (AAX_IEffectDescriptor& descriptor, [[maybe_unused]] const AAX_IFeatureInfo* featureInfo, bool isARASupported, bool isEnhancedAudioSuite = false)
     {
         auto aaxType = isEnhancedAudioSuite ? AudioProcessor::wrapperType_AudioSuite : AudioProcessor::wrapperType_AAX;
 
@@ -3220,7 +3221,7 @@ namespace AAXClasses
 
                     if (auto* desc = descriptor.NewComponentDescriptor())
                     {
-                        createDescriptor (*desc, fullLayout, *plugin, pluginIds, numMeters);
+                        createDescriptor (*desc, fullLayout, *plugin, pluginIds, numMeters, isARASupported);
                         check (descriptor.AddComponent (desc));
                     }
                 }
@@ -3250,16 +3251,30 @@ AAX_Result JUCE_CDECL GetEffectDescriptions (AAX_ICollection* collection)
     if (const auto* hostDescription = collection->DescriptionHost())
         stemFormatFeatureInfo.reset (hostDescription->AcquireFeatureProperties (AAXATTR_ClientFeature_StemFormat));
 
+    // only check when being called under PT process, pluginrunner might not support GetHostVersion
+    uint32_t hostVersion = 0;
+    bool isARASupported = true;
+    if (PluginHostType().isProTools())
+    {
+        isARASupported = false;
+        if (collection->GetHostVersion (&hostVersion) == AAX_SUCCESS)
+        {
+            const uint16_t major = (hostVersion >> 16) & 0xFFFF;
+            const uint8_t minor = (hostVersion >> 8) & 0xFF;
+            isARASupported = major >= 2024 && minor >= 6;
+        }
+    }
+
     if (auto* descriptor = collection->NewDescriptor())
     {
 #if !JucePlugin_EnhancedAudioSuiteOnly
-        AAXClasses::getPlugInDescription (*descriptor, stemFormatFeatureInfo.get());
+        AAXClasses::getPlugInDescription (*descriptor, stemFormatFeatureInfo.get(), isARASupported);
         result = collection->AddEffect (JUCE_STRINGIFY (JucePlugin_AAXIdentifier), descriptor);
 #endif
 #if JucePlugin_EnhancedAudioSuite
         if (AAX_IEffectDescriptor* const asDescriptor = collection->NewDescriptor())
         {
-            AAXClasses::getPlugInDescription (*asDescriptor, nullptr, true);
+            AAXClasses::getPlugInDescription (*asDescriptor, nullptr, isARASupported, true);
             result = collection->AddEffect (JUCE_STRINGIFY (JucePlugin_AAXIdentifier ".hostprocessor"), asDescriptor);
         }
         else
