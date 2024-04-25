@@ -1110,7 +1110,7 @@ namespace AAXClasses
             void UpdateBusLayout(int numOfIns, int numOfOuts, bool hasSideChain)
             {
                 auto currentLayout = getAAXProcessor().getPluginInstance().getBusesLayout();
-                currentLayout.inputBuses.set(0, AudioChannelSet::namedChannelSet(numOfIns));
+                currentLayout.inputBuses.set(0, AudioChannelSet::canonicalChannelSet(numOfIns));
                 if (currentLayout.inputBuses.size() > 1)
                 {
                     currentLayout.inputBuses.set(1, hasSideChain ? AudioChannelSet::mono() : AudioChannelSet::disabled());
