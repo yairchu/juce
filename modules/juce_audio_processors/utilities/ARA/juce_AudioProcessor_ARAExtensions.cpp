@@ -120,12 +120,10 @@ void AudioProcessorARAExtension::didBindToARA() noexcept
 {
     // validate that the ARA binding is not established by the host while prepared to play
 #if ARA_VALIDATE_API_CALLS
-    if (!isAAX)
-        ARA_VALIDATE_API_STATE (! isPrepared);
-#endif
+    ARA_VALIDATE_API_STATE (! isPrepared);
     if (auto playbackRenderer = getPlaybackRenderer())
         playbackRenderer->araExtension = this;
-
+#endif
 
 #if (! JUCE_DISABLE_ASSERTIONS)
     // validate proper subclassing of the instance role classes
