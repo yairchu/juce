@@ -141,9 +141,11 @@ public:
         return ARA::PlugIn::PlaybackRenderer::getPlaybackRegions<PlaybackRegion_t>();
     }
 
+#if ARA_VALIDATE_API_CALLS
     void addPlaybackRegion (ARA::ARAPlaybackRegionRef playbackRegionRef) noexcept override;
     void removePlaybackRegion (ARA::ARAPlaybackRegionRef playbackRegionRef) noexcept override;
     AudioProcessorARAExtension* araExtension {};
+#endif
 
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARAPlaybackRenderer)

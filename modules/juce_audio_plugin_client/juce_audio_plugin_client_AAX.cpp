@@ -1264,7 +1264,6 @@ namespace AAXClasses
                 if (! plugInExtensionInstance)
                     return AAX_ERROR_NULL_OBJECT;
                 result = araBinding->SetPlugInExtensionInstance (plugInExtensionInstance);
-                araAudioProcessorExtension->isAAX = true;
             }
             isARA = result == AAX_SUCCESS;
 
@@ -2064,13 +2063,8 @@ namespace AAXClasses
            #endif
 
             {
-                auto *maybeAraExtension =
-                    dynamic_cast<AudioProcessorARAExtension *>(
-                        pluginInstance.get());
-                const auto shouldARAPrepare =
-                    maybeAraExtension != nullptr &&
-                    maybeAraExtension->shouldInjectAAXPrepare;
-                if (lastBufferSize != bufferSize || shouldARAPrepare) {
+                if (lastBufferSize != bufferSize)
+                {
                     lastBufferSize = bufferSize;
                     pluginInstance->setRateAndBufferSizeDetails (sampleRate, lastBufferSize);
 
@@ -2079,10 +2073,8 @@ namespace AAXClasses
                     // currently, this should never actually happen, because as of Pro Tools 12,
                     // the maximum possible value is 1024, and we call prepareToPlay with that
                     // value during initialisation.
-                    if (bufferSize > maxBufferSize || shouldARAPrepare)
+                    if (bufferSize > maxBufferSize)
                         prepareProcessorWithSampleRateAndBufferSize (sampleRate, bufferSize);
-                    if (shouldARAPrepare)
-                        maybeAraExtension->shouldInjectAAXPrepare = false;
                 }
 
                 if (bypass && pluginInstance->getBypassParameter() == nullptr)
