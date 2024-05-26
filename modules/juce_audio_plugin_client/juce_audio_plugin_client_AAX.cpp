@@ -3021,6 +3021,9 @@ namespace AAXClasses
             properties->AddProperty (AAX_eProperty_Constraint_Topology, AAX_eConstraintTopology_Monolithic);
             // ARA factory
             properties->AddPointerProperty (ARA::AAX_eProperty_ARAFactoryPointer, getFactory());
+       #if JucePlugin_AAX_ARARequiresAllTrackDataAnalysis
+            properties->AddProperty (ARA::AAX_eProperty_RequiresAllTrackDataAnalysis, true);
+       #endif
         }
        #endif
        #if JucePlugin_AAXHideInMenus
