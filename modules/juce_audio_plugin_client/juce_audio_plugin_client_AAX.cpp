@@ -3304,6 +3304,14 @@ AAX_Result JUCE_CDECL GetEffectDescriptions (AAX_ICollection* collection)
         collection->AddPackageName (JucePlugin_Name);
         collection->SetPackageVersion (JucePlugin_VersionCode);
 
+#if JucePlugin_AAXDisableCache
+        {
+            AAX_IPropertyMap* properties = collection->NewPropertyMap();
+            properties->AddProperty (AAX_eProperty_Constraint_NeverCache, true);
+            collection->SetProperties (properties);
+        }
+#endif
+
         return result;
     }
 
