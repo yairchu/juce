@@ -2410,9 +2410,11 @@ namespace AAXClasses
                 auto& i = **iter;
 
 #if JucePlugin_Enable_ARA
-                const auto isARAExtension =
-                    dynamic_cast<const AudioProcessorARAExtension*> (&i.pluginInstance->parameters.getPluginInstance())
-                    != nullptr;
+                bool isARAExtension = false;
+                {
+                    const auto* maybeARAExtension = dynamic_cast<const AudioProcessorARAExtension*> (&i.pluginInstance->parameters.getPluginInstance());
+                    isARAExtension = maybeARAExtension != nullptr && maybeARAExtension->isBoundToARA();
+                }
 #else
                 constexpr auto isARAExtension = false;
 #endif
