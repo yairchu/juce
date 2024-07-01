@@ -3011,8 +3011,6 @@ namespace AAXClasses
        #endif
 
        #if JucePlugin_Enable_ARA
-        if (! canARA)
-            properties->AddProperty (AAX_eProperty_Constraint_NeverCache, true);
         if (canARA && aaxInputFormat == aaxOutputFormat)
         {
             // ARA playback renderers need transport information
@@ -3305,6 +3303,13 @@ AAX_Result JUCE_CDECL GetEffectDescriptions (AAX_ICollection* collection)
         collection->SetPackageVersion (JucePlugin_VersionCode);
 
 #if JucePlugin_AAXDisableCache
+        {
+            AAX_IPropertyMap* properties = collection->NewPropertyMap();
+            properties->AddProperty (AAX_eProperty_Constraint_NeverCache, true);
+            collection->SetProperties (properties);
+        }
+#elif JucePlugin_Enable_ARA
+        if (!hasARASupport)
         {
             AAX_IPropertyMap* properties = collection->NewPropertyMap();
             properties->AddProperty (AAX_eProperty_Constraint_NeverCache, true);
