@@ -2902,7 +2902,7 @@ namespace AAXClasses
         properties->AddProperty(AAX_eProperty_DisableHandles, true);
 #endif
 #if JucePlugin_EnhancedAudioSuite_DisableAudiosuiteReverse
-        properties->AddProperty(AAX_eProperty_DisableAudiosuiteReverse, true);
+        properties->AddProperty(AAX_eProperty_DisableAudioSuiteReverse, true);
 #endif
 #if JucePlugin_AAXDisableBypass
         properties->AddProperty(AAX_eProperty_CanBypass, false);
