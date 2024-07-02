@@ -1039,7 +1039,7 @@ public:
 
     CoreAudioIODevice& owner;
     int bitDepth = 32;
-    int xruns = 0;
+    std::atomic<int> xruns = 0;
     Array<double> sampleRates;
     Array<int> bufferSizes;
     AudioDeviceID deviceID;
@@ -1147,7 +1147,7 @@ private:
             return x.mSelector == kAudioDeviceProcessorOverload;
         });
 
-        intern.xruns += xruns;
+        intern.xruns += (int) xruns;
 
         const auto detailsChanged = std::any_of (pa, pa + numAddresses, [] (const AudioObjectPropertyAddress& x)
         {
@@ -1352,6 +1352,8 @@ public:
 
     void start (AudioIODeviceCallback* callback) override
     {
+        const ScopedLock sl (startStopLock);
+
         if (internal->start (callback))
             pendingCallback = nullptr;
     }
@@ -1359,12 +1361,14 @@ public:
     void stop() override
     {
         stopAndGetLastCallback();
+
+        const ScopedLock sl (startStopLock);
         pendingCallback = nullptr;
     }
 
     void stopWithPendingCallback()
     {
-        const ScopedLock sl (closeLock);
+        const ScopedLock sl (startStopLock);
 
         if (pendingCallback == nullptr)
             pendingCallback = stopAndGetLastCallback();
@@ -1427,7 +1431,7 @@ private:
     AudioIODeviceCallback* pendingCallback = nullptr;
     AsyncRestarter* restarter = nullptr;
     BigInteger inputChannelsRequested, outputChannelsRequested;
-    CriticalSection closeLock;
+    CriticalSection startStopLock;
 
     AudioIODeviceCallback* stopAndGetLastCallback() const
     {
@@ -1452,6 +1456,7 @@ private:
               getCurrentSampleRate(),
               getCurrentBufferSizeSamples());
 
+        const ScopedLock sl { startStopLock };
         start (pendingCallback);
     }
 
