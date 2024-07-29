@@ -47,11 +47,16 @@ void ARARenderer::prepareToPlay ([[maybe_unused]] double sampleRate,
                                  [[maybe_unused]] AudioProcessor::ProcessingPrecision precision,
                                  [[maybe_unused]] AlwaysNonRealtime alwaysNonRealtime) {}
 
+static bool apiSupportsToggleRendering()
+{
+    return PluginHostType::jucePlugInClientCurrentWrapperType != AudioProcessor::WrapperType::wrapperType_AAX;
+}
+
 //==============================================================================
 #if ARA_VALIDATE_API_CALLS
 void ARAPlaybackRenderer::addPlaybackRegion (ARA::ARAPlaybackRegionRef playbackRegionRef) noexcept
 {
-    if (araExtension)
+    if (araExtension && apiSupportsToggleRendering())
         ARA_VALIDATE_API_STATE (! araExtension->isPrepared);
 
     ARA::PlugIn::PlaybackRenderer::addPlaybackRegion (playbackRegionRef);
@@ -59,7 +64,7 @@ void ARAPlaybackRenderer::addPlaybackRegion (ARA::ARAPlaybackRegionRef playbackR
 
 void ARAPlaybackRenderer::removePlaybackRegion (ARA::ARAPlaybackRegionRef playbackRegionRef) noexcept
 {
-    if (araExtension)
+    if (araExtension && apiSupportsToggleRendering())
         ARA_VALIDATE_API_STATE (! araExtension->isPrepared);
 
     ARA::PlugIn::PlaybackRenderer::removePlaybackRegion (playbackRegionRef);
