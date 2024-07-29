@@ -48,48 +48,23 @@ void ARARenderer::prepareToPlay ([[maybe_unused]] double sampleRate,
                                  [[maybe_unused]] AlwaysNonRealtime alwaysNonRealtime) {}
 
 //==============================================================================
-bool ARAPlaybackRenderer::supportsToggleRendering()
-{
-    return PluginHostType::jucePlugInClientCurrentWrapperType != AudioProcessor::WrapperType::wrapperType_AAX;
-}
-
+#if ARA_VALIDATE_API_CALLS
 void ARAPlaybackRenderer::addPlaybackRegion (ARA::ARAPlaybackRegionRef playbackRegionRef) noexcept
 {
-#if ARA_VALIDATE_API_CALLS
-    if (supportsToggleRendering() && araExtension)
+    if (araExtension)
         ARA_VALIDATE_API_STATE (! araExtension->isPrepared);
-#endif
-    if (! supportsToggleRendering())
-        releaseResources();
+
     ARA::PlugIn::PlaybackRenderer::addPlaybackRegion (playbackRegionRef);
-    // This must be called after calling the ARA::PlugIn to ensure getPlaybackRegions() is up-to-date.
-    if (! supportsToggleRendering() && araExtension)
-    {
-        auto* processor = dynamic_cast<AudioProcessor*> (araExtension);
-        processor->prepareToPlay (processor->getSampleRate(), processor->getBlockSize());
-    }
 }
 
 void ARAPlaybackRenderer::removePlaybackRegion (ARA::ARAPlaybackRegionRef playbackRegionRef) noexcept
 {
-    if (supportsToggleRendering())
-    {
-#if ARA_VALIDATE_API_CALLS
-        if (araExtension)
-            ARA_VALIDATE_API_STATE (! araExtension->isPrepared);
-#endif
-    }
+    if (araExtension)
+        ARA_VALIDATE_API_STATE (! araExtension->isPrepared);
 
-    if (! supportsToggleRendering())
-        releaseResources();
     ARA::PlugIn::PlaybackRenderer::removePlaybackRegion (playbackRegionRef);
-    // This must be called after calling the ARA::PlugIn to ensure getPlaybackRegions() is up-to-date.
-    if (! supportsToggleRendering() && araExtension)
-    {
-        auto* processor = dynamic_cast<AudioProcessor*> (araExtension);
-        processor->prepareToPlay (processor->getSampleRate(), processor->getBlockSize());
-    }
 }
+#endif
 
 bool ARAPlaybackRenderer::processBlock ([[maybe_unused]] AudioBuffer<float>& buffer,
                                         [[maybe_unused]] AudioProcessor::Realtime realtime,
