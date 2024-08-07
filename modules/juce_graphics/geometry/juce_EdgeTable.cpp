@@ -1,24 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2022 - Raw Material Software Limited
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 7 End-User License
-   Agreement and JUCE Privacy Policy.
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-7-licence
-   Privacy Policy: www.juce.com/juce-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -269,6 +278,19 @@ EdgeTable::EdgeTable (Rectangle<float> rectangleToAdd)
     }
 }
 
+static void copyEdgeTableData (int* dest,
+                               size_t destLineStride,
+                               const int* src,
+                               size_t srcLineStride,
+                               size_t numLines) noexcept
+{
+    for (size_t line = 0; line < numLines; ++line)
+    {
+        const auto* srcLine = src + line * srcLineStride;
+        std::copy (srcLine, srcLine + *srcLine * 2 + 1, dest + line * destLineStride);
+    }
+}
+
 EdgeTable::EdgeTable (const EdgeTable& other)
 {
     operator= (other);
@@ -282,12 +304,12 @@ EdgeTable& EdgeTable::operator= (const EdgeTable& other)
     needToCheckEmptiness = other.needToCheckEmptiness;
 
     allocate();
-    copyEdgeTableData (table, lineStrideElements, other.table, lineStrideElements, bounds.getHeight());
+    copyEdgeTableData (table,
+                       (size_t) lineStrideElements,
+                       other.table,
+                       (size_t) lineStrideElements,
+                       (size_t) bounds.getHeight());
     return *this;
-}
-
-EdgeTable::~EdgeTable()
-{
 }
 
 //==============================================================================
@@ -310,16 +332,6 @@ void EdgeTable::clearLineSizes() noexcept
     {
         *t = 0;
         t += lineStrideElements;
-    }
-}
-
-void EdgeTable::copyEdgeTableData (int* dest, int destLineStride, const int* src, int srcLineStride, int numLines) noexcept
-{
-    while (--numLines >= 0)
-    {
-        memcpy (dest, src, (size_t) (src[0] * 2 + 1) * sizeof (int));
-        src += srcLineStride;
-        dest += destLineStride;
     }
 }
 
@@ -391,14 +403,18 @@ void EdgeTable::remapTableForNumEdges (const int newNumEdgesPerLine)
 {
     if (newNumEdgesPerLine != maxEdgesPerLine)
     {
+        jassert (newNumEdgesPerLine > maxEdgesPerLine);
         maxEdgesPerLine = newNumEdgesPerLine;
 
         jassert (bounds.getHeight() > 0);
         auto newLineStrideElements = maxEdgesPerLine * 2 + 1;
 
         HeapBlock<int> newTable (getEdgeTableAllocationSize (newLineStrideElements, bounds.getHeight()));
-
-        copyEdgeTableData (newTable, newLineStrideElements, table, lineStrideElements, bounds.getHeight());
+        copyEdgeTableData (newTable,
+                           (size_t) newLineStrideElements,
+                           table,
+                           (size_t) lineStrideElements,
+                           (size_t) bounds.getHeight());
 
         table.swapWith (newTable);
         lineStrideElements = newLineStrideElements;
@@ -416,7 +432,7 @@ void EdgeTable::optimiseTable()
     int maxLineElements = 0;
 
     for (int i = bounds.getHeight(); --i >= 0;)
-        maxLineElements = jmax (maxLineElements, table[i * lineStrideElements]);
+        maxLineElements = jmax (maxLineElements, table[(size_t) i * (size_t) lineStrideElements]);
 
     remapTableForNumEdges (maxLineElements);
 }
@@ -490,13 +506,13 @@ void EdgeTable::multiplyLevels (float amount)
     for (int y = 0; y < bounds.getHeight(); ++y)
     {
         auto numPoints = lineStart[0];
-        auto* item = reinterpret_cast<LineItem*> (lineStart + 1);
-        lineStart += lineStrideElements;
 
-        while (--numPoints > 0)
+        for (auto i = 0; i < numPoints; ++i)
         {
-            item->level = jmin (255, (item->level * multiplier) / scale);
-            ++item;
+            auto* ptr = lineStart + 1 + (2 * i);
+            auto item = readUnaligned<LineItem> (ptr);
+            item.level = jmin (255, (item.level * multiplier) / scale);
+            writeUnaligned (ptr, item);
         }
     }
 }
@@ -506,12 +522,12 @@ void EdgeTable::intersectWithEdgeTableLine (const int y, const int* const otherL
     jassert (y >= 0 && y < bounds.getHeight());
 
     auto* srcLine = table + lineStrideElements * y;
-    auto srcNum1 = *srcLine;
+    const auto srcNum1 = *srcLine;
 
     if (srcNum1 == 0)
         return;
 
-    auto srcNum2 = *otherLine;
+    const auto srcNum2 = *otherLine;
 
     if (srcNum2 == 0)
     {
@@ -519,29 +535,44 @@ void EdgeTable::intersectWithEdgeTableLine (const int y, const int* const otherL
         return;
     }
 
-    auto right = bounds.getRight() * scale;
+    Span srcLine1 { srcLine   + 1, (size_t) srcNum1 * 2 };
+    Span srcLine2 { otherLine + 1, (size_t) srcNum2 * 2 };
+
+    const auto popHead = [] (auto& s)
+    {
+        if (s.empty())
+            return 0;
+
+        const auto result = s.front();
+        s = Span { s.data() + 1, s.size() - 1 };
+        return result;
+    };
+
+    const auto reseat = [] (auto& s, auto* ptr)
+    {
+        s = Span { ptr, s.size() };
+    };
+
+    const auto right = bounds.getRight() * scale;
 
     // optimise for the common case where our line lies entirely within a
     // single pair of points, as happens when clipping to a simple rect.
-    if (srcNum2 == 2 && otherLine[2] >= 255)
+    if (srcLine2.size() == 4 && srcLine2[1] >= 255)
     {
-        clipEdgeTableLineToRange (srcLine, otherLine[1], jmin (right, otherLine[3]));
+        clipEdgeTableLineToRange (srcLine, srcLine2[0], jmin (right, srcLine2[2]));
         return;
     }
 
     bool isUsingTempSpace = false;
 
-    const int* src1 = srcLine + 1;
-    auto x1 = *src1++;
-
-    const int* src2 = otherLine + 1;
-    auto x2 = *src2++;
+    auto x1 = popHead (srcLine1);
+    auto x2 = popHead (srcLine2);
 
     int destIndex = 0, destTotal = 0;
     int level1 = 0, level2 = 0;
     int lastX = std::numeric_limits<int>::min(), lastLevel = 0;
 
-    while (srcNum1 > 0 && srcNum2 > 0)
+    while (! srcLine1.empty() && ! srcLine2.empty())
     {
         int nextX;
 
@@ -549,74 +580,65 @@ void EdgeTable::intersectWithEdgeTableLine (const int y, const int* const otherL
         {
             if (x1 == x2)
             {
-                level2 = *src2++;
-                x2 = *src2++;
-                --srcNum2;
+                level2 = popHead (srcLine2);
+                x2 = popHead (srcLine2);
             }
 
             nextX = x1;
-            level1 = *src1++;
-            x1 = *src1++;
-            --srcNum1;
+            level1 = popHead (srcLine1);
+            x1 = popHead (srcLine1);
         }
         else
         {
             nextX = x2;
-            level2 = *src2++;
-            x2 = *src2++;
-            --srcNum2;
+            level2 = popHead (srcLine2);
+            x2 = popHead (srcLine2);
         }
 
-        if (nextX > lastX)
+        if (right <= nextX)
+            break;
+
+        const auto nextLevel = (level1 * (level2 + 1)) / scale;
+
+        if (std::exchange (lastX, nextX) < nextX || std::exchange (lastLevel, nextLevel) != nextLevel)
         {
-            if (nextX >= right)
-                break;
-
-            lastX = nextX;
-
-            auto nextLevel = (level1 * (level2 + 1)) / scale;
             jassert (isPositiveAndBelow (nextLevel, 256));
 
-            if (nextLevel != lastLevel)
+            if (destTotal >= maxEdgesPerLine)
             {
-                if (destTotal >= maxEdgesPerLine)
+                srcLine[0] = destTotal;
+
+                if (isUsingTempSpace)
                 {
-                    srcLine[0] = destTotal;
+                    auto* stackBuffer = static_cast<int*> (alloca (sizeof (int) * srcLine1.size()));
+                    std::copy (srcLine1.begin(), srcLine1.end(), stackBuffer);
 
-                    if (isUsingTempSpace)
-                    {
-                        auto tempSize = (size_t) srcNum1 * 2 * sizeof (int);
-                        auto oldTemp = static_cast<int*> (alloca (tempSize));
-                        memcpy (oldTemp, src1, tempSize);
+                    remapTableForNumEdges (jmax (256, destTotal * 2));
+                    srcLine = table + lineStrideElements * y;
 
-                        remapTableForNumEdges (jmax (256, destTotal * 2));
-                        srcLine = table + lineStrideElements * y;
-
-                        auto* newTemp = table + lineStrideElements * bounds.getHeight();
-                        memcpy (newTemp, oldTemp, tempSize);
-                        src1 = newTemp;
-                    }
-                    else
-                    {
-                        remapTableForNumEdges (jmax (256, destTotal * 2));
-                        srcLine = table + lineStrideElements * y;
-                    }
+                    reseat (srcLine1, table + lineStrideElements * bounds.getHeight());
+                    std::copy (stackBuffer, stackBuffer + srcLine1.size(), srcLine1.data());
                 }
-
-                ++destTotal;
-                lastLevel = nextLevel;
-
-                if (! isUsingTempSpace)
+                else
                 {
-                    isUsingTempSpace = true;
-                    auto* temp = table + lineStrideElements * bounds.getHeight();
-                    memcpy (temp, src1, (size_t) srcNum1 * 2 * sizeof (int));
-                    src1 = temp;
+                    remapTableForNumEdges (jmax (256, destTotal * 2));
+                    srcLine = table + lineStrideElements * y;
                 }
-
-                srcLine[++destIndex] = nextX;
-                srcLine[++destIndex] = nextLevel;
             }
+
+            ++destTotal;
+            lastLevel = nextLevel;
+
+            if (! isUsingTempSpace)
+            {
+                isUsingTempSpace = true;
+                auto* temp = table + lineStrideElements * bounds.getHeight();
+                std::copy (srcLine1.begin(), srcLine1.end(), temp);
+                reseat (srcLine1, temp);
+            }
+
+            srcLine[++destIndex] = nextX;
+            srcLine[++destIndex] = nextLevel;
         }
     }
 
@@ -696,7 +718,7 @@ void EdgeTable::clipToRectangle (Rectangle<int> r)
             bounds.setHeight (bottom);
 
         for (int i = 0; i < top; ++i)
-            table[lineStrideElements * i] = 0;
+            table[(size_t) lineStrideElements * (size_t) i] = 0;
 
         if (clipped.getX() > bounds.getX() || clipped.getRight() < bounds.getRight())
         {
@@ -759,7 +781,7 @@ void EdgeTable::clipToEdgeTable (const EdgeTable& other)
             bounds.setRight (clipped.getRight());
 
         for (int i = 0; i < top; ++i)
-            table[lineStrideElements * i] = 0;
+            table[(size_t) lineStrideElements * (size_t) i] = 0;
 
         auto* otherLine = other.table + other.lineStrideElements * (clipped.getY() - other.bounds.getY());
 
@@ -784,7 +806,7 @@ void EdgeTable::clipLineToMask (int x, int y, const uint8* mask, int maskStride,
 
     if (numPixels <= 0)
     {
-        table[lineStrideElements * y] = 0;
+        table[(size_t) lineStrideElements * (size_t) y] = 0;
         return;
     }
 
@@ -839,5 +861,145 @@ bool EdgeTable::isEmpty() noexcept
 }
 
 JUCE_END_IGNORE_WARNINGS_MSVC
+
+//==============================================================================
+//==============================================================================
+#if JUCE_UNIT_TESTS
+
+class EdgeTableTests : public UnitTest
+{
+public:
+    EdgeTableTests() : UnitTest ("EdgeTable", UnitTestCategories::graphics) {}
+
+    void runTest() override
+    {
+        beginTest ("The result of clipToEdgeTable() shouldn't contain any point that's not present in both operands");
+        {
+            // The way this EdgeTable is constructed is significant in triggering a certain corner
+            // case.
+            const auto edgeTableContainingAPath = [&]
+            {
+                RectangleList<int> rl;
+                rl.add (Rectangle<int> (6, 1, 1, 4));
+                rl.add (Rectangle<int> (1, 1, 5, 5));
+                EdgeTable rectListEdgeTable { rl };
+
+                Path p;
+                p.startNewSubPath (2.0f, 6.0f);
+                p.lineTo (2.0f, 1.0f);
+                p.lineTo (6.0f, 1.0f);
+                p.lineTo (6.0f, 6.0f);
+                p.closeSubPath();
+
+                const EdgeTable pathEdgeTable { Rectangle<int> { 1, 1, 6, 5 }, p, {} };
+
+                rectListEdgeTable.clipToEdgeTable (pathEdgeTable);
+                return rectListEdgeTable;
+            }();
+
+            const EdgeTable edgeTableFromRectangle (Rectangle<float> (1.0f, 1.0f, 6.0f, 5.0f));
+
+            const auto intersection = [&]
+            {
+                auto result = edgeTableFromRectangle;
+                result.clipToEdgeTable (edgeTableContainingAPath);
+                return result;
+            }();
+
+            expect (! contains (edgeTableContainingAPath, { 6, 2 }),
+                    "The path doesn't enclose the point (6, 2) so it's EdgeTable shouldn't contain it");
+
+            expect (contains (edgeTableFromRectangle, { 6, 2 }),
+                    "The Rectangle covers the point (6, 2) so it's EdgeTable should contain it");
+
+            expect (! contains (intersection, { 6, 2 }),
+                    "The intersecting EdgeTable shouldn't contain (6, 2) because one of its constituents doesn't contain it either");
+        }
+    }
+
+private:
+    class EdgeTableFiller
+    {
+    public:
+        EdgeTableFiller (int w, int h)
+            : width (w), height (h), data ((size_t) (w * h))
+        {
+        }
+
+        void setEdgeTableYPos (int yIn)
+        {
+            y = yIn;
+        }
+
+        void handleEdgeTablePixelFull (int x)
+        {
+            if (! (y < height && x < width))
+                return;
+
+            auto* ptr = data.data() + width * y + x;
+            *ptr = 1;
+        }
+
+        void handleEdgeTablePixel (int x, int)
+        {
+            handleEdgeTablePixelFull (x);
+        }
+
+        void handleEdgeTableLineFull (int x, int w)
+        {
+            if (! (y < height && x < width))
+                return;
+
+            auto* ptr = data.data() + width * y + x;
+            std::fill (ptr, ptr + std::min (w, width - x), 1);
+        }
+
+        void handleEdgeTableLine (int x, int w, int)
+        {
+            handleEdgeTableLineFull (x, w);
+        }
+
+        void handleEdgeTableRectangleFull (int x, int yIn, int w, int h) noexcept
+        {
+            for (int j = yIn; j < std::min (yIn + h, height); ++j)
+            {
+                auto* ptr = data.data() + width * j + x;
+                std::fill (ptr, ptr + std::min (w, width - x), 1);
+            }
+        }
+
+        void handleEdgeTableRectangle (int x, int yIn, int w, int h, int) noexcept
+        {
+            handleEdgeTableRectangleFull (x, yIn, w, h);
+        }
+
+        int get (int x, int yIn) const
+        {
+            const auto index = (size_t) (width * yIn + x);
+
+            if (index >= data.size())
+                return 0;
+
+            return data[index];
+        }
+
+    private:
+        const int width, height = 0;
+        std::vector<int> data;
+        int y = 0;
+    };
+
+    static bool contains (const EdgeTable& et, Point<int> p)
+    {
+        EdgeTableFiller filler { p.getX() + 2, p.getY() + 2 };
+        et.iterate (filler);
+
+        return filler.get (p.getX(), p.getY()) == 1;
+    }
+};
+
+static EdgeTableTests edgeTableTests;
+
+#endif
 
 } // namespace juce
