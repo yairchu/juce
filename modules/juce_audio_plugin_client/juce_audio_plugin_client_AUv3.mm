@@ -120,6 +120,26 @@ JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wnullability-completeness")
 
 using namespace juce;
 
+template <typename Callback>
+static void waitForExecutionOnMainThread (Callback&& callback)
+{
+    if (MessageManager::getInstance()->isThisTheMessageThread())
+    {
+        callback();
+        return;
+    }
+
+    std::promise<void> promise;
+
+    MessageManager::callAsync ([&]
+    {
+        callback();
+        promise.set_value();
+    });
+
+    promise.get_future().get();
+}
+
 struct AudioProcessorHolder final : public ReferenceCountedObject
 {
     AudioProcessorHolder() = default;
@@ -2049,26 +2069,6 @@ public:
     }
 
 private:
-    template <typename Callback>
-    static void waitForExecutionOnMainThread (Callback&& callback)
-    {
-        if (MessageManager::getInstance()->isThisTheMessageThread())
-        {
-            callback();
-            return;
-        }
-
-        std::promise<void> promise;
-
-        MessageManager::callAsync ([&]
-        {
-            callback();
-            promise.set_value();
-        });
-
-        promise.get_future().get();
-    }
-
     // There's a chance that createAudioUnit will be called from a background
     // thread while the processorHolder is being updated on the main thread.
     class LockedProcessorHolder
