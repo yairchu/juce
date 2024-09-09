@@ -62,7 +62,59 @@
 
 #define JUCE_AUDIOUNIT_OBJC_NAME(x) JUCE_JOIN_MACRO (x, AUv3)
 
+#define JUCE_MESSAGE_CHANNEL_OBJC_NAME(x) JUCE_JOIN_MACRO (x, MessageChannelAUv3)
+
 #include <future>
+
+#if JucePlugin_Enable_ARA
+#include <ARA_API/ARAAudioUnit_v3.h>
+#include "ARA_Library/IPC/ARAIPCAudioUnit_v3.h"
+#include "ARA_Library/IPC/ARAIPCProxyHost.h"
+
+#if ARA_AUDIOUNITV3_IPC_IS_AVAILABLE
+// \todo this class could be a reusable part of ARA_Library if we could figure out how to avoid the
+//       ObjC class name clashes that will arise when multiple plug-ins from different binaries are
+//       using/linking this class.
+//       The IPC-related additions to TestAUv3AudioUnit could also be moved to a reusable base class
+//       from which TestAUv3AudioUnit and others could derive.
+//       A workaround might be a set of macros that can be used to provide the code with adjusted
+//       class names for client projects, but since some methods may be implemented in the client
+//       this is somewhat messy.
+
+API_AVAILABLE(macos(13.0))
+@interface JUCE_MESSAGE_CHANNEL_OBJC_NAME(JucePlugin_AUExportPrefix) : NSObject<AUMessageChannel>
+@end
+
+@implementation JUCE_MESSAGE_CHANNEL_OBJC_NAME(JucePlugin_AUExportPrefix) {
+    ARA::IPC::ARAIPCMessageChannelRef _messageChannelRef;
+}
+
+@synthesize callHostBlock = _callHostBlock;
+
+- (instancetype)initAsMainThreadChannel:(BOOL) isMainThreadChannel {
+    self = [super init];
+
+    if (self == nil) { return nil; }
+
+    _callHostBlock = nil;
+    _messageChannelRef = ARA::IPC::ARAIPCAUProxyHostInitializeMessageChannel(self, isMainThreadChannel);
+
+    return self;
+}
+
+- (void)dealloc {
+    ARA::IPC::ARAIPCAUProxyHostUninitializeMessageChannel(_messageChannelRef);
+}
+
+- (NSDictionary * _Nonnull)callAudioUnit:(NSDictionary *)message {
+    return ARA::IPC::ARAIPCAUProxyHostCommandHandler(_messageChannelRef, message);
+}
+
+@end
+
+#endif // ARA_AUDIOUNITV3_IPC_IS_AVAILABLE
+
+#endif
 
 JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wnullability-completeness")
 
@@ -205,6 +257,9 @@ public:
         processor.setRateAndBufferSizeDetails (kDefaultSampleRate, static_cast<int> (maxFrames));
         processor.prepareToPlay (kDefaultSampleRate, static_cast<int> (maxFrames));
         processor.addListener (this);
+
+        _araFactory = createARAFactory();
+        _araPlugInExtension = nullptr;
 
         addParameters();
         addPresets();
@@ -726,6 +781,13 @@ public:
         return info;
     }
 
+    const ARA::ARAPlugInExtensionInstance* _Nonnull bindToARA (ARA::ARADocumentControllerRef documentControllerRef,
+                    ARA::ARAPlugInInstanceRoleFlags knownRoles, ARA::ARAPlugInInstanceRoleFlags assignedRoles) {
+        auto& processor = getAudioProcessor();
+        _araPlugInExtension = dynamic_cast<AudioProcessorARAExtension*> (&processor);
+        return _araPlugInExtension->bindToARA (documentControllerRef, knownRoles, assignedRoles);
+    }
+
     //==============================================================================
     static void removeEditor (AudioProcessor& processor)
     {
@@ -865,6 +927,41 @@ private:
             addMethod (@selector (renderContextObserver),                   [] (id self, SEL)                                                   { return _this (self)->getInternalContextObserver(); });
            #endif
 
+            if (@available (macOS 13.0, iOS 16.0, *))
+            {
+#if JucePlugin_Enable_ARA && ARA_AUDIOUNITV3_IPC_IS_AVAILABLE
+                addProtocol (@protocol (ARAAudioUnit));
+                addIvar<const ARA::ARAFactory*> ("araFactory");
+                addIvar<NSUInteger> ("araRemoteInstanceRef");
+                addMethod (@selector (bindToDocumentController:withRoles:knownRoles:),                   [] (id self, SEL, ARA::ARADocumentControllerRef docRef, ARA::ARAPlugInInstanceRoleFlags assignedRoles, ARA::ARAPlugInInstanceRoleFlags knownRoles)                                                   {
+                    return _this (self)->bindToARA (docRef, knownRoles, assignedRoles); });
+
+                addMethod (@selector (messageChannelFor:),                   [] (id self, SEL, NSString* _Nonnull channelName)                        {
+                    if ([channelName isEqual: ARA_AUDIOUNIT_MAIN_THREAD_MESSAGES_UTI])
+                    {
+                        if (! _this (self)->_mainMessageChannel)
+                        {
+                            if (! _this (self)->_otherMessageChannel)
+                                ARA::IPC::ARAIPCProxyHostAddFactory(createARAFactory());
+                            _this (self)->_mainMessageChannel = [[JUCE_MESSAGE_CHANNEL_OBJC_NAME(JucePlugin_AUExportPrefix) alloc] initAsMainThreadChannel:YES];
+                        }
+                        return _this (self)->_mainMessageChannel;
+                    }
+                    if ([channelName isEqual: ARA_AUDIOUNIT_OTHER_THREADS_MESSAGES_UTI])
+                    {
+                        if (! _this (self)->_otherMessageChannel)
+                        {
+                            if (! _this (self)->_mainMessageChannel)
+                                ARA::IPC::ARAIPCProxyHostAddFactory(createARAFactory());
+                            _this (self)->_otherMessageChannel = [[JUCE_MESSAGE_CHANNEL_OBJC_NAME(JucePlugin_AUExportPrefix) alloc] initAsMainThreadChannel:NO];
+                        }
+                        return _this (self)->_otherMessageChannel;
+                    }
+                    return (NSObject<AUMessageChannel>*)nil;
+                });
+#endif
+            }
+
             //==============================================================================
             if (@available (macOS 10.13, iOS 11.0, *))
             {
@@ -915,8 +1012,36 @@ private:
 
         //==============================================================================
         static JuceAudioUnitv3* _this (id self)                     { return getIvar<JuceAudioUnitv3*>     (self, "cppObject"); }
-        static void setThis (id self, JuceAudioUnitv3* cpp)         { object_setInstanceVariable           (self, "cppObject", cpp); }
+        static void setThis (id self, JuceAudioUnitv3* cpp)         {
+            object_setInstanceVariable           (self, "cppObject", cpp);
+            setARAFactory (self, cpp->_araFactory);
+#if JucePlugin_Enable_ARA && ARA_AUDIOUNITV3_IPC_IS_AVAILABLE
+            static_assert(sizeof(self) == sizeof(NSUInteger), "opaque ref type size mismatch");
+            auto ref = (NSUInteger)self;
+            [self setValue:@(ref) forKey:@"araRemoteInstanceRef"];
+#endif
+        }
+
+        static void setARAFactory (id self, const ARA::ARAFactory* factory) {
+            object_setInstanceVariable (self, "araFactory", (ARA::ARAFactory*)factory);
+        }
     };
+
+#if JucePlugin_Enable_ARA && ARA_AUDIOUNITV3_IPC_IS_AVAILABLE
+    NSObject<AUMessageChannel> * __strong _mainMessageChannel API_AVAILABLE(macos(13.0)) = nil;
+    NSObject<AUMessageChannel> * __strong _otherMessageChannel API_AVAILABLE(macos(13.0)) = nil;
+
+    __attribute__((destructor))
+    void destroy_sharedMessageChannels() {
+        if (@available(macOS 13.0, *))
+        {
+            if (_mainMessageChannel || _otherMessageChannel)
+                ARA::IPC::ARAIPCAUProxyHostUninitialize();
+            _mainMessageChannel = nil;
+            _otherMessageChannel = nil;
+        }
+    }
+#endif
 
     static JuceAudioUnitv3* create (AUAudioUnit* audioUnit, AudioComponentDescription descr, AudioComponentInstantiationOptions options, NSError** error)
     {
@@ -1779,6 +1904,9 @@ private:
     static constexpr bool forceLegacyParamIDs = false;
    #endif
     AudioProcessorParameter* bypassParam = nullptr;
+
+    const ARA::ARAFactory* _araFactory;
+    juce::AudioProcessorARAExtension* _araPlugInExtension;
 };
 
 #if JUCE_IOS
