@@ -604,8 +604,10 @@ public:
             return 44100.0;
         }();
 
-        processor.setRateAndBufferSizeDetails (sampleRate, static_cast<int> (maxFrames));
-        processor.prepareToPlay (sampleRate, static_cast<int> (maxFrames));
+        waitForExecutionOnMainThread ([&processor, sampleRate, maxFrames]{
+            processor.setRateAndBufferSizeDetails (sampleRate, static_cast<int> (maxFrames));
+            processor.prepareToPlay (sampleRate, static_cast<int> (maxFrames));
+        });
 
         midiMessages.ensureSize (2048);
         midiMessages.clear();
