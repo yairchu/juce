@@ -276,6 +276,7 @@ public:
 
         processor.setRateAndBufferSizeDetails (kDefaultSampleRate, static_cast<int> (maxFrames));
         processor.prepareToPlay (kDefaultSampleRate, static_cast<int> (maxFrames));
+        processor.releaseResources(); // asserted by ARA
         processor.addListener (this);
 
         _araFactory = createARAFactory();
