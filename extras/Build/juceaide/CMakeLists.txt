@@ -112,6 +112,7 @@ else()
             "-DJUCE_BUILD_HELPER_TOOLS=ON"
             "-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
             "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13"
+            "-DCMAKE_C_FLAGS=-mmacosx-version-min=10.13"
             ${extra_compiler_flag_arguments}
         WORKING_DIRECTORY "${JUCE_SOURCE_DIR}"
         OUTPUT_VARIABLE command_output
