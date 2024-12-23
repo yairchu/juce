@@ -79,7 +79,6 @@ JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-W#warnings",
 #undef DEVELOPMENT
 #define DEVELOPMENT 0  // This avoids a Clang warning in Steinberg code about unused values
 
-#include "pslextensions/ipslviewembedding.h"
 #include "pslextensions/ipslcontextinfo.h"
 #include "pslextensions/ipslgainreduction.h"
 
