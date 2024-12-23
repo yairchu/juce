@@ -127,7 +127,6 @@ else()
             "-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
             "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13"
             ${platform_specific_extra_bootstrap_options}
-            ${extra_compiler_flag_arguments}
         WORKING_DIRECTORY "${JUCE_SOURCE_DIR}"
         OUTPUT_VARIABLE command_output
         ERROR_VARIABLE command_output
