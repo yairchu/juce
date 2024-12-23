@@ -70,6 +70,10 @@
  #import <IOKit/pwr_mgt/IOPMLib.h>
  #import <MetalKit/MetalKit.h>
 
+ #if defined (MAC_OS_VERSION_14_4) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_VERSION_14_4
+  #import <ScreenCaptureKit/ScreenCaptureKit.h>
+ #endif
+
 #elif JUCE_IOS
  #if JUCE_PUSH_NOTIFICATIONS
   #import <UserNotifications/UserNotifications.h>
@@ -110,6 +114,16 @@
   #pragma comment(lib, "comctl32.lib")
   #pragma comment(lib, "dwmapi.lib")
 
+  // Link a newer version of the side-by-side comctl32 dll.
+  // Required to enable the newer native message box and visual styles on vista and above.
+  #pragma comment(linker,                             \
+          "\"/MANIFESTDEPENDENCY:type='Win32' "       \
+          "name='Microsoft.Windows.Common-Controls' " \
+          "version='6.0.0.0' "                        \
+          "processorArchitecture='*' "                \
+          "publicKeyToken='6595b64144ccf1df' "        \
+          "language='*'\""                            \
+      )
   #if JUCE_OPENGL
    #pragma comment(lib, "OpenGL32.Lib")
    #pragma comment(lib, "GlU32.Lib")
@@ -240,6 +254,7 @@
 #endif
 
 //==============================================================================
+#include "native/accessibility/juce_Accessibility.cpp"
 #include "accessibility/juce_AccessibilityHandler.cpp"
 #include "application/juce_Application.cpp"
 #include "buttons/juce_ArrowButton.cpp"
@@ -326,7 +341,6 @@
 #include "mouse/juce_MouseInactivityDetector.cpp"
 #include "mouse/juce_MouseInputSource.cpp"
 #include "mouse/juce_MouseListener.cpp"
-#include "native/accessibility/juce_Accessibility.cpp"
 #include "native/juce_ScopedDPIAwarenessDisabler.cpp"
 #include "positioning/juce_MarkerList.cpp"
 #include "positioning/juce_RelativeCoordinate.cpp"
