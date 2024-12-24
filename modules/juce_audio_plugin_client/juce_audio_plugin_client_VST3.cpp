@@ -1752,7 +1752,7 @@ private:
                                             #endif
                                              SharedBase<FUnknown, Vst::IEditController>{});
 
-        if (targetIID == Vst::IRemapParamID::iid)
+        if (doUIDsMatch (targetIID, Vst::IRemapParamID::iid))
             jassertfalse;
 
         if (result.isOk())
