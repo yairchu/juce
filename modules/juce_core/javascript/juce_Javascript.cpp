@@ -621,6 +621,11 @@ public:
     Impl()
     {
         DynamicObjectWrapper::createClass (engine.getQuickJSRuntime());
+
+        engine.setInterruptHandler ([this]
+        {
+            return (int64) Time::getMillisecondCounterHiRes() >= timeout;
+        });
     }
 
     void registerNativeObject (const Identifier& name,
@@ -690,16 +695,7 @@ public:
 
     var evaluate (const String& code, Result* errorMessage, RelativeTime maxExecTime)
     {
-        shouldStop = false;
-
-        engine.setInterruptHandler ([this, maxExecTime, started = Time::getMillisecondCounterHiRes()]()
-                                    {
-                                        if (shouldStop)
-                                            return 1;
-
-                                        const auto elapsed = RelativeTime::milliseconds ((int64) (Time::getMillisecondCounterHiRes() - started));
-                                        return elapsed > maxExecTime ? 1 : 0;
-                                    });
+        resetTimeout (maxExecTime);
 
         if (errorMessage != nullptr)
             *errorMessage = Result::ok();
@@ -723,8 +719,13 @@ public:
         return result;
     }
 
-    var callFunction (const Identifier& function, const var::NativeFunctionArgs& args, Result* errorMessage)
+    var callFunction (const Identifier& function,
+                      const var::NativeFunctionArgs& args,
+                      Result* errorMessage,
+                      RelativeTime maxExecTime)
     {
+        resetTimeout (maxExecTime);
+
         auto* ctx = engine.getQuickJSContext();
         const auto functionStr = function.toString();
 
@@ -754,7 +755,7 @@ public:
 
     void stop() noexcept
     {
-        shouldStop = true;
+        timeout = (int64) Time::getMillisecondCounterHiRes();
     }
 
     JSObject getRootObject() const
@@ -762,15 +763,15 @@ public:
         return JSObject { &engine };
     }
 
-    const detail::QuickJSWrapper& getEngine() const
-    {
-        return engine;
-    }
-
 private:
     //==============================================================================
+    void resetTimeout (RelativeTime maxExecTime)
+    {
+        timeout = (int64) Time::getMillisecondCounterHiRes() + maxExecTime.inMilliseconds();
+    }
+
     detail::QuickJSWrapper engine;
-    std::atomic<bool> shouldStop = false;
+    std::atomic<int64> timeout{};
 };
 
 //==============================================================================
@@ -801,7 +802,7 @@ var JavascriptEngine::callFunction (const Identifier& function,
                                     const var::NativeFunctionArgs& args,
                                     Result* errorMessage)
 {
-    return impl->callFunction (function, args, errorMessage);
+    return impl->callFunction (function, args, errorMessage, maximumExecutionTime);
 }
 
 void JavascriptEngine::stop() noexcept
