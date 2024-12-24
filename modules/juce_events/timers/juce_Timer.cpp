@@ -77,10 +77,8 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ShutdownDetector)
     JUCE_DECLARE_NON_MOVEABLE (ShutdownDetector)
-    JUCE_DECLARE_SINGLETON (ShutdownDetector, false)
+    JUCE_DECLARE_SINGLETON_INLINE (ShutdownDetector, false)
 };
-
-JUCE_IMPLEMENT_SINGLETON (ShutdownDetector)
 
 class Timer::TimerThread final : private Thread,
                                  private ShutdownDetector::Listener
@@ -89,7 +87,7 @@ public:
     using LockType = CriticalSection;
 
     TimerThread()
-        : Thread ("JUCE Timer")
+        : Thread (SystemStats::getJUCEVersion() + ": Timer")
     {
         timers.reserve (32);
         ShutdownDetector::addListener (this);

@@ -35,10 +35,6 @@
 namespace juce
 {
 
-#if JUCE_DIRECT2D_METRICS
-JUCE_IMPLEMENT_SINGLETON (Direct2DMetricsHub)
-#endif
-
 struct ScopedBlendCopy
 {
     explicit ScopedBlendCopy (ComSmartPtr<ID2D1DeviceContext1> c)
@@ -595,7 +591,7 @@ public:
         const auto paintAreas = getPaintAreas();
         const auto paintBounds = paintAreas.getBounds();
 
-        if (! getFrameSize().intersects (paintBounds) || paintBounds.isEmpty())
+        if (! getFrameSize().intersects (paintBounds) || paintBounds.isEmpty() || paintAreas.isEmpty())
             return nullptr;
 
         // Is Direct2D ready to paint?

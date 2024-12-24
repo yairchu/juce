@@ -1132,9 +1132,17 @@ public:
     {
         mappings = std::move (arrangements);
 
-        floatBusMap .resize (mappings.size());
-        doubleBusMap.resize (mappings.size());
-        busBuffers  .resize (mappings.size());
+        const auto numBuses = mappings.size();
+        floatBusMap .resize (numBuses);
+        doubleBusMap.resize (numBuses);
+        busBuffers  .resize (numBuses);
+
+        for (auto [index, busMap] : enumerate (mappings, size_t{}))
+        {
+            const auto numChannels = busMap.size();
+            floatBusMap [index].reserve (numChannels);
+            doubleBusMap[index].reserve (numChannels);
+        }
     }
 
     /*  Applies the mapping to an AudioBuffer using JUCE channel layout. */
@@ -1170,6 +1178,10 @@ private:
                             const ChannelMapping& busMap,
                             int channelStartOffset) const
     {
+        // If this is hit, we may be about to allocate memory. Ideally, this should have been
+        // allocated in prepare().
+        jassert (busMap.size() <= bus.capacity());
+
         bus.clear();
 
         for (size_t i = 0; i < busMap.size(); ++i)
@@ -1431,7 +1443,7 @@ private:
                                                              controlEvent->controllerNumber);
 
         if (controlParamID != Steinberg::Vst::kNoParamId)
-            callback (controlParamID, controlEvent->paramValue);
+            callback (controlParamID, controlEvent->paramValue, msg.getTimeStamp());
 
         return true;
     }
