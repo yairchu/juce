@@ -111,6 +111,12 @@ else()
         set(ENV{CMAKE_GENERATOR_PLATFORM} "${CMAKE_HOST_SYSTEM_PROCESSOR}")
     endif()
 
+    set(PASSTHROUGH_ARGS "")
+
+    if(CMAKE_OSX_DEPLOYMENT_TARGET)
+        list(APPEND PASSTHROUGH_ARGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    endif()
+
     # Looks like we're bootstrapping, reinvoke CMake
     set (platform_specific_extra_bootstrap_options "")
     if (APPLE)
@@ -127,6 +133,7 @@ else()
             "-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
             "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13"
             ${platform_specific_extra_bootstrap_options}
+            "${PASSTHROUGH_ARGS}"
         WORKING_DIRECTORY "${JUCE_SOURCE_DIR}"
         OUTPUT_VARIABLE command_output
         ERROR_VARIABLE command_output
