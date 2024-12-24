@@ -2247,9 +2247,6 @@ void Component::internalMouseUp (MouseInputSource source,
     }
 #endif
 
-    if (flags.mouseDownWasBlocked && isCurrentlyBlockedByAnotherModalComponent())
-        return;
-
     const auto me = makeMouseEvent (source,
                                     relativePointerState,
                                     oldModifiers,
@@ -2262,6 +2259,14 @@ void Component::internalMouseUp (MouseInputSource source,
                                     source.isLongPressOrDrag());
 
     HierarchyChecker checker (this, me);
+
+    if (flags.mouseDownWasBlocked && isCurrentlyBlockedByAnotherModalComponent())
+    {
+        // Global listeners still need to know about the mouse up
+        auto& desktop = Desktop::getInstance();
+        desktop.getMouseListeners().callChecked (checker, [&] (MouseListener& l) { l.mouseUp (checker.eventWithNearestParent()); });
+        return;
+    }
 
     if (flags.repaintOnMouseActivityFlag)
         repaint();
