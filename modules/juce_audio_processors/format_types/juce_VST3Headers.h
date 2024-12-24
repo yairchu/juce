@@ -94,10 +94,6 @@ JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-W#warnings",
 #undef DEVELOPMENT
 #define DEVELOPMENT 0  // This avoids a Clang warning in Steinberg code about unused values
 
-#include "pslextensions/ipslviewembedding.h"
-#include "pslextensions/ipslcontextinfo.h"
-#include "pslextensions/ipslgainreduction.h"
-
 /*  These files come with the Steinberg VST3 SDK - to get them, you'll need to
     visit the Steinberg website and agree to whatever is currently required to
     get them.
@@ -209,6 +205,8 @@ JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-W#warnings",
  #endif
 
  #include "pslextensions/ipslviewembedding.h"
+ #include "pslextensions/ipslcontextinfo.h"
+ #include "pslextensions/ipslgainreduction.h"
 
 //==============================================================================
 namespace Steinberg
