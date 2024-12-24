@@ -3776,6 +3776,8 @@ void XWindowSystem::dismissBlockingModals (LinuxComponentPeer* peer) const
 
 void XWindowSystem::handleConfigureNotifyEvent (LinuxComponentPeer* peer, XConfigureEvent& confEvent) const
 {
+    const ScopedValueSetter<bool> scope { peer->inConfigureNotifyHandler, true };
+
     peer->updateWindowBounds();
     peer->updateBorderSize();
     peer->handleMovedOrResized();

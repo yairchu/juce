@@ -1920,9 +1920,9 @@ public:
     }
 
     //==============================================================================
-    void onVBlank() override
+    void onVBlank (double timestampSec) override
     {
-        vBlankListeners.call ([] (auto& l) { l.onVBlank(); });
+        callVBlankListeners (timestampSec);
         dispatchDeferredRepaints();
 
         if (renderContext != nullptr)
@@ -2786,7 +2786,7 @@ private:
             ReleaseCapture();
     }
 
-    void doMouseDown (LPARAM lParam, const WPARAM wParam, WindowArea area)
+    void doMouseDown (LPARAM lParam, const WPARAM wParam)
     {
         // this will be handled by WM_TOUCH
         if (isTouchEvent() || areOtherTouchSourcesActive())
@@ -2795,7 +2795,7 @@ private:
         if (GetCapture() != hwnd)
             SetCapture (hwnd);
 
-        doMouseMove (lParam, true, area);
+        doMouseMove (lParam, true, WindowArea::client);
 
         if (isValidPeer (this))
         {
@@ -2803,9 +2803,7 @@ private:
 
             isDragging = true;
 
-            const auto position = area == WindowArea::client ? getPointFromLocalLParam (lParam)
-                                                             : getLocalPointFromScreenLParam (lParam);
-            doMouseEvent (position, MouseInputSource::defaultPressure);
+            doMouseEvent (clientLparamToPoint (lParam), MouseInputSource::defaultPressure);
         }
     }
 
@@ -3709,21 +3707,11 @@ private:
         return globalToLocal (convertPhysicalScreenPointToLogical (globalPos, hwnd).toFloat());
     }
 
-    Point<float> getPointFromLocalLParam (LPARAM lParam) noexcept
+    Point<float> clientLparamToPoint (LPARAM lParam)
     {
-        auto p = D2DUtilities::toPoint (getPOINTFromLParam (lParam));
-
-        if (isPerMonitorDPIAwareWindow (hwnd))
-        {
-            // LPARAM is relative to this window's top-left but may be on a different monitor so we need to calculate the
-            // physical screen position and then convert this to local logical coordinates
-            auto r = getWindowScreenRect (hwnd);
-            const auto windowBorder = findPhysicalBorderSize();
-            return globalToLocal (Desktop::getInstance().getDisplays().physicalToLogical (D2DUtilities::toPoint ({ r.left + p.x + windowBorder.getLeft(),
-                                                                                                                   r.top  + p.y + windowBorder.getTop() })).toFloat());
-        }
-
-        return p.toFloat();
+        auto point = getPOINTFromLParam (lParam);
+        ClientToScreen (hwnd, &point);
+        return getLocalPointFromScreenLParam (MAKELPARAM (point.x, point.y));
     }
 
     Point<float> getCurrentMousePos() noexcept
@@ -3961,13 +3949,13 @@ private:
             case WM_LBUTTONDOWN:
             case WM_MBUTTONDOWN:
             case WM_RBUTTONDOWN:
-                doMouseDown (lParam, wParam, WindowArea::client);
+                doMouseDown (lParam, wParam);
                 return 0;
 
             case WM_LBUTTONUP:
             case WM_MBUTTONUP:
             case WM_RBUTTONUP:
-                doMouseUp (getPointFromLocalLParam (lParam), wParam);
+                doMouseUp (clientLparamToPoint (lParam), wParam);
                 return 0;
 
             case WM_POINTERWHEEL:

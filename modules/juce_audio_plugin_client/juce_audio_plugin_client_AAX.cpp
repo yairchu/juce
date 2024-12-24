@@ -66,13 +66,7 @@ JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wdeprecated-declarations",
 
 #include <AAX_Version.h>
 
-static_assert (AAX_SDK_CURRENT_REVISION >= AAX_SDK_2p4p0_REVISION, "JUCE requires AAX SDK version 2.4.0 or higher");
-
-#if defined (AAX_SDK_2p5p0_REVISION) && AAX_SDK_2p5p0_REVISION <= AAX_SDK_CURRENT_REVISION
- #define JUCE_AAX_SDK_2p5p0 1
-#else
- #define JUCE_AAX_SDK_2p5p0 0
-#endif
+static_assert (AAX_SDK_CURRENT_REVISION >= AAX_SDK_2p6p1_REVISION, "JUCE requires AAX SDK version 2.6.1 or higher");
 
 #define INITACFIDS
 
@@ -126,7 +120,17 @@ using namespace juce;
  #define JucePlugin_AAX_Chunk_Identifier     'juce'
 #endif
 
-const int32_t juceChunkType = JucePlugin_AAX_Chunk_Identifier;
+constexpr int32_t juceChunkType = JucePlugin_AAX_Chunk_Identifier;
+
+static auto supportsMidiInput (const AudioProcessor& p)
+{
+    return p.isMidiEffect() || p.acceptsMidi();
+}
+
+static auto supportsMidiOutput (const AudioProcessor& p)
+{
+    return p.isMidiEffect() || p.producesMidi();
+}
 
 //==============================================================================
 namespace AAXClasses
@@ -160,12 +164,10 @@ namespace AAXClasses
             case 1:   return AAX_eStemFormat_Ambi_1_ACN;
             case 2:   return AAX_eStemFormat_Ambi_2_ACN;
             case 3:   return AAX_eStemFormat_Ambi_3_ACN;
-           #if JUCE_AAX_SDK_2p5p0
             case 4:   return AAX_eStemFormat_Ambi_4_ACN;
             case 5:   return AAX_eStemFormat_Ambi_5_ACN;
             case 6:   return AAX_eStemFormat_Ambi_6_ACN;
             case 7:   return AAX_eStemFormat_Ambi_7_ACN;
-           #endif
             default:  break;
         }
 
@@ -213,7 +215,6 @@ namespace AAXClasses
         { AAX_eStemFormat_7_1_2,    { AudioChannelSet::left, AudioChannelSet::centre, AudioChannelSet::right, AudioChannelSet::leftSurroundSide, AudioChannelSet::rightSurroundSide,
                                       AudioChannelSet::leftSurroundRear, AudioChannelSet::rightSurroundRear, AudioChannelSet::LFE, AudioChannelSet::topSideLeft, AudioChannelSet::topSideRight } },
 
-       #if JUCE_AAX_SDK_2p5p0
         { AAX_eStemFormat_5_0_2,    { AudioChannelSet::left, AudioChannelSet::centre, AudioChannelSet::right, AudioChannelSet::leftSurround, AudioChannelSet::rightSurround,
                                       AudioChannelSet::topSideLeft, AudioChannelSet::topSideRight } },
 
@@ -259,7 +260,6 @@ namespace AAXClasses
                                       AudioChannelSet::leftSurroundSide, AudioChannelSet::rightSurroundSide, AudioChannelSet::leftSurroundRear, AudioChannelSet::rightSurroundRear,
                                       AudioChannelSet::LFE, AudioChannelSet::topFrontLeft, AudioChannelSet::topFrontRight, AudioChannelSet::topSideLeft, AudioChannelSet::topSideRight,
                                       AudioChannelSet::topRearLeft, AudioChannelSet::topRearRight } },
-       #endif
 
         { AAX_eStemFormat_None,     {} },
     };
@@ -284,7 +284,6 @@ namespace AAXClasses
         AAX_eStemFormat_Ambi_1_ACN,
         AAX_eStemFormat_Ambi_2_ACN,
         AAX_eStemFormat_Ambi_3_ACN,
-       #if JUCE_AAX_SDK_2p5p0
         AAX_eStemFormat_5_0_2,
         AAX_eStemFormat_5_1_2,
         AAX_eStemFormat_5_0_4,
@@ -301,7 +300,6 @@ namespace AAXClasses
         AAX_eStemFormat_Ambi_5_ACN,
         AAX_eStemFormat_Ambi_6_ACN,
         AAX_eStemFormat_Ambi_7_ACN,
-       #endif
     };
 
     static AAX_EStemFormat getFormatForAudioChannelSet (const AudioChannelSet& set, bool ignoreLayout) noexcept
@@ -324,14 +322,12 @@ namespace AAXClasses
                 case 8:   return AAX_eStemFormat_7_1_DTS;
                 case 9:   return AAX_eStemFormat_7_0_2;
                 case 10:  return AAX_eStemFormat_7_1_2;
-               #if JUCE_AAX_SDK_2p5p0
                 case 11:  return AAX_eStemFormat_7_0_4;
                 case 12:  return AAX_eStemFormat_7_1_4;
                 case 13:  return AAX_eStemFormat_9_0_4;
                 case 14:  return AAX_eStemFormat_9_1_4;
                 case 15:  return AAX_eStemFormat_9_0_6;
                 case 16:  return AAX_eStemFormat_9_1_6;
-               #endif
                 default:  break;
             }
 
@@ -359,8 +355,6 @@ namespace AAXClasses
         if (set == AudioChannelSet::create7point1SDDS())    return AAX_eStemFormat_7_1_SDDS;
         if (set == AudioChannelSet::create7point0point2())  return AAX_eStemFormat_7_0_2;
         if (set == AudioChannelSet::create7point1point2())  return AAX_eStemFormat_7_1_2;
-
-       #if JUCE_AAX_SDK_2p5p0
         if (set == AudioChannelSet::create5point0point2())  return AAX_eStemFormat_5_0_2;
         if (set == AudioChannelSet::create5point1point2())  return AAX_eStemFormat_5_1_2;
         if (set == AudioChannelSet::create5point0point4())  return AAX_eStemFormat_5_0_4;
@@ -373,7 +367,6 @@ namespace AAXClasses
         if (set == AudioChannelSet::create9point1point4())  return AAX_eStemFormat_9_1_4;
         if (set == AudioChannelSet::create9point0point6())  return AAX_eStemFormat_9_0_6;
         if (set == AudioChannelSet::create9point1point6())  return AAX_eStemFormat_9_1_6;
-       #endif
 
         auto order = set.getAmbisonicOrder();
         if (order >= 0)
@@ -407,8 +400,6 @@ namespace AAXClasses
                 case AAX_eStemFormat_Ambi_1_ACN: return AudioChannelSet::ambisonic (1);
                 case AAX_eStemFormat_Ambi_2_ACN: return AudioChannelSet::ambisonic (2);
                 case AAX_eStemFormat_Ambi_3_ACN: return AudioChannelSet::ambisonic (3);
-
-               #if JUCE_AAX_SDK_2p5p0
                 case AAX_eStemFormat_5_0_2:      return AudioChannelSet::create5point0point2();
                 case AAX_eStemFormat_5_1_2:      return AudioChannelSet::create5point1point2();
                 case AAX_eStemFormat_5_0_4:      return AudioChannelSet::create5point0point4();
@@ -425,11 +416,6 @@ namespace AAXClasses
                 case AAX_eStemFormat_Ambi_5_ACN: return AudioChannelSet::ambisonic (5);
                 case AAX_eStemFormat_Ambi_6_ACN: return AudioChannelSet::ambisonic (6);
                 case AAX_eStemFormat_Ambi_7_ACN: return AudioChannelSet::ambisonic (7);
-               #else
-                case AAX_eStemFormat_Reserved_1:
-                case AAX_eStemFormat_Reserved_2:
-                case AAX_eStemFormat_Reserved_3:
-               #endif
 
                 case AAX_eStemFormatNum:
                 case AAX_eStemFormat_Any:
@@ -1810,7 +1796,12 @@ namespace AAXClasses
                 auto numChans = jmax (numIns, numOuts);
 
                 if (numChans == 0)
+                {
+                    // No audio channels to process, but the plugin was not declared as a MIDI effect!
+                    float* noBuffer = nullptr;
+                    process (&noBuffer, numOuts, bufferSize, bypass, midiNodeIn, midiNodesOut);
                     return;
+                }
 
                 if (channelList.size() <= numChans)
                     channelList.insertMultiple (-1, nullptr, 1 + numChans - channelList.size());
@@ -2193,13 +2184,13 @@ namespace AAXClasses
 
         bool getMainBusFormats (AudioChannelSet& inputSet, AudioChannelSet& outputSet)
         {
-            [[maybe_unused]] auto& audioProcessor = getPluginInstance();
+            auto& audioProcessor = getPluginInstance();
 
             if (audioProcessor.isMidiEffect())
             {
                 // MIDI effect plug-ins do not support any audio channels
-                jassert (audioProcessor.getTotalNumInputChannels()  == 0
-                         && audioProcessor.getTotalNumOutputChannels() == 0);
+                jassertquiet (audioProcessor.getTotalNumInputChannels() == 0
+                              && audioProcessor.getTotalNumOutputChannels() == 0);
 
                 inputSet = outputSet = AudioChannelSet();
                 return true;
@@ -2222,8 +2213,10 @@ namespace AAXClasses
             inputSet  = (inputBuses  > 0 ? channelSetFromStemFormat (inputStemFormat,  false) : AudioChannelSet());
             outputSet = (outputBuses > 0 ? channelSetFromStemFormat (outputStemFormat, false) : AudioChannelSet());
 
-            if ((inputSet == AudioChannelSet::disabled() && inputStemFormat != AAX_eStemFormat_None) || (outputSet == AudioChannelSet::disabled() && outputStemFormat != AAX_eStemFormat_None)
-                || (inputSet != AudioChannelSet::disabled() && inputBuses == 0) || (outputSet != AudioChannelSet::disabled() && outputBuses == 0))
+            if ((inputSet == AudioChannelSet::disabled() && inputStemFormat != AAX_eStemFormat_None)
+                || (outputSet == AudioChannelSet::disabled() && outputStemFormat != AAX_eStemFormat_None)
+                || (inputSet != AudioChannelSet::disabled() && inputBuses == 0)
+                || (outputSet != AudioChannelSet::disabled() && outputBuses == 0))
                 return false;
 
             return true;
@@ -2677,8 +2670,8 @@ namespace AAXClasses
         int lastBufferSize = maxSamplesPerBlock, maxBufferSize = maxSamplesPerBlock;
         bool hasSidechain = false, canDisableSidechain = false, lastSideChainState = false;
 
-        const bool supportsMidiIn  = pluginInstance->isMidiEffect() || pluginInstance->acceptsMidi();
-        const bool supportsMidiOut = pluginInstance->isMidiEffect() || pluginInstance->producesMidi();
+        const bool supportsMidiIn  = supportsMidiInput  (*pluginInstance);
+        const bool supportsMidiOut = supportsMidiOutput (*pluginInstance);
 
         /*  Pro Tools 2021 sends TransportStateChanged on the main thread, but we read
             the recording state on the audio thread.
@@ -2936,11 +2929,11 @@ namespace AAXClasses
         check (desc.AddAudioBufferLength (JUCEAlgorithmIDs::bufferSize));
         check (desc.AddDataInPort (JUCEAlgorithmIDs::bypass, sizeof (int32_t)));
 
-        if (processor.acceptsMidi() || processor.isMidiEffect())
+        if (supportsMidiInput (processor))
             check (desc.AddMIDINode (JUCEAlgorithmIDs::midiNodeIn, AAX_eMIDINodeType_LocalInput,
                                      JucePlugin_Name, 0xffff));
 
-        if (processor.producesMidi() || processor.isMidiEffect())
+        if (supportsMidiOutput (processor))
             check (desc.AddMIDINode (JUCEAlgorithmIDs::midiNodeOut, AAX_eMIDINodeType_LocalOutput,
                                      JucePlugin_Name " Out", 0xffff));
 
