@@ -2210,7 +2210,7 @@ void XWindowSystem::blitToWindow (::Window windowH, Image image, Rectangle<int> 
 {
     jassert (windowH != 0);
 
-    auto* xbitmap = static_cast<XBitmapImage*> (image.getPixelData());
+    auto* xbitmap = static_cast<XBitmapImage*> (image.getPixelData().get());
 
     xbitmap->blitToWindow (windowH,
                            destinationRect.getX(), destinationRect.getY(),

@@ -73,7 +73,7 @@ struct CachedImageList final : public ReferenceCountedObject,
     TextureInfo getTextureFor (const Image& image)
     {
         auto pixelData = image.getPixelData();
-        auto* c = findCachedImage (pixelData);
+        auto* c = findCachedImage (pixelData.get());
 
         if (c == nullptr)
         {
@@ -89,7 +89,7 @@ struct CachedImageList final : public ReferenceCountedObject,
                 return t;
             }
 
-            c = images.add (new CachedImage (*this, pixelData));
+            c = images.add (new CachedImage (*this, pixelData.get()));
             // A single image taking more than the maximum cache size means it would be purged the next time
             // -any- other image is inserted, then would be re-inserted on next use, then likely purged again,
             // ad infinitum, greatly reducing graphics performance.
